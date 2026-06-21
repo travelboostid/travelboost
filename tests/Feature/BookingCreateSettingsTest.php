@@ -1020,7 +1020,7 @@ test('booking create credits the current hold back into the editable booking sea
         ->where('existingBooking.booking_number', 'BKG-SEAT-LIMIT'));
 });
 
-test('booking create counts infants in the current hold seat limit', function () {
+test('booking create excludes infants from the current hold seat limit', function () {
     ['user' => $user, 'company' => $company, 'tour' => $tour, 'schedule' => $schedule] = createBookingCreateScenario('infantseatlimitvendor');
 
     $booking = Booking::factory()->create([
@@ -1049,7 +1049,7 @@ test('booking create counts infants in the current hold seat limit', function ()
     $response->assertOk();
     $response->assertInertia(fn ($page) => $page
         ->component('tours/bookings/create')
-        ->where('availability', 7)
+        ->where('availability', 9)
         ->where('bookingSeatLimit', 10)
         ->where('existingBooking.booking_number', 'BKG-INFANT-SEAT-LIMIT'));
 });
@@ -1209,7 +1209,7 @@ test('reserve allows the owner to expand within their current held seat limit', 
         ->and((int) TourAvailability::where('schedule_id', $schedule->id)->first()->available)->toBe(0);
 });
 
-test('reserve rejects infants when total guests exceed availability', function () {
+test('reserve allows infants without consuming seat availability', function () {
     ['user' => $user, 'company' => $company, 'tour' => $tour, 'schedule' => $schedule] = createBookingCreateScenario('infantavailabilityvendor');
 
     TourAvailability::where('schedule_id', $schedule->id)->update([
@@ -1237,10 +1237,12 @@ test('reserve rejects infants when total guests exceed availability', function (
             'passengers' => bookingPassengers(3),
         ]);
 
-    $response->assertSessionHasErrors('availability');
-    $this->assertDatabaseMissing('bookings', [
+    $response->assertRedirect();
+    $this->assertDatabaseHas('bookings', [
         'booking_number' => 'BKG-INFANT-AVAILABILITY',
         'status' => BookingStatus::BOOKING_RESERVED->value,
+        'pax_adult' => 1,
+        'pax_infant' => 2,
     ]);
 });
 
@@ -1724,6 +1726,98 @@ test('reserve recalculates booking totals from schedule prices and ignores tampe
         ->and((float) $booking->passengers()->firstOrFail()->price_amount)->toBe(900_000.0);
 });
 
+test('reserve persists booking add ons and recalculates grand total', function () {
+    ['user' => $user, 'company' => $company, 'tour' => $tour, 'schedule' => $schedule] = createBookingCreateScenario('reserveaddonvendor');
+    $company->companySetting()->updateOrCreate([], ['minimum_vat' => 11]);
+    AppConfig::updateOrCreate(['key' => 'admin'], [
+        'description' => 'Admin Parameter configuration',
+        'value' => ['platform_fee' => '25000'],
+    ]);
+
+    $adultTwin = PriceCategory::create([
+        'company_id' => $company->id,
+        'name' => 'Adult Twin',
+        'room_type' => 'twin',
+    ]);
+    TourPrice::create([
+        'company_id' => $company->id,
+        'tour_code' => $tour->code,
+        'schedule_id' => $schedule->id,
+        'price_category_id' => $adultTwin->id,
+        'currency' => 'IDR',
+        'price' => 1_000_000,
+        'promotion' => 0,
+    ]);
+
+    TourAddOn::create([
+        'company_id' => $company->id,
+        'tour_id' => $tour->id,
+        'schedule_id' => $schedule->id,
+        'description' => 'Tipping',
+        'price' => 200_000,
+        'edit_status' => true,
+        'is_taxable' => false,
+    ]);
+
+    $passengers = [
+        [
+            'first_name' => 'Reserve',
+            'last_name' => 'Guest',
+            'pob' => 'Jakarta',
+            'price_category' => 'Adult Twin',
+            'price_amount' => 1_000_000,
+        ],
+    ];
+    $addons = [
+        [
+            'name' => 'Tipping',
+            'price' => 200_000,
+            'qty' => 1,
+            'is_taxable' => false,
+        ],
+    ];
+
+    $expectedGrandTotal = app(BookingPricingService::class)->quoteForBookingData(
+        $tour,
+        $schedule->departure_date,
+        $passengers,
+        $addons,
+        11.0,
+    )['grand_total'];
+
+    $this->actingAs($user)
+        ->from(route('bookings.create', [
+            'username' => $company->username,
+            'tour' => $tour,
+            'date' => $schedule->departure_date,
+        ]))
+        ->post(route('bookings.reserve', [
+            'username' => $company->username,
+            'tour' => $tour,
+        ]), [
+            'booking_number' => 'BKG-RESERVE-ADDON',
+            'tour_id' => $tour->id,
+            'departure_date' => $schedule->departure_date,
+            'pax_adult' => 1,
+            'pax_child' => 0,
+            'pax_infant' => 0,
+            'vendor_id' => $company->id,
+            'contact_name' => 'Reserve Addon',
+            'contact_email' => 'reserve-addon@example.com',
+            'contact_phone' => '08123456789',
+            'passengers' => $passengers,
+            'addons' => $addons,
+        ])
+        ->assertRedirect();
+
+    $booking = Booking::where('booking_number', 'BKG-RESERVE-ADDON')->firstOrFail();
+
+    expect($booking->addons)->toHaveCount(1)
+        ->and($booking->addons->first()->name)->toBe('Tipping')
+        ->and((float) $booking->addons->first()->price)->toBe(200_000.0)
+        ->and((float) $booking->grand_total)->toBe((float) $expectedGrandTotal);
+});
+
 test('store persists room arrangement and travel document data', function () {
     Storage::fake('public');
 
@@ -2185,6 +2279,10 @@ test('booking create exposes paid booking room payload without hold timer', func
         'departure_date' => $schedule->departure_date,
         'status' => BookingStatus::DOWN_PAYMENT,
         'payment_mode' => 'manual',
+        'total_price' => 1_000_000,
+        'tax_rate' => 0,
+        'tax_amount' => 0,
+        'platform_fee' => 0,
         'grand_total' => 1_000_000,
         'reserved_type' => 'system',
         'reserved_expires_at' => null,
