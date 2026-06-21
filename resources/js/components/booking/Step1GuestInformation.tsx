@@ -556,9 +556,6 @@ function GuestDetailForm({
                 <div className="grid gap-1">
                     <Label className="text-[11px] text-muted-foreground">
                         Last Name{' '}
-                        <span className="font-normal opacity-70">
-                            (optional)
-                        </span>
                     </Label>
                     <Input
                         placeholder="Doe"

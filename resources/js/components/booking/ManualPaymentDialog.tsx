@@ -1,3 +1,4 @@
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -9,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { formatCurrency } from '@/constants/booking';
 import {
+    AlertCircleIcon,
     FileTextIcon,
     Loader2Icon,
     UploadCloudIcon,
@@ -92,145 +94,164 @@ export function ManualPaymentDialog({
         update('proofFile', file);
     };
 
+    const receiptUpload = (
+        <>
+            <input
+                ref={fileRef}
+                type="file"
+                accept="image/*,.pdf"
+                className="hidden"
+                onChange={handleProofFileChange}
+            />
+            {form.proofFile ? (
+                <div className="grid min-w-0 max-w-full grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 rounded-lg border bg-muted/30 px-3 py-2">
+                    <FileTextIcon className="size-4 shrink-0 text-primary" />
+                    <span className="min-w-0 truncate text-xs text-foreground">
+                        {form.proofFile.name}
+                    </span>
+                    <button
+                        type="button"
+                        onClick={() => {
+                            update('proofFile', null);
+                            if (fileRef.current) {
+                                fileRef.current.value = '';
+                            }
+                        }}
+                        className="shrink-0 rounded-full p-0.5 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+                    >
+                        <XIcon className="size-3.5" />
+                    </button>
+                </div>
+            ) : (
+                <button
+                    type="button"
+                    onClick={() => fileRef.current?.click()}
+                    className="flex h-9 w-full items-center gap-2 rounded-lg border border-dashed px-3 text-xs text-muted-foreground transition-colors hover:border-primary/40 hover:bg-primary/5 hover:text-primary"
+                >
+                    <UploadCloudIcon className="size-3.5 shrink-0" />
+                    Upload file
+                </button>
+            )}
+        </>
+    );
+
     return (
         <Dialog open={open} onOpenChange={(nextOpen) => !nextOpen && onClose()}>
-            <DialogContent className="w-full max-w-md">
-                <DialogHeader>
+            <DialogContent className="flex max-h-[calc(100dvh-1.5rem)] w-[calc(100%-1.5rem)] max-w-md flex-col gap-0 overflow-hidden p-0 sm:max-w-xl">
+                <DialogHeader className="shrink-0 border-b px-4 py-3 sm:px-6 sm:py-4">
                     <DialogTitle>Manual Bank Transfer</DialogTitle>
                 </DialogHeader>
 
-                <div className="rounded-lg border bg-muted/40 p-4 text-sm">
-                    <p className="mb-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                        Transfer To
-                    </p>
-                    <div className="flex flex-col gap-2">
-                        <div className="flex justify-between gap-4">
-                            <span className="text-muted-foreground">Bank</span>
-                            <span className="font-semibold">
-                                {vendorBank.bankName || '—'}
-                            </span>
-                        </div>
-                        <div className="flex justify-between gap-4">
-                            <span className="text-muted-foreground">
-                                Account Name
-                            </span>
-                            <span className="text-right font-semibold">
-                                {vendorBank.accountName || '—'}
-                            </span>
-                        </div>
-                        <div className="flex justify-between gap-4">
-                            <span className="text-muted-foreground">
-                                Account Number
-                            </span>
-                            <span className="font-mono font-semibold tracking-wider">
-                                {vendorBank.accountNumber || '—'}
-                            </span>
-                        </div>
-                        <div className="flex justify-between gap-4 border-t pt-2">
-                            <span className="text-muted-foreground">
-                                Pay Now
-                            </span>
-                            <span className="font-semibold text-primary">
-                                {formatCurrency(amount)}
-                            </span>
-                        </div>
-                    </div>
-                </div>
-
-                <div className="flex flex-col gap-4">
-                    <div className="grid gap-1">
-                        <Label>Your Bank Name</Label>
-                        <Input
-                            placeholder="e.g. BCA"
-                            value={form.senderBankName}
-                            onChange={(event) =>
-                                update('senderBankName', event.target.value)
-                            }
-                        />
-                    </div>
-                    <div className="grid gap-1">
-                        <Label>Your Account Number</Label>
-                        <Input
-                            placeholder="e.g. 1234567890"
-                            inputMode="numeric"
-                            pattern="[0-9]*"
-                            value={form.senderAccountNumber}
-                            onChange={(event) =>
-                                update(
-                                    'senderAccountNumber',
-                                    event.target.value.replace(/\D/g, ''),
-                                )
-                            }
-                        />
-                    </div>
-                    <div className="grid gap-1">
-                        <Label>Transfer Amount</Label>
-                        <Input
-                            type="number"
-                            min={1}
-                            value={amount}
-                            disabled
-                            readOnly
-                        />
-                    </div>
-                    <div className="grid gap-1">
-                        <Label>Payment Date</Label>
-                        <Input
-                            type="date"
-                            max={todayInputValue}
-                            value={form.paymentDate}
-                            onChange={(event) =>
-                                update('paymentDate', event.target.value)
-                            }
-                        />
-                    </div>
-                    <div className="grid gap-1">
-                        <Label>Payment Receipt</Label>
-                        <input
-                            ref={fileRef}
-                            type="file"
-                            accept="image/*,.pdf"
-                            className="hidden"
-                            onChange={handleProofFileChange}
-                        />
-                        {form.proofFile ? (
-                            <div className="grid min-w-0 max-w-full grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 rounded-lg border bg-muted/30 px-3 py-2">
-                                <FileTextIcon className="size-4 shrink-0 text-primary" />
-                                <span className="min-w-0 truncate text-xs text-foreground">
-                                    {form.proofFile.name}
+                <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-4 sm:px-6">
+                    <div className="rounded-lg border bg-muted/40 p-3 text-sm sm:p-4">
+                        <p className="mb-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                            Transfer To
+                        </p>
+                        <div className="flex flex-col gap-2">
+                            <div className="flex justify-between gap-4">
+                                <span className="text-muted-foreground">
+                                    Bank
                                 </span>
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        update('proofFile', null);
-                                        if (fileRef.current) {
-                                            fileRef.current.value = '';
-                                        }
-                                    }}
-                                    className="shrink-0 rounded-full p-0.5 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
-                                >
-                                    <XIcon className="size-3.5" />
-                                </button>
+                                <span className="font-semibold">
+                                    {vendorBank.bankName || '—'}
+                                </span>
                             </div>
-                        ) : (
-                            <button
-                                type="button"
-                                onClick={() => fileRef.current?.click()}
-                                className="flex items-center gap-2 rounded-lg border border-dashed px-3 py-2 text-xs text-muted-foreground transition-colors hover:border-primary/40 hover:bg-primary/5 hover:text-primary"
-                            >
-                                <UploadCloudIcon className="size-3.5" />
-                                Upload file
-                            </button>
-                        )}
+                            <div className="flex justify-between gap-4">
+                                <span className="text-muted-foreground">
+                                    Account Name
+                                </span>
+                                <span className="text-right font-semibold">
+                                    {vendorBank.accountName || '—'}
+                                </span>
+                            </div>
+                            <div className="flex justify-between gap-4">
+                                <span className="text-muted-foreground">
+                                    Account Number
+                                </span>
+                                <span className="font-mono font-semibold tracking-wider">
+                                    {vendorBank.accountNumber || '—'}
+                                </span>
+                            </div>
+                            <div className="flex justify-between gap-4 border-t pt-2">
+                                <span className="text-muted-foreground">
+                                    Pay Now
+                                </span>
+                                <span className="font-semibold text-primary">
+                                    {formatCurrency(amount)}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <Alert className="border-amber-200/60 bg-amber-50/50 py-2.5 dark:border-amber-900/40 dark:bg-amber-950/20">
+                        <AlertCircleIcon className="text-amber-600 dark:text-amber-500" />
+                        <AlertDescription className="text-xs leading-relaxed text-amber-800/90 sm:text-sm dark:text-amber-200/90">
+                            Transfer only to the account details above. We
+                            cannot verify payments sent elsewhere and are not
+                            responsible for losses from incorrect transfers.
+                        </AlertDescription>
+                    </Alert>
+
+                    <div className="grid gap-3 sm:grid-cols-2 sm:gap-4">
+                        <div className="grid gap-1 sm:col-span-2">
+                            <Label>Your Bank Name</Label>
+                            <Input
+                                placeholder="e.g. BCA"
+                                value={form.senderBankName}
+                                onChange={(event) =>
+                                    update('senderBankName', event.target.value)
+                                }
+                            />
+                        </div>
+                        <div className="grid gap-1">
+                            <Label>Your Account Number</Label>
+                            <Input
+                                placeholder="e.g. 1234567890"
+                                inputMode="numeric"
+                                pattern="[0-9]*"
+                                value={form.senderAccountNumber}
+                                onChange={(event) =>
+                                    update(
+                                        'senderAccountNumber',
+                                        event.target.value.replace(/\D/g, ''),
+                                    )
+                                }
+                            />
+                        </div>
+                        <div className="grid gap-1">
+                            <Label>Transfer Amount</Label>
+                            <Input
+                                type="number"
+                                min={1}
+                                value={amount}
+                                disabled
+                                readOnly
+                            />
+                        </div>
+                        <div className="grid gap-1">
+                            <Label>Payment Date</Label>
+                            <Input
+                                type="date"
+                                max={todayInputValue}
+                                value={form.paymentDate}
+                                onChange={(event) =>
+                                    update('paymentDate', event.target.value)
+                                }
+                            />
+                        </div>
+                        <div className="grid gap-1">
+                            <Label>Payment Receipt</Label>
+                            {receiptUpload}
+                        </div>
                         {fileError && (
-                            <p className="text-xs text-destructive">
+                            <p className="text-xs text-destructive sm:col-span-2">
                                 {fileError}
                             </p>
                         )}
                     </div>
                 </div>
 
-                <div className="flex justify-end gap-2 pt-2">
+                <div className="flex shrink-0 justify-end gap-2 border-t bg-background px-4 py-3 sm:px-6">
                     <Button
                         variant="outline"
                         onClick={onClose}
