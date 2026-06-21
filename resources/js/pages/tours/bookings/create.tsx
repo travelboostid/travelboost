@@ -1034,7 +1034,7 @@ export default function Page() {
     const selectedAddOnsForPricing = useMemo(
         () =>
             selectedAddOns.map((addon) =>
-                addon.hasQty === false && addon.qty > 0
+                addon.hasQty === false
                     ? { ...addon, qty: guests.length }
                     : addon,
             ),
