@@ -2,7 +2,7 @@ import type { TourResource } from '@/api/model';
 import BookingInfoCard from '@/components/booking/BookingInfoCard';
 import Step1GuestInformation from '@/components/booking/Step1GuestInformation';
 import Step2RoomConfiguration, {
-    deserializeRoomsFromBooking,
+    loadRoomsFromBooking,
 } from '@/components/booking/Step2RoomConfiguration';
 import Step3TravelDocuments from '@/components/booking/Step3TravelDocuments';
 import Step4BookingSummary, {
@@ -287,7 +287,7 @@ function ReadOnlyWizard({
     // ── Rooms ──────────────────────────────────────────────────────────
     const rooms = useMemo(
         () =>
-            deserializeRoomsFromBooking(
+            loadRoomsFromBooking(
                 booking.rooms || [],
                 guests,
                 booking.passengers,

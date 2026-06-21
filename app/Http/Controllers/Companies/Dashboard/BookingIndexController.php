@@ -771,6 +771,7 @@ class BookingIndexController extends Controller
             ->when($companyType === 'agent', fn ($query) => $query->where('requester_company_id', $company->id))
             ->where('target_action', $activeAction)
             ->when($search !== '', fn (Builder $query) => $this->applyBookingActionRequestSearch($query, $search))
+            ->orderByRaw("CASE WHEN status = 'pending' THEN 0 ELSE 1 END")
             ->latest()
             ->paginate(15)
             ->withQueryString()
@@ -2414,7 +2415,7 @@ class BookingIndexController extends Controller
             ->first();
 
         if (! $schedule) {
-            return max(0, (int) $booking->pax_adult + (int) $booking->pax_child + (int) $booking->pax_infant);
+            return max(0, $booking->seatTakingPaxCount());
         }
 
         $availableSeats = (int) (TourAvailability::query()
@@ -2436,7 +2437,7 @@ class BookingIndexController extends Controller
             return 0;
         }
 
-        return max(0, (int) $booking->pax_adult + (int) $booking->pax_child + (int) $booking->pax_infant);
+        return max(0, $booking->seatTakingPaxCount());
     }
 
     private function resolveEditMode(Booking $booking): string

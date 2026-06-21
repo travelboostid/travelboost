@@ -21,13 +21,13 @@ use App\Models\Payment;
 use App\Models\PaymentMethod;
 use App\Models\Role;
 use App\Models\Tour;
-use App\Models\TourAddOn;
 use App\Models\TourAvailability;
 use App\Models\TourPrice;
 use App\Models\TourSchedule;
 use App\Models\User;
 use App\Models\VendorAgentPartner;
 use App\Services\AgentCommissionResolver;
+use App\Services\BookingAddOnOptionsService;
 use App\Services\BookingContactPaymentEmailService;
 use App\Services\BookingDownPaymentRuleService;
 use App\Services\BookingNumberService;
@@ -107,21 +107,6 @@ class DashboardBookingController extends Controller
                 ->first();
 
             $availableSeats = $isScheduleBookable && $availability ? (int) $availability->available : 0;
-
-            $addOns = TourAddOn::query()
-                ->where('schedule_id', $schedule->id)
-                ->where('tour_id', $tour->id)
-                ->get()
-                ->map(fn (TourAddOn $addon): array => [
-                    'key' => 'addon_'.$addon->id,
-                    'label' => $addon->description,
-                    'unitPrice' => (float) $addon->price,
-                    'qty' => $addon->edit_status ? 0 : 1,
-                    'hasQty' => (bool) $addon->edit_status,
-                    'isTaxable' => (bool) $addon->is_taxable,
-                ])
-                ->values()
-                ->toArray();
         }
 
         $requestedBookingNumber = request()->string('booking_number')->trim()->toString();
@@ -140,14 +125,20 @@ class DashboardBookingController extends Controller
 
             if ($existingBooking) {
                 $bookingNumber = $existingBooking->booking_number;
+                $existingBooking = app(BookingPricingService::class)->reconcileSnapshotTotals($existingBooking);
                 $existingBooking->load([
                     'inputByCompany:id,name,type',
                     'inputByUser:id,name',
                     'passengers',
                     'rooms',
+                    'addons',
                     'user:id,name',
                 ]);
             }
+        }
+
+        if ($schedule) {
+            $addOns = app(BookingAddOnOptionsService::class)->forSchedule($tour, $schedule, $existingBooking);
         }
 
         if (($company->type->value ?? $company->type) === 'vendor' && $existingBooking?->agent_id) {
@@ -256,6 +247,11 @@ class DashboardBookingController extends Controller
             'contact_phone' => ['nullable', 'string', 'max:50'],
             'contact_notes' => ['nullable', 'string', 'max:1000'],
             'agent_id' => ['nullable', 'integer', 'exists:companies,id'],
+            'addons' => ['nullable', 'array'],
+            'addons.*.name' => ['required_with:addons', 'string', 'max:255'],
+            'addons.*.price' => ['required_with:addons', 'numeric', 'min:0'],
+            'addons.*.qty' => ['nullable', 'integer', 'min:0'],
+            'addons.*.is_taxable' => ['nullable', 'boolean'],
             'passengers' => ['required', 'array', 'min:1'],
             'passengers.*.title' => ['nullable', 'string', 'max:20'],
             'passengers.*.first_name' => ['required', 'string', 'max:255'],
@@ -306,7 +302,7 @@ class DashboardBookingController extends Controller
 
             $bookingSeatLimit = ($availability ? (int) $availability->available : 0)
                 + $this->heldSeatCountForBooking($existingBooking, $tour->id, $this->normalizeDateString($schedule->departure_date), $tour->company_id);
-            $requestedSeatCount = (int) $data['pax_adult'] + (int) $data['pax_child'] + (int) $data['pax_infant'];
+            $requestedSeatCount = (int) $data['pax_adult'] + (int) $data['pax_child'];
 
             if ($requestedSeatCount > $bookingSeatLimit) {
                 throw ValidationException::withMessages([
@@ -322,7 +318,7 @@ class DashboardBookingController extends Controller
                 $tour,
                 (string) $data['departure_date'],
                 $data['passengers'],
-                [],
+                $data['addons'] ?? [],
                 $taxRate,
                 $agent !== null,
                 $agent?->id,
@@ -368,6 +364,11 @@ class DashboardBookingController extends Controller
 
             $booking->passengers()->delete();
             $booking->passengers()->createMany($quote['passengers']);
+
+            $booking->addons()->delete();
+            if (! empty($quote['addons'])) {
+                $booking->addons()->createMany($quote['addons']);
+            }
 
             return $booking;
         });
@@ -1425,9 +1426,7 @@ class DashboardBookingController extends Controller
 
     private function eligibleAgentSubscriptionConstraint(Builder $query): Builder
     {
-        return $query
-            ->whereNotNull('package_id')
-            ->where('package_id', '!=', 1);
+        return $query->whereNotNull('package_id');
     }
 
     private function transferDashboardPlaceholderOwnership(string $bookingNumber, ?User $dashboardUser, User $owner): void
@@ -1675,7 +1674,7 @@ class DashboardBookingController extends Controller
             return 0;
         }
 
-        return max(0, (int) $booking->pax_adult + (int) $booking->pax_child + (int) $booking->pax_infant);
+        return max(0, $booking->seatTakingPaxCount());
     }
 
     private function bookingNeedsTravelDocuments(Booking $booking): bool

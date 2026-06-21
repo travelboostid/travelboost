@@ -7,9 +7,10 @@ import Step1GuestInformation, {
     calculateAgeAtDeparture,
 } from '@/components/booking/Step1GuestInformation';
 import Step2RoomConfiguration, {
-    autoRecommendRooms,
-    deserializeRoomsFromBooking,
     getRoomNumberByGuestId,
+    isRoomArrangementComplete,
+    loadRoomsFromBooking,
+    recommendRoomsForGuests,
     serializeRoomsForBooking,
     validateDependentBedPassengerMix,
     validateRoomArrangement,
@@ -820,7 +821,7 @@ export default function Page() {
                 ? matchedPrice.price
                 : restoredPrice;
 
-            if (matchedPrice) {
+            if (matchedPrice && !(parseFloat(p.price_amount) > 0)) {
                 if (matchedPrice.promotionRate > 0) {
                     restoredPrice = Math.max(
                         0,
@@ -869,14 +870,14 @@ export default function Page() {
 
     // ─── Rooms ──────────────────────────────────────────────────────────
     const [rooms, setRooms] = useState<RoomConfig[]>(() =>
-        deserializeRoomsFromBooking(
+        loadRoomsFromBooking(
             existingBooking?.rooms ?? [],
             guests,
             existingBooking?.passengers ?? [],
         ),
     );
     const roomsGuestFingerprint = useRef<string>(
-        rooms.length > 0
+        rooms.length > 0 && isRoomArrangementComplete(rooms, guests)
             ? JSON.stringify(guests.map((g) => `${g.id}-${g.priceCategory}`))
             : '',
     );
@@ -1008,7 +1009,7 @@ export default function Page() {
     const selectedAddOnsForPricing = useMemo(
         () =>
             selectedAddOns.map((addon) =>
-                addon.hasQty === false
+                addon.hasQty === false && addon.qty > 0
                     ? { ...addon, qty: guests.length }
                     : addon,
             ),
@@ -1334,6 +1335,200 @@ export default function Page() {
         pendingExitTarget,
     ]);
 
+    const buildReservePayload = useCallback(() => {
+        const reserveAddOnRows = selectedAddOnsForPricing
+            .filter((a) => a.qty > 0)
+            .map((a) => ({
+                name: a.label,
+                price: a.unitPrice * a.qty,
+                qty: a.qty,
+                is_taxable: a.isTaxable ?? false,
+            }));
+        const reserveAddOnPricing = calculateAddOnPricing(
+            selectedAddOnsForPricing.filter((a) => a.qty > 0),
+            minimumVatPct ?? 0,
+        );
+        const reserveGrandTotal =
+            pricing.totalPrice +
+            reserveAddOnPricing.addOnsTotal +
+            reserveAddOnPricing.addOnsVat;
+
+        return {
+            tour_id: tour.id,
+            departure_date: preselectedDate,
+            pax_adult: adults,
+            pax_child: children,
+            pax_infant: infants,
+            booking_number: bookingNumber,
+            vendor_id: vendor?.id ?? (tour.company as any)?.id,
+            agent_id: selectedAgentId,
+            contact_name: contact.name,
+            contact_email: contact.email,
+            contact_phone: contact.phone,
+            contact_notes: contact.notes,
+            total_price: pricing.subtotalGuests,
+            tax_amount: pricing.ppn + reserveAddOnPricing.addOnsVat,
+            platform_fee: pricing.platformFee,
+            commission_amount: pricing.agentCommission,
+            grand_total: reserveGrandTotal,
+            addons: reserveAddOnRows,
+            passengers: guests.map((g) => ({
+                client_guest_id: g.id,
+                title: g.title || null,
+                first_name: g.firstName,
+                last_name: g.lastName || '',
+                gender: null,
+                dob: g.dateOfBirth || null,
+                pob: g.placeOfBirth || null,
+                price_category: g.priceCategory,
+                price_amount: g.price,
+                visa_category_item_id: g.visaCategoryItemId,
+                room_type: g.roomTypeDescription || null,
+                room_number: null,
+                note: g.note || null,
+            })),
+        } as Record<string, unknown>;
+    }, [
+        adults,
+        bookingNumber,
+        children,
+        contact,
+        guests,
+        infants,
+        minimumVatPct,
+        preselectedDate,
+        pricing,
+        selectedAddOnsForPricing,
+        selectedAgentId,
+        tour,
+        vendor,
+    ]);
+
+    const buildReserveFingerprint = useCallback(
+        (payload: Record<string, unknown>) =>
+            JSON.stringify({
+                addons: payload.addons,
+                grand_total: payload.grand_total,
+                total_price: payload.total_price,
+                tax_amount: payload.tax_amount,
+                platform_fee: payload.platform_fee,
+                commission_amount: payload.commission_amount,
+                passengers: payload.passengers,
+            }),
+        [],
+    );
+
+    const lastSyncedReservePayloadRef = useRef<string | null>(null);
+    const reserveSyncTimeoutRef = useRef<number | null>(null);
+
+    const postReserveSnapshot = useCallback(
+        (immediate = false): Promise<void> => {
+            if (!timerStarted) {
+                return Promise.resolve();
+            }
+
+            if (currentStep < 2 || currentStep > 4) {
+                return Promise.resolve();
+            }
+
+            if (isReadOnlyBookingMode || isDocumentUpdateMode) {
+                return Promise.resolve();
+            }
+
+            if (!isResuming && !bookingNumber) {
+                return Promise.resolve();
+            }
+
+            const payload = buildReservePayload();
+            const fingerprint = buildReserveFingerprint(payload);
+
+            if (lastSyncedReservePayloadRef.current === fingerprint) {
+                return Promise.resolve();
+            }
+
+            if (reserveSyncTimeoutRef.current !== null) {
+                window.clearTimeout(reserveSyncTimeoutRef.current);
+                reserveSyncTimeoutRef.current = null;
+            }
+
+            const submitSnapshot = () =>
+                new Promise<void>((resolve) => {
+                    lastSyncedReservePayloadRef.current = fingerprint;
+                    router.post(reserveUrl, payload as any, {
+                        preserveScroll: true,
+                        preserveState: true,
+                        only: [],
+                        onFinish: () => resolve(),
+                    });
+                });
+
+            if (immediate) {
+                return submitSnapshot();
+            }
+
+            return new Promise((resolve) => {
+                reserveSyncTimeoutRef.current = window.setTimeout(() => {
+                    reserveSyncTimeoutRef.current = null;
+                    void submitSnapshot().then(resolve);
+                }, 400);
+            });
+        },
+        [
+            bookingNumber,
+            buildReserveFingerprint,
+            buildReservePayload,
+            currentStep,
+            isDocumentUpdateMode,
+            isReadOnlyBookingMode,
+            isResuming,
+            reserveUrl,
+            timerStarted,
+        ],
+    );
+
+    // Persist add-on / passenger snapshot updates after step 1 -> 2 reserve.
+    useEffect(() => {
+        void postReserveSnapshot();
+    }, [postReserveSnapshot]);
+
+    useEffect(() => {
+        if (
+            currentStep !== 2 ||
+            isReadOnlyBookingMode ||
+            isPaidBookingMode ||
+            isReviewMode
+        ) {
+            return;
+        }
+
+        if (isRoomArrangementComplete(rooms, guests)) {
+            return;
+        }
+
+        const currentFingerprint = JSON.stringify(
+            guests.map((g) => `${g.id}-${g.priceCategory}`),
+        );
+
+        setRooms(recommendRoomsForGuests(guests));
+        roomsGuestFingerprint.current = currentFingerprint;
+    }, [
+        currentStep,
+        guests,
+        isPaidBookingMode,
+        isReadOnlyBookingMode,
+        isReviewMode,
+        rooms,
+    ]);
+
+    // Sync immediately when the customer reaches the payment summary step.
+    useEffect(() => {
+        if (currentStep !== 4 || !timerStarted) {
+            return;
+        }
+
+        void postReserveSnapshot(true);
+    }, [currentStep, postReserveSnapshot, timerStarted]);
+
     // ─── Navigation ─────────────────────────────────────────────────────
     const goNext = () => {
         if ((isPaidBookingMode || isReviewMode) && currentStep < 4) {
@@ -1369,52 +1564,19 @@ export default function Page() {
             guests.map((g) => `${g.id}-${g.priceCategory}`),
         );
         if (
-            rooms.length === 0 ||
+            !isRoomArrangementComplete(rooms, guests) ||
             roomsGuestFingerprint.current !== currentFingerprint
         ) {
-            setRooms(autoRecommendRooms(guests));
+            setRooms(recommendRoomsForGuests(guests));
             roomsGuestFingerprint.current = currentFingerprint;
         }
 
-        // Always send the reserve POST to update the booking status and data
-        router.post(
-            reserveUrl,
-            {
-                tour_id: tour.id,
-                departure_date: preselectedDate,
-                pax_adult: adults,
-                pax_child: children,
-                pax_infant: infants,
-                booking_number: bookingNumber,
-                vendor_id: vendor?.id ?? (tour.company as any)?.id,
-                agent_id: selectedAgentId,
-                contact_name: contact.name,
-                contact_email: contact.email,
-                contact_phone: contact.phone,
-                contact_notes: contact.notes,
-                total_price: pricing.subtotalGuests,
-                tax_amount: pricing.ppn,
-                platform_fee: pricing.platformFee,
-                commission_amount: pricing.agentCommission,
-                grand_total: pricing.totalPrice,
-                passengers: guests.map((g) => ({
-                    client_guest_id: g.id,
-                    title: g.title || null,
-                    first_name: g.firstName,
-                    last_name: g.lastName || '',
-                    gender: null,
-                    dob: g.dateOfBirth || null,
-                    pob: g.placeOfBirth || null,
-                    price_category: g.priceCategory,
-                    price_amount: g.price,
-                    visa_category_item_id: g.visaCategoryItemId,
-                    room_type: g.roomTypeDescription || null,
-                    room_number: null,
-                    note: g.note || null,
-                })),
-            } as any,
-            { preserveScroll: true, preserveState: true },
-        );
+        const payload = buildReservePayload();
+        lastSyncedReservePayloadRef.current = buildReserveFingerprint(payload);
+        router.post(reserveUrl, payload as any, {
+            preserveScroll: true,
+            preserveState: true,
+        });
 
         if (!timerStarted) {
             holdExpiryHandledRef.current = false;
@@ -1625,8 +1787,7 @@ export default function Page() {
         (enabled: boolean) => {
             if (enabled) {
                 const contactNameParts = splitContactName(contact.name);
-                const canAddNewAdult =
-                    adults + children + infants < maxSeatTakingGuests;
+                const canAddNewAdult = adults + children < maxSeatTakingGuests;
 
                 if (!contactNameParts || contactGuestId || !canAddNewAdult) {
                     return;
@@ -1672,7 +1833,7 @@ export default function Page() {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     const phoneRegex = /^\+?\d+$/;
 
-    const paxTakingSeats = adults + children + infants;
+    const paxTakingSeats = adults + children;
     const isAvailabilityExceeded =
         bookingSeatLimitValue !== null &&
         paxTakingSeats > bookingSeatLimitValue;
@@ -1699,7 +1860,6 @@ export default function Page() {
             if (
                 g.title.trim() === '' ||
                 g.firstName.trim() === '' ||
-                g.lastName.trim() === '' ||
                 g.dateOfBirth.trim() === '' ||
                 g.placeOfBirth.trim() === '' ||
                 g.priceCategory === null ||
@@ -1976,83 +2136,90 @@ export default function Page() {
     ) => {
         const { paymentType, finalAmount, addOns } = pending;
 
-        if (isBalancePayment && existingBooking?.id) {
-            let startedPayment = false;
+        const submitMidtransPayment = () => {
+            if (isBalancePayment && existingBooking?.id) {
+                let startedPayment = false;
 
-            router.put(
-                `/bookings/${existingBooking.id}`,
-                buildBookingPayload(addOns, paymentType, 'midtrans', false),
-                {
-                    forceFormData: true,
-                    preserveScroll: true,
-                    onSuccess: () => {
-                        startedPayment = true;
-                        startOnlinePayment(
-                            existingBooking.id,
-                            paymentType,
-                            finalAmount,
-                            paymentMethodId,
-                        );
-                    },
-                    onError: (errors) => {
-                        const message =
-                            firstErrorMessage(errors.payment) ??
-                            firstErrorMessage(errors.payment_date) ??
-                            firstErrorMessage(errors.payment_type);
+                router.put(
+                    `/bookings/${existingBooking.id}`,
+                    buildBookingPayload(addOns, paymentType, 'midtrans', false),
+                    {
+                        forceFormData: true,
+                        preserveScroll: true,
+                        onSuccess: () => {
+                            startedPayment = true;
+                            startOnlinePayment(
+                                existingBooking.id,
+                                paymentType,
+                                finalAmount,
+                                paymentMethodId,
+                            );
+                        },
+                        onError: (errors) => {
+                            const message =
+                                firstErrorMessage(errors.payment) ??
+                                firstErrorMessage(errors.payment_date) ??
+                                firstErrorMessage(errors.payment_type);
 
-                        if (message) {
-                            setPaymentErrorMessage(message);
-                        }
+                            if (message) {
+                                setPaymentErrorMessage(message);
+                            }
+                        },
+                        onFinish: () => {
+                            if (!startedPayment) {
+                                setIsSubmitting(false);
+                            }
+                        },
                     },
-                    onFinish: () => {
-                        if (!startedPayment) {
-                            setIsSubmitting(false);
-                        }
-                    },
-                },
+                );
+
+                return;
+            }
+
+            const payload = buildBookingPayload(
+                addOns,
+                paymentType,
+                'midtrans',
+                true,
             );
 
-            return;
-        }
+            router.post(storeUrl, payload as any, {
+                forceFormData: true,
+                preserveScroll: true,
+                onSuccess: (page) => {
+                    const bookingId =
+                        bookingIdFromPageProps(page.props) ??
+                        existingBooking?.id;
 
-        const payload = buildBookingPayload(
-            addOns,
-            paymentType,
-            'midtrans',
-            true,
-        );
+                    if (!bookingId) {
+                        setIsSubmitting(false);
+                        return;
+                    }
 
-        router.post(storeUrl, payload as any, {
-            forceFormData: true,
-            preserveScroll: true,
-            onSuccess: (page) => {
-                const bookingId =
-                    bookingIdFromPageProps(page.props) ?? existingBooking?.id;
+                    startOnlinePayment(
+                        bookingId,
+                        paymentType,
+                        finalAmount,
+                        paymentMethodId,
+                    );
+                },
+                onError: (errors) => {
+                    const message =
+                        firstErrorMessage(errors.payment) ??
+                        firstErrorMessage(errors.payment_date) ??
+                        firstErrorMessage(errors.payment_type);
 
-                if (!bookingId) {
+                    if (message) {
+                        setPaymentErrorMessage(message);
+                    }
+
                     setIsSubmitting(false);
-                    return;
-                }
+                },
+            });
+        };
 
-                startOnlinePayment(
-                    bookingId,
-                    paymentType,
-                    finalAmount,
-                    paymentMethodId,
-                );
-            },
-            onError: (errors) => {
-                const message =
-                    firstErrorMessage(errors.payment) ??
-                    firstErrorMessage(errors.payment_date) ??
-                    firstErrorMessage(errors.payment_type);
-
-                if (message) {
-                    setPaymentErrorMessage(message);
-                }
-
-                setIsSubmitting(false);
-            },
+        void postReserveSnapshot(true).finally(() => {
+            submitMidtransPayment();
         });
     };
 
@@ -2372,91 +2539,103 @@ export default function Page() {
             return;
         }
 
-        if (isBalancePayment && existingBooking?.id) {
-            let startedPayment = false;
+        const submitPayment = () => {
+            if (isBalancePayment && existingBooking?.id) {
+                let startedPayment = false;
 
-            router.put(
-                `/bookings/${existingBooking.id}`,
-                buildBookingPayload(addOns, paymentType, paymentMethod, false),
-                {
-                    forceFormData: true,
-                    preserveScroll: true,
-                    onSuccess: () => {
-                        startedPayment = true;
+                router.put(
+                    `/bookings/${existingBooking.id}`,
+                    buildBookingPayload(
+                        addOns,
+                        paymentType,
+                        paymentMethod,
+                        false,
+                    ),
+                    {
+                        forceFormData: true,
+                        preserveScroll: true,
+                        onSuccess: () => {
+                            startedPayment = true;
 
-                        submitManualPayment(
-                            existingBooking.id,
-                            paymentType,
-                            finalAmount,
-                            manualData,
-                        );
+                            submitManualPayment(
+                                existingBooking.id,
+                                paymentType,
+                                finalAmount,
+                                manualData,
+                            );
+                        },
+                        onError: (errors) => {
+                            const message =
+                                firstErrorMessage(errors.payment) ??
+                                firstErrorMessage(errors.payment_date) ??
+                                firstErrorMessage(errors.payment_type);
+
+                            if (message) {
+                                setPaymentErrorMessage(message);
+                            }
+                        },
+                        onFinish: () => {
+                            if (!startedPayment) {
+                                setIsSubmitting(false);
+                            }
+                        },
                     },
-                    onError: (errors) => {
-                        const message =
-                            firstErrorMessage(errors.payment) ??
-                            firstErrorMessage(errors.payment_date) ??
-                            firstErrorMessage(errors.payment_type);
-
-                        if (message) {
-                            setPaymentErrorMessage(message);
-                        }
-                    },
-                    onFinish: () => {
-                        if (!startedPayment) {
-                            setIsSubmitting(false);
-                        }
-                    },
-                },
-            );
-            return;
-        }
-
-        const payload = buildBookingPayload(
-            addOns,
-            paymentType,
-            paymentMethod,
-            true,
-        );
-
-        router.post(storeUrl, payload as any, {
-            forceFormData: true,
-            preserveScroll: true,
-            onSuccess: (page) => {
-                if (!manualData || paymentMethod !== 'manual_transfer') {
-                    return;
-                }
-
-                const bookingId =
-                    bookingIdFromPageProps(page.props) ?? existingBooking?.id;
-                if (!bookingId || !manualData.proofFile) {
-                    setIsSubmitting(false);
-                    return;
-                }
-
-                submitManualPayment(
-                    bookingId,
-                    paymentType,
-                    finalAmount,
-                    manualData,
                 );
-            },
-            onError: (errors) => {
-                const message =
-                    firstErrorMessage(errors.payment) ??
-                    firstErrorMessage(errors.payment_date) ??
-                    firstErrorMessage(errors.payment_type);
+                return;
+            }
 
-                if (message) {
-                    setPaymentErrorMessage(message);
-                }
+            const payload = buildBookingPayload(
+                addOns,
+                paymentType,
+                paymentMethod,
+                true,
+            );
 
-                setIsSubmitting(false);
-            },
-            onFinish: () => {
-                if (!manualData) {
+            router.post(storeUrl, payload as any, {
+                forceFormData: true,
+                preserveScroll: true,
+                onSuccess: (page) => {
+                    if (!manualData || paymentMethod !== 'manual_transfer') {
+                        return;
+                    }
+
+                    const bookingId =
+                        bookingIdFromPageProps(page.props) ??
+                        existingBooking?.id;
+                    if (!bookingId || !manualData.proofFile) {
+                        setIsSubmitting(false);
+                        return;
+                    }
+
+                    submitManualPayment(
+                        bookingId,
+                        paymentType,
+                        finalAmount,
+                        manualData,
+                    );
+                },
+                onError: (errors) => {
+                    const message =
+                        firstErrorMessage(errors.payment) ??
+                        firstErrorMessage(errors.payment_date) ??
+                        firstErrorMessage(errors.payment_type);
+
+                    if (message) {
+                        setPaymentErrorMessage(message);
+                    }
+
                     setIsSubmitting(false);
-                }
-            },
+                },
+                onFinish: () => {
+                    if (!manualData) {
+                        setIsSubmitting(false);
+                    }
+                },
+            });
+        };
+
+        void postReserveSnapshot(true).finally(() => {
+            submitPayment();
         });
     };
 

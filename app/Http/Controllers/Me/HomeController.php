@@ -14,6 +14,7 @@ use App\Models\TourPrice;
 use App\Models\TourSchedule;
 use App\Services\BookingPaymentReceiverService;
 use App\Services\BookingPaymentWorkflowService;
+use App\Services\BookingPricingService;
 use App\Services\BookingTravelDocumentService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\JsonResponse;
@@ -208,6 +209,7 @@ class HomeController extends Controller
      */
     private function appendBookingPayload(Booking $booking): array
     {
+        $booking = app(BookingPricingService::class)->reconcileSnapshotTotals($booking);
         $paidAmount = app(BookingPaymentWorkflowService::class)->finalizablePaidAmount($booking);
         $grandTotal = (float) $booking->grand_total;
         $remainingBalance = max(0.0, $grandTotal - $paidAmount);

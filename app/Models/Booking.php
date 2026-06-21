@@ -118,4 +118,9 @@ class Booking extends Model
     {
         return $this->hasMany(BookingActionRequest::class);
     }
+
+    public function seatTakingPaxCount(): int
+    {
+        return max(0, (int) $this->pax_adult + (int) $this->pax_child);
+    }
 }

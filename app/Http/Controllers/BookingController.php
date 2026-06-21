@@ -16,12 +16,12 @@ use App\Models\BookingDocument;
 use App\Models\Payment;
 use App\Models\PaymentMethod;
 use App\Models\Tour;
-use App\Models\TourAddOn;
 use App\Models\TourAvailability;
 use App\Models\TourPrice;
 use App\Models\TourSchedule;
 use App\Models\User;
 use App\Services\AgentCommissionResolver;
+use App\Services\BookingAddOnOptionsService;
 use App\Services\BookingContactPaymentEmailService;
 use App\Services\BookingDownPaymentRuleService;
 use App\Services\BookingNumberService;
@@ -194,6 +194,8 @@ class BookingController extends Controller
             }
 
             if ($existingBooking) {
+                $existingBooking = app(BookingPricingService::class)->reconcileSnapshotTotals($existingBooking);
+                $existingBooking->loadMissing(['passengers', 'rooms', 'addons']);
                 $bookingNumber = $existingBooking->booking_number;
                 $isResumingExistingBooking = true;
             }
@@ -364,6 +366,11 @@ class BookingController extends Controller
             'platform_fee' => ['nullable', 'numeric', 'min:0'],
             'commission_amount' => ['nullable', 'numeric', 'min:0'],
             'grand_total' => ['nullable', 'numeric', 'min:0'],
+            'addons' => ['nullable', 'array'],
+            'addons.*.name' => ['required_with:addons', 'string', 'max:255'],
+            'addons.*.price' => ['required_with:addons', 'numeric', 'min:0'],
+            'addons.*.qty' => ['nullable', 'integer', 'min:0'],
+            'addons.*.is_taxable' => ['nullable', 'boolean'],
             'passengers' => ['required', 'array', 'min:1'],
             'passengers.*.title' => ['nullable', 'string', 'max:20'],
             'passengers.*.first_name' => ['required', 'string', 'max:255'],
@@ -424,8 +431,7 @@ class BookingController extends Controller
                     $vendorId
                 );
             $requestedSeatCount = (int) $data['pax_adult']
-                + (int) $data['pax_child']
-                + (int) $data['pax_infant'];
+                + (int) $data['pax_child'];
 
             if ($requestedSeatCount > $bookingSeatLimit) {
                 throw ValidationException::withMessages([
@@ -441,7 +447,7 @@ class BookingController extends Controller
                 $tour,
                 (string) $data['departure_date'],
                 $data['passengers'],
-                [],
+                $data['addons'] ?? [],
                 $taxRate,
                 ! empty($data['agent_id']),
                 ! empty($data['agent_id']) ? (int) $data['agent_id'] : null,
@@ -489,6 +495,11 @@ class BookingController extends Controller
             if (! empty($data['passengers'])) {
                 $booking->passengers()->delete();
                 $booking->passengers()->createMany($quote['passengers']);
+            }
+
+            $booking->addons()->delete();
+            if (! empty($quote['addons'])) {
+                $booking->addons()->createMany($quote['addons']);
             }
 
             return $booking;
@@ -1517,60 +1528,9 @@ class BookingController extends Controller
         return $booking->passengers()->exists();
     }
 
-    /**
-     * @return array<int, array{key: string, label: string, unitPrice: float, qty: int, hasQty: bool, isTaxable: bool}>
-     */
     private function buildAddOnOptions(Tour $tour, TourSchedule $schedule, ?Booking $booking = null): array
     {
-        $booking?->loadMissing('addons');
-
-        $bookingAddOns = $booking
-            ? $booking->addons->keyBy(fn ($addon): string => strtolower((string) $addon->name))
-            : collect();
-
-        $addOns = TourAddOn::query()
-            ->where('schedule_id', $schedule->id)
-            ->where('tour_id', $tour->id)
-            ->get()
-            ->map(function (TourAddOn $addon) use ($bookingAddOns): array {
-                $savedAddon = $bookingAddOns->get(strtolower((string) $addon->description));
-                $unitPrice = (float) $addon->price;
-
-                return [
-                    'key' => 'addon_'.$addon->id,
-                    'label' => $addon->description,
-                    'unitPrice' => $unitPrice,
-                    'qty' => $savedAddon
-                        ? (int) max(1, round((float) $savedAddon->price / max($unitPrice, 1)))
-                        : ($addon->edit_status ? 0 : 1),
-                    'hasQty' => (bool) $addon->edit_status,
-                    'isTaxable' => (bool) ($savedAddon?->is_taxable ?? $addon->is_taxable),
-                ];
-            })
-            ->values()
-            ->toArray();
-
-        $knownAddOnLabels = collect($addOns)
-            ->pluck('label')
-            ->map(fn ($label): string => strtolower((string) $label))
-            ->all();
-
-        foreach ($booking?->addons ?? [] as $bookingAddon) {
-            if (in_array(strtolower((string) $bookingAddon->name), $knownAddOnLabels, true)) {
-                continue;
-            }
-
-            $addOns[] = [
-                'key' => 'booking_addon_'.$bookingAddon->id,
-                'label' => $bookingAddon->name,
-                'unitPrice' => (float) $bookingAddon->price,
-                'qty' => 1,
-                'hasQty' => true,
-                'isTaxable' => (bool) $bookingAddon->is_taxable,
-            ];
-        }
-
-        return $addOns;
+        return app(BookingAddOnOptionsService::class)->forSchedule($tour, $schedule, $booking);
     }
 
     /**
@@ -1792,7 +1752,7 @@ class BookingController extends Controller
             return 0;
         }
 
-        return max(0, (int) $booking->pax_adult + (int) $booking->pax_child + (int) $booking->pax_infant);
+        return max(0, $booking->seatTakingPaxCount());
     }
 
     private function ensureBookingNotExpired(Booking $booking): Booking

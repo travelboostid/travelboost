@@ -5,9 +5,10 @@ import Step1GuestInformation, {
     calculateAgeAtDeparture,
 } from '@/components/booking/Step1GuestInformation';
 import Step2RoomConfiguration, {
-    autoRecommendRooms,
-    deserializeRoomsFromBooking,
     getRoomNumberByGuestId,
+    isRoomArrangementComplete,
+    loadRoomsFromBooking,
+    recommendRoomsForGuests,
     serializeRoomsForBooking,
     validateDependentBedPassengerMix,
     validateRoomArrangement,
@@ -495,13 +496,11 @@ function EditableWizard({
 
     // ── Rooms ──────────────────────────────────────────────────────────
     const [rooms, setRooms] = useState<RoomConfig[]>(() =>
-        booking.rooms?.length
-            ? deserializeRoomsFromBooking(
-                  booking.rooms,
-                  initialGuests,
-                  booking.passengers,
-              )
-            : autoRecommendRooms(initialGuests),
+        loadRoomsFromBooking(
+            booking.rooms ?? [],
+            initialGuests,
+            booking.passengers,
+        ),
     );
     const [selectedAddOns, setSelectedAddOns] =
         useState<AddOnItem[]>(initialAddOns);
@@ -520,7 +519,7 @@ function EditableWizard({
         [minimumVatPct, selectedAddOnsForPricing],
     );
     const roomsGuestFingerprint = useRef<string>(
-        booking.rooms?.length
+        rooms.length > 0 && isRoomArrangementComplete(rooms, initialGuests)
             ? JSON.stringify(
                   initialGuests.map((g) => `${g.id}-${g.priceCategory}`),
               )
@@ -657,10 +656,10 @@ function EditableWizard({
                 guests.map((g) => `${g.id}-${g.priceCategory}`),
             );
             if (
-                rooms.length === 0 ||
+                !isRoomArrangementComplete(rooms, guests) ||
                 roomsGuestFingerprint.current !== currentFingerprint
             ) {
-                setRooms(autoRecommendRooms(guests));
+                setRooms(recommendRoomsForGuests(guests));
                 roomsGuestFingerprint.current = currentFingerprint;
             }
         }
@@ -676,10 +675,10 @@ function EditableWizard({
                 guests.map((g) => `${g.id}-${g.priceCategory}`),
             );
             if (
-                rooms.length === 0 ||
+                !isRoomArrangementComplete(rooms, guests) ||
                 roomsGuestFingerprint.current !== currentFingerprint
             ) {
-                setRooms(autoRecommendRooms(guests));
+                setRooms(recommendRoomsForGuests(guests));
                 roomsGuestFingerprint.current = currentFingerprint;
             }
         }
