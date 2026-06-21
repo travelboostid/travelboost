@@ -3152,9 +3152,9 @@ test('availability save preserves manual reserved and recomputes booking reserve
     $availability->refresh();
 
     expect((int) $availability->RS)->toBe(2)
-        ->and((int) $availability->BRS)->toBe(4)
+        ->and((int) $availability->BRS)->toBe(3)
         ->and((int) $availability->DP)->toBe(0)
-        ->and((float) $availability->available)->toBe(4.0);
+        ->and((float) $availability->available)->toBe(5.0);
 });
 
 test('booking show includes room bed layout data', function () {

@@ -151,7 +151,7 @@ class SyncAvailabilityAction
         }
 
         $totals = Booking::query()
-            ->select('status', DB::raw('COALESCE(SUM(COALESCE(pax_adult, 0) + COALESCE(pax_child, 0) + COALESCE(pax_infant, 0)), 0) as total_pax'))
+            ->select('status', DB::raw('COALESCE(SUM(COALESCE(pax_adult, 0) + COALESCE(pax_child, 0)), 0) as total_pax'))
             ->where('tour_id', $tourId)
             ->where('vendor_id', $companyId)
             ->whereDate('departure_date', $departureDate)

@@ -293,7 +293,7 @@ test('SyncAvailabilityAction correctly computes snapshot columns and available',
         ->and((float) $this->availability->available)->toBe(18.0);
 });
 
-test('infants reduce availability with other booking guests', function () {
+test('infants do not reduce availability with other booking guests', function () {
     $this->availability->update(['RS' => 1]);
 
     Booking::withoutEvents(function () {
@@ -315,8 +315,8 @@ test('infants reduce availability with other booking guests', function () {
     $this->availability->refresh();
 
     expect((int) $this->availability->RS)->toBe(1)
-        ->and((int) $this->availability->BRS)->toBe(4)
-        ->and((float) $this->availability->available)->toBe(25.0);
+        ->and((int) $this->availability->BRS)->toBe(2)
+        ->and((float) $this->availability->available)->toBe(27.0);
 });
 
 test('booking reserved expires without changing manual reserved holds', function () {

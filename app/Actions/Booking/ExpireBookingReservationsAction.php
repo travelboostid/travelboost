@@ -85,7 +85,7 @@ class ExpireBookingReservationsAction
             Log::info('Booking reservation expired', [
                 'booking_number' => $booking->booking_number,
                 'tour_id' => $booking->tour_id,
-                'pax_released' => $booking->pax_adult + $booking->pax_child + $booking->pax_infant,
+                'pax_released' => $booking->seatTakingPaxCount(),
             ]);
 
             return $booking;
