@@ -471,6 +471,10 @@ test('my bookings exposes paid balance deadlines document completeness and broch
         'status' => BookingStatus::DOWN_PAYMENT,
         'booking_number' => 'BKG-DERIVED-DP',
         'departure_date' => $departureDate,
+        'total_price' => 1_000_000,
+        'tax_rate' => 0,
+        'tax_amount' => 0,
+        'platform_fee' => 0,
         'grand_total' => 1_000_000,
     ]);
     $booking->payments()->create([
