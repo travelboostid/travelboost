@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Companies\Dashboard;
 
+use App\Enums\BookingStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Booking;
 use App\Models\Company;
@@ -40,7 +41,10 @@ class RoomListingController extends Controller
             ->where('company_id', $company->id)
             ->whereHas('bookings', function ($query) use ($company): void {
                 $query->where('vendor_id', $company->id)
-                    ->whereIn('status', ['full payment']);
+                    ->whereIn('status', [
+                        BookingStatus::DOWN_PAYMENT->value,
+                        BookingStatus::FULL_PAYMENT->value,
+                    ]);
             })
             ->select('id', 'name', 'code')
             ->orderBy('code')
@@ -52,7 +56,10 @@ class RoomListingController extends Controller
             $availableDates = Booking::query()
                 ->where('vendor_id', $company->id)
                 ->where('tour_id', $tourId)
-                ->whereIn('status', ['full payment'])
+                ->whereIn('status', [
+                    BookingStatus::DOWN_PAYMENT->value,
+                    BookingStatus::FULL_PAYMENT->value,
+                ])
                 ->whereNotNull('departure_date')
                 ->orderBy('departure_date')
                 ->selectRaw('DATE(departure_date) as date')
@@ -154,20 +161,21 @@ class RoomListingController extends Controller
                         'A' => 5,
                         'B' => 9,
                         'C' => 24,
-                        'D' => 12,
-                        'E' => 8,
+                        'D' => 14,
+                        'E' => 12,
                         'F' => 8,
                         'G' => 8,
-                        'H' => 7,
-                        'I' => 22,
-                        'J' => 16,
-                        'K' => 13,
+                        'H' => 8,
+                        'I' => 7,
+                        'J' => 22,
+                        'K' => 16,
                         'L' => 13,
-                        'M' => 16,
-                        'N' => 13,
-                        'O' => 14,
-                        'P' => 12,
-                        'Q' => 6,
+                        'M' => 13,
+                        'N' => 16,
+                        'O' => 13,
+                        'P' => 14,
+                        'Q' => 12,
+                        'R' => 6,
                     ];
                 }
 
@@ -183,32 +191,32 @@ class RoomListingController extends Controller
                         ->getAlignment()
                         ->setVertical(Alignment::VERTICAL_CENTER);
 
-                    $sheet->getStyle('A1:Q4')->getAlignment()
+                    $sheet->getStyle('A1:R4')->getAlignment()
                         ->setHorizontal(Alignment::HORIZONTAL_LEFT)
                         ->setVertical(Alignment::VERTICAL_CENTER);
 
-                    $sheet->getStyle('A6:Q6')->getAlignment()
+                    $sheet->getStyle('A6:R6')->getAlignment()
                         ->setHorizontal(Alignment::HORIZONTAL_CENTER)
                         ->setVertical(Alignment::VERTICAL_CENTER);
 
-                    $sheet->getStyle('A6:Q6')->getFill()
+                    $sheet->getStyle('A6:R6')->getFill()
                         ->setFillType(Fill::FILL_SOLID)
                         ->getStartColor()
                         ->setRGB('EAF2FF');
 
-                    $sheet->getStyle('A6:Q6')->getBorders()->getAllBorders()
+                    $sheet->getStyle('A6:R6')->getBorders()->getAllBorders()
                         ->setBorderStyle(Border::BORDER_THIN)
                         ->getColor()
                         ->setRGB('B8C7D9');
 
-                    $sheet->getStyle('A1:Q3')->getFill()
+                    $sheet->getStyle('A1:R3')->getFill()
                         ->setFillType(Fill::FILL_SOLID)
                         ->getStartColor()
                         ->setRGB('FFFFFF');
 
                     $highestRow = max(7, $sheet->getHighestRow());
 
-                    $sheet->getStyle('A7:Q'.$highestRow)->getBorders()->getAllBorders()
+                    $sheet->getStyle('A7:R'.$highestRow)->getBorders()->getAllBorders()
                         ->setBorderStyle(Border::BORDER_THIN)
                         ->getColor()
                         ->setRGB('D8E1EC');
@@ -252,7 +260,7 @@ class RoomListingController extends Controller
                                 ->getColor()
                                 ->setRGB('64748B');
 
-                            $worksheet->getStyle('L1:Q2')->getFont()
+                            $worksheet->getStyle('L1:R2')->getFont()
                                 ->setBold(true)
                                 ->setSize(10)
                                 ->getColor()
@@ -264,7 +272,7 @@ class RoomListingController extends Controller
                                 ->getColor()
                                 ->setRGB('334155');
 
-                            $worksheet->getStyle('A1:Q4')->getBorders()->getBottom()
+                            $worksheet->getStyle('A1:R4')->getBorders()->getBottom()
                                 ->setBorderStyle(Border::BORDER_MEDIUM)
                                 ->getColor()
                                 ->setRGB('0F172A');
@@ -322,7 +330,10 @@ class RoomListingController extends Controller
     ) {
         return Booking::query()
             ->where('vendor_id', $company->id)
-            ->whereIn('status', ['full payment'])
+            ->whereIn('status', [
+                BookingStatus::DOWN_PAYMENT->value,
+                BookingStatus::FULL_PAYMENT->value,
+            ])
             ->with(['passengers', 'rooms', 'agent:id,name'])
             ->where('tour_id', $tourId)
             ->whereDate('departure_date', $departureDate)
@@ -357,6 +368,9 @@ class RoomListingController extends Controller
             $agentGroups[$agentName]['bookings'][] = [
                 'booking_id' => $booking->id,
                 'booking_number' => $booking->booking_number,
+                'payment_status' => $booking->status instanceof BookingStatus
+                    ? $booking->status->value
+                    : (string) $booking->status,
                 'contact_phone' => $booking->contact_phone,
                 'contact_notes' => $booking->contact_notes,
                 'rooms' => $rooms,
@@ -379,6 +393,7 @@ class RoomListingController extends Controller
                     foreach ($passengers as $passenger) {
                         $roomData[] = [
                             'booking_number' => $bookingData['booking_number'],
+                            'payment_status' => $bookingData['payment_status'],
                             'agent_name' => $agentGroup['agent_name'],
                             'contact_phone' => $bookingData['contact_phone'],
                             'contact_notes' => $bookingData['contact_notes'],

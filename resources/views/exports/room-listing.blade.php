@@ -150,7 +150,7 @@
                 <td colspan="9" style="border-bottom: 2px solid #111827"></td>
             </tr>
             <tr>
-                <td colspan="17"></td>
+                <td colspan="18"></td>
             </tr>
         </table>
     @else
@@ -211,8 +211,13 @@
                 </th>
                 <th
                     style="{{ $headerStyle }}"
-                    {!! !$isExcel ? 'width="15%"' : '' !!}
+                    {!! !$isExcel ? 'width="12%"' : '' !!}
                     >Passenger Name
+                </th>
+                <th
+                    style="{{ $headerStyle }}"
+                    {!! !$isExcel ? 'width="7%"' : '' !!}
+                    >Payment Status
                 </th>
                 <th
                     style="{{ $headerStyle }}"
@@ -346,6 +351,15 @@
                                 <td style="{{ $cellStyle }} font-weight: 700;">
                                     {{ $fullName !== '' ? $fullName : '-' }}
                                 </td>
+
+                                @if ($isFirstInBooking)
+                                    <td
+                                        rowspan="{{ $totalPaxInBooking }}"
+                                        style="{{ $cellStyle }} text-align: center; font-size: 7pt; font-weight: 700; text-transform: uppercase; {{ $bookingData['payment_status'] === 'full payment' ? 'background-color: #dcfce7; color: #166534;' : 'background-color: #fef3c7; color: #92400e;' }}"
+                                    >
+                                        {{ $bookingData['payment_status'] === 'full payment' ? 'Full Payment' : 'Down Payment' }}
+                                    </td>
+                                @endif
 
                                 @if ($isFirstInRoom)
                                     <td
