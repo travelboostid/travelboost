@@ -1,0 +1,337 @@
+<?php
+
+use App\Actions\Booking\CancelOverdueDownPaymentBookingsAction;
+use App\Enums\BookingStatus;
+use App\Enums\CompanyTeamStatus;
+use App\Enums\PaymentStatus;
+use App\Models\Booking;
+use App\Models\BookingActionRequest;
+use App\Models\Company;
+use App\Models\CompanyTeam;
+use App\Models\Payment;
+use App\Models\Tour;
+use App\Models\TourAvailability;
+use App\Models\TourSchedule;
+use App\Models\User;
+use App\Notifications\BookingPaymentNotification;
+use Database\Seeders\Common\RolePermissionSeeder;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Notification;
+use Tests\TestCase;
+
+beforeEach(function () {
+    /** @var TestCase $this */
+    $this->withoutVite();
+    $this->seed(RolePermissionSeeder::class);
+    Booking::unsetEventDispatcher();
+    DB::table('continents')->insertOrIgnore(['id' => 1, 'name' => 'Asia']);
+    DB::table('regions')->insertOrIgnore(['id' => 1, 'name' => 'Southeast Asia', 'continent_id' => 1]);
+    DB::table('countries')->insertOrIgnore(['id' => 1, 'name' => 'Indonesia', 'continent_id' => 1, 'region_id' => 1]);
+    $this->user = User::factory()->create();
+});
+
+function createRescheduleScenario(): array
+{
+    $vendor = Company::factory()->create(['type' => 'vendor']);
+    $agent = Company::factory()->create(['type' => 'agent']);
+    $tour = Tour::factory()->create(['company_id' => $vendor->id]);
+    $currentDeparture = now()->addMonths(2)->toDateString();
+    $newDeparture = now()->addMonths(3)->toDateString();
+
+    $currentSchedule = TourSchedule::create([
+        'tour_id' => $tour->id,
+        'tour_code' => $tour->code,
+        'company_id' => $vendor->id,
+        'departure_date' => $currentDeparture,
+        'return_date' => now()->addMonths(2)->addDays(5)->toDateString(),
+        'is_active' => true,
+    ]);
+    $newSchedule = TourSchedule::create([
+        'tour_id' => $tour->id,
+        'tour_code' => $tour->code,
+        'company_id' => $vendor->id,
+        'departure_date' => $newDeparture,
+        'return_date' => now()->addMonths(3)->addDays(5)->toDateString(),
+        'is_active' => true,
+    ]);
+
+    TourAvailability::create([
+        'company_id' => $vendor->id,
+        'tour_id' => $tour->id,
+        'schedule_id' => $currentSchedule->id,
+        'max_pax' => 10,
+        'available' => 6,
+        'DP' => 4,
+    ]);
+    TourAvailability::create([
+        'company_id' => $vendor->id,
+        'tour_id' => $tour->id,
+        'schedule_id' => $newSchedule->id,
+        'max_pax' => 10,
+        'available' => 8,
+    ]);
+
+    $booking = Booking::factory()->create([
+        'vendor_id' => $vendor->id,
+        'agent_id' => $agent->id,
+        'tour_id' => $tour->id,
+        'user_id' => User::factory()->create()->id,
+        'booking_number' => 'BKG-RESCHEDULE-001',
+        'departure_date' => $currentDeparture,
+        'status' => BookingStatus::DOWN_PAYMENT,
+        'pax_adult' => 2,
+        'pax_child' => 0,
+        'grand_total' => 10_000_000,
+    ]);
+
+    Payment::create([
+        'owner_type' => User::class,
+        'owner_id' => $booking->user_id,
+        'payable_type' => Booking::class,
+        'payable_id' => $booking->id,
+        'provider' => 'manual',
+        'payment_method' => 'bank_transfer',
+        'amount' => 2_000_000,
+        'status' => PaymentStatus::PAID,
+        'payload' => ['payment_type' => 'down_payment'],
+    ]);
+
+    return compact('vendor', 'agent', 'tour', 'booking', 'currentSchedule', 'newSchedule', 'currentDeparture', 'newDeparture');
+}
+
+function attachCompanyTeam(User $user, Company $company): void
+{
+    CompanyTeam::create([
+        'company_id' => $company->id,
+        'user_id' => $user->id,
+        'status' => CompanyTeamStatus::ACTIVE,
+        'is_owner' => true,
+        'accepted_at' => now(),
+    ]);
+}
+
+test('agent can submit a reschedule request for a down payment booking', function () {
+    ['vendor' => $vendor, 'agent' => $agent, 'booking' => $booking, 'newSchedule' => $newSchedule] = createRescheduleScenario();
+    $agentUser = User::factory()->create();
+    attachCompanyTeam($agentUser, $agent);
+
+    $response = $this->actingAs($agentUser)
+        ->from("/companies/{$agent->username}/dashboard/bookings")
+        ->post("/companies/{$agent->username}/dashboard/bookings/{$booking->id}/reschedule", [
+            'schedule_id' => $newSchedule->id,
+            'reason' => 'Customer requested new date',
+        ]);
+
+    $response->assertRedirect("/companies/{$agent->username}/dashboard/bookings");
+    $response->assertSessionHas('success');
+
+    expect($booking->fresh()->departure_date?->toDateString())->toBe($booking->departure_date?->toDateString());
+
+    $request = BookingActionRequest::query()
+        ->where('booking_id', $booking->id)
+        ->where('target_action', 'reschedule')
+        ->first();
+
+    expect($request)->not->toBeNull()
+        ->and($request->status)->toBe('pending')
+        ->and(data_get($request->payload, 'requested_schedule_id'))->toBe($newSchedule->id);
+});
+
+test('vendor can approve an agent reschedule request and notify the customer', function () {
+    Notification::fake();
+
+    ['vendor' => $vendor, 'agent' => $agent, 'booking' => $booking, 'newSchedule' => $newSchedule, 'newDeparture' => $newDeparture] = createRescheduleScenario();
+    $vendorUser = User::factory()->create();
+    attachCompanyTeam($vendorUser, $vendor);
+
+    $actionRequest = BookingActionRequest::create([
+        'booking_id' => $booking->id,
+        'requester_company_id' => $agent->id,
+        'requester_user_id' => $this->user->id,
+        'target_action' => 'reschedule',
+        'status' => 'pending',
+        'reason' => 'Please move to next month',
+        'payload' => [
+            'requested_schedule_id' => $newSchedule->id,
+            'requested_departure_date' => $newDeparture,
+            'previous_departure_date' => $booking->departure_date?->toDateString(),
+        ],
+    ]);
+
+    $response = $this->actingAs($vendorUser)
+        ->post("/companies/{$vendor->username}/dashboard/booking-correction/{$actionRequest->id}/approve");
+
+    $response->assertRedirect();
+    $response->assertSessionHas('success');
+
+    expect($booking->fresh()->departure_date?->toDateString())->toBe($newDeparture)
+        ->and($booking->fresh()->status)->toBe(BookingStatus::DOWN_PAYMENT)
+        ->and($actionRequest->fresh()->status)->toBe('approved');
+
+    Notification::assertSentTo(
+        $booking->fresh()->user,
+        BookingPaymentNotification::class,
+        fn (BookingPaymentNotification $notification): bool => $notification->stage === 'booking_rescheduled'
+    );
+});
+
+test('vendor can directly reschedule a full payment booking', function () {
+    ['vendor' => $vendor, 'booking' => $booking, 'newSchedule' => $newSchedule, 'newDeparture' => $newDeparture] = createRescheduleScenario();
+    attachCompanyTeam($this->user, $vendor);
+
+    $booking->update(['status' => BookingStatus::FULL_PAYMENT]);
+
+    $response = $this->actingAs($this->user)
+        ->post("/companies/{$vendor->username}/dashboard/bookings/{$booking->id}/reschedule", [
+            'schedule_id' => $newSchedule->id,
+            'reason' => 'Vendor moved departure',
+        ]);
+
+    $response->assertRedirect();
+    expect($booking->fresh()->departure_date?->toDateString())->toBe($newDeparture)
+        ->and($booking->fresh()->status)->toBe(BookingStatus::FULL_PAYMENT);
+});
+
+test('system-cancelled booking can be reactivated by vendor to down payment', function () {
+    Notification::fake();
+
+    $vendor = Company::factory()->create(['type' => 'vendor']);
+    $vendor->companySetting()->update(['full_payment_deadline' => 7]);
+    attachCompanyTeam($this->user, $vendor);
+
+    $tour = Tour::factory()->create(['company_id' => $vendor->id]);
+    $departureDate = now()->addDays(5)->toDateString();
+    $schedule = TourSchedule::create([
+        'tour_id' => $tour->id,
+        'tour_code' => $tour->code,
+        'company_id' => $vendor->id,
+        'departure_date' => $departureDate,
+        'return_date' => now()->addDays(10)->toDateString(),
+        'is_active' => true,
+    ]);
+    TourAvailability::create([
+        'company_id' => $vendor->id,
+        'tour_id' => $tour->id,
+        'schedule_id' => $schedule->id,
+        'max_pax' => 10,
+        'available' => 8,
+        'CA' => 2,
+    ]);
+
+    $customer = User::factory()->create();
+    $booking = Booking::factory()->create([
+        'vendor_id' => $vendor->id,
+        'tour_id' => $tour->id,
+        'user_id' => $customer->id,
+        'departure_date' => $departureDate,
+        'status' => BookingStatus::DOWN_PAYMENT,
+        'pax_adult' => 2,
+        'pax_child' => 0,
+    ]);
+
+    Payment::create([
+        'owner_type' => User::class,
+        'owner_id' => $customer->id,
+        'payable_type' => Booking::class,
+        'payable_id' => $booking->id,
+        'provider' => 'manual',
+        'payment_method' => 'bank_transfer',
+        'amount' => 1_000_000,
+        'status' => PaymentStatus::PAID,
+        'payload' => ['payment_type' => 'down_payment'],
+    ]);
+
+    $this->travelTo(now()->addDays(10)->startOfDay()->addHour());
+    app(CancelOverdueDownPaymentBookingsAction::class)->execute();
+
+    expect($booking->fresh()->status)->toBe(BookingStatus::CANCELLED);
+
+    $response = $this->actingAs($this->user)
+        ->post("/companies/{$vendor->username}/dashboard/bookings/{$booking->id}/restore", [
+            'reason' => 'Customer will complete payment',
+        ]);
+
+    $response->assertRedirect();
+    expect($booking->fresh()->status)->toBe(BookingStatus::DOWN_PAYMENT);
+
+    Notification::assertSentTo(
+        $customer,
+        BookingPaymentNotification::class,
+        fn (BookingPaymentNotification $notification): bool => $notification->stage === 'booking_reactivated'
+    );
+});
+
+test('manually cancelled booking can be reactivated by agent request and vendor approval', function () {
+    ['vendor' => $vendor, 'agent' => $agent, 'booking' => $booking] = createRescheduleScenario();
+    $agentUser = User::factory()->create();
+    $vendorUser = User::factory()->create();
+    attachCompanyTeam($agentUser, $agent);
+    attachCompanyTeam($vendorUser, $vendor);
+
+    $booking->update(['status' => BookingStatus::CANCELLED]);
+
+    BookingActionRequest::create([
+        'booking_id' => $booking->id,
+        'requester_company_id' => $vendor->id,
+        'requester_user_id' => $vendorUser->id,
+        'target_action' => 'cancel',
+        'status' => 'approved',
+        'reason' => 'Cancelled by vendor after customer request',
+        'reviewer_company_id' => $vendor->id,
+        'reviewer_user_id' => $vendorUser->id,
+        'reviewed_at' => now(),
+    ]);
+
+    $this->actingAs($agentUser)
+        ->post("/companies/{$agent->username}/dashboard/bookings/{$booking->id}/restore", [
+            'reason' => 'Customer wants to continue',
+        ])
+        ->assertRedirect();
+
+    $restoreRequest = BookingActionRequest::query()
+        ->where('booking_id', $booking->id)
+        ->where('target_action', 'restore')
+        ->where('status', 'pending')
+        ->first();
+
+    expect($restoreRequest)->not->toBeNull();
+
+    $this->actingAs($vendorUser)
+        ->post("/companies/{$vendor->username}/dashboard/booking-correction/{$restoreRequest->id}/approve")
+        ->assertRedirect();
+
+    expect($booking->fresh()->status)->toBe(BookingStatus::DOWN_PAYMENT);
+});
+
+test('bookings index exposes can_reschedule and can_reactivate flags', function () {
+    ['vendor' => $vendor, 'agent' => $agent, 'booking' => $booking, 'newSchedule' => $newSchedule] = createRescheduleScenario();
+    attachCompanyTeam($this->user, $agent);
+
+    $this->actingAs($this->user)
+        ->get("/companies/{$agent->username}/dashboard/bookings")
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('data.data.0.can_reschedule', true)
+            ->where('data.data.0.can_reactivate', false));
+
+    $booking->update(['status' => BookingStatus::CANCELLED]);
+
+    $this->actingAs($this->user)
+        ->get("/companies/{$agent->username}/dashboard/bookings?status=cancelled")
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('data.data.0.can_reschedule', false)
+            ->where('data.data.0.can_reactivate', true));
+});
+
+test('reschedule options endpoint returns alternative schedules lazily', function () {
+    ['vendor' => $vendor, 'booking' => $booking, 'newSchedule' => $newSchedule, 'newDeparture' => $newDeparture] = createRescheduleScenario();
+    attachCompanyTeam($this->user, $vendor);
+
+    $response = $this->actingAs($this->user)
+        ->getJson("/companies/{$vendor->username}/dashboard/bookings/{$booking->id}/reschedule-options");
+
+    $response->assertOk()
+        ->assertJsonPath('schedules.0.id', $newSchedule->id)
+        ->assertJsonPath('schedules.0.departure_date', $newDeparture);
+});

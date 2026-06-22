@@ -6,6 +6,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { formatIDR } from '@/constants/booking';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
 import { cn } from '@/lib/utils';
+import CorrectionSummaryCards, {
+    actionBadgeClassName,
+} from '@/pages/companies/dashboard/bookings/components/booking-correction/correction-summary-cards';
+import {
+    CorrectionChangeSummary,
+    type CorrectionPayload,
+} from '@/pages/companies/dashboard/bookings/components/booking-correction/correction-change-summary';
 import {
     approve,
     index as bookingCorrectionRoute,
@@ -39,6 +46,7 @@ type ActionRequest = {
     target_action: ActionKey;
     status: 'pending' | 'approved' | 'rejected' | string;
     reason: string | null;
+    payload?: CorrectionPayload;
     created_at: string | null;
     booking: {
         id: number;
@@ -338,12 +346,16 @@ export default function Page({
             />
 
             <div className="mx-auto flex w-full max-w-7xl flex-col gap-4 p-4 md:p-6">
+                <CorrectionSummaryCards
+                    counts={actionRequiredCounts}
+                    canReviewRequests={canReviewRequests}
+                />
                 <Tabs
                     value={activeAction}
                     onValueChange={handleActionChange}
                     className="gap-4"
                 >
-                    <TabsList className="mx-auto grid !h-auto w-full max-w-[360px] grid-cols-2 gap-2 overflow-visible bg-transparent p-0 md:inline-flex md:w-auto md:max-w-none md:gap-1.5">
+                    <TabsList className="mx-auto flex !h-auto w-full max-w-full gap-2 overflow-x-auto bg-transparent p-0 [-ms-overflow-style:none] [scrollbar-width:none] md:justify-center [&::-webkit-scrollbar]:hidden">
                         {tabs.map((tab) => {
                             const Icon = tab.icon;
                             const count =
@@ -353,7 +365,7 @@ export default function Page({
                                 <TabsTrigger
                                     key={tab.value}
                                     value={tab.value}
-                                    className="!h-8 rounded-full border border-border bg-background px-2.5 text-[0.72rem] leading-none shadow-sm data-[state=active]:border-primary/40 data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none sm:text-xs md:flex-none md:px-3"
+                                    className="!h-8 shrink-0 rounded-full border border-border bg-background px-2.5 text-[0.72rem] leading-none shadow-sm data-[state=active]:border-primary/40 data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none sm:text-xs md:px-3"
                                 >
                                     <Icon className="size-3.5" />
                                     <span>{tab.label}</span>
@@ -541,9 +553,13 @@ function RequestRow({
                 <div className="flex flex-wrap items-center gap-2">
                     <Badge
                         variant="outline"
-                        className="border-slate-200 bg-slate-50 text-slate-600 capitalize dark:border-slate-800 dark:bg-slate-900/50 dark:text-slate-300"
+                        className={actionBadgeClassName(request.target_action)}
                     >
-                        {request.target_action}
+                        {request.target_action === 'restore'
+                            ? intl.formatMessage({
+                                  defaultMessage: 'reactivation',
+                              })
+                            : request.target_action}
                     </Badge>
                     <Badge
                         variant="outline"
@@ -606,6 +622,12 @@ function RequestRow({
                         value={formatIDR(request.booking?.grand_total ?? 0)}
                     />
                 </div>
+
+                <CorrectionChangeSummary
+                    targetAction={request.target_action}
+                    payload={request.payload ?? null}
+                    currentDeparture={request.booking?.departure_date ?? null}
+                />
 
                 {request.reason && (
                     <p className="break-words rounded-md bg-muted/60 px-3 py-2 text-xs leading-relaxed text-muted-foreground">

@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Companies\Dashboard;
 use App\Actions\Booking\ExpireBookingReservationsAction;
 use App\Actions\Booking\FinalizeBookingPaymentAction;
 use App\Actions\Booking\NotifyBookingPaymentEventAction;
+use App\Actions\Booking\ReactivateBookingAction;
+use App\Actions\Booking\RescheduleBookingAction;
 use App\Actions\Booking\SyncAvailabilityAction;
 use App\Enums\BookingStatus;
 use App\Enums\PaymentStatus;
@@ -67,6 +69,14 @@ class BookingIndexController extends Controller
      * @var list<string>
      */
     private const REFUNDABLE_STATUSES = [
+        'down payment',
+        'full payment',
+    ];
+
+    /**
+     * @var list<string>
+     */
+    private const RESCHEDULABLE_STATUSES = [
         'down payment',
         'full payment',
     ];
@@ -194,6 +204,8 @@ class BookingIndexController extends Controller
                 : null;
             $booking->can_cancel = in_array($this->bookingStatusValue($booking), self::CANCELLABLE_STATUSES, true);
             $booking->can_refund = in_array($this->bookingStatusValue($booking), self::REFUNDABLE_STATUSES, true);
+            $booking->can_reschedule = app(RescheduleBookingAction::class)->canReschedule($booking);
+            $booking->can_reactivate = app(ReactivateBookingAction::class)->canReactivate($booking);
             $booking->can_reorder = $this->canReorderBooking($booking);
             $booking->proforma_invoice_available = $this->proformaInvoiceAvailable($booking);
 
@@ -745,6 +757,127 @@ class BookingIndexController extends Controller
         return $this->handleBookingAction($company, $booking, 'refund', $request);
     }
 
+    public function rescheduleOptions(Company $company, Booking $booking): \Illuminate\Http\JsonResponse
+    {
+        $this->assertCompanyCanAccessBooking($company, $booking);
+        abort_unless(app(RescheduleBookingAction::class)->canReschedule($booking), 422);
+
+        $booking->loadMissing(['vendor.companySetting', 'tour.company.companySetting']);
+        $requiredSeats = (int) ($booking->pax_adult ?? 0) + (int) ($booking->pax_child ?? 0);
+        $currentDeparture = Carbon::parse($booking->departure_date)->toDateString();
+        $rescheduleAction = app(RescheduleBookingAction::class);
+
+        $deadlineDays = (int) (
+            $booking->vendor?->companySetting?->booking_deadline
+            ?? $booking->tour?->company?->companySetting?->booking_deadline
+            ?? 0
+        );
+        $earliestBookableDate = now()->startOfDay()->addDays($deadlineDays);
+
+        $schedules = TourSchedule::query()
+            ->with(['availability', 'prices'])
+            ->where('tour_id', $booking->tour_id)
+            ->where('company_id', $booking->vendor_id)
+            ->where('is_active', true)
+            ->whereDate('departure_date', '>=', $earliestBookableDate->toDateString())
+            ->orderBy('departure_date')
+            ->get()
+            ->filter(function (TourSchedule $schedule) use ($booking, $requiredSeats, $currentDeparture, $rescheduleAction): bool {
+                if (Carbon::parse($schedule->departure_date)->toDateString() === $currentDeparture) {
+                    return false;
+                }
+
+                $availability = $schedule->availability;
+
+                if (! $availability || (int) $availability->available < $requiredSeats) {
+                    return false;
+                }
+
+                return $rescheduleAction->canReschedule($booking);
+            })
+            ->values()
+            ->map(function (TourSchedule $schedule) use ($booking, $rescheduleAction, $currentDeparture): array {
+                $departureDate = Carbon::parse($schedule->departure_date)->toDateString();
+                $prices = $schedule->prices ?? collect();
+                $priceFrom = $prices->isNotEmpty()
+                    ? (float) $prices->min('price')
+                    : 0.0;
+                $pricePreview = $rescheduleAction->previewPricingChange($booking, $schedule);
+
+                return [
+                    'id' => $schedule->id,
+                    'departure_date' => $departureDate,
+                    'return_date' => $schedule->return_date
+                        ? Carbon::parse($schedule->return_date)->toDateString()
+                        : null,
+                    'available' => (int) ($schedule->availability?->available ?? 0),
+                    'price_from' => $priceFrom,
+                    'is_current' => false,
+                    'price_preview' => $pricePreview,
+                ];
+            });
+
+        return response()->json([
+            'current_departure_date' => $currentDeparture,
+            'required_seats' => $requiredSeats,
+            'schedules' => $schedules,
+        ]);
+    }
+
+    public function reschedule(Company $company, Booking $booking, Request $request): RedirectResponse
+    {
+        $this->assertCompanyCanAccessBooking($company, $booking);
+        $this->assertNoPendingBookingActionRequest($booking);
+
+        $validated = $request->validate([
+            'schedule_id' => ['required', 'integer', 'exists:tour_schedules,id'],
+            'reason' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        $schedule = TourSchedule::query()
+            ->whereKey($validated['schedule_id'])
+            ->where('tour_id', $booking->tour_id)
+            ->where('company_id', $booking->vendor_id)
+            ->firstOrFail();
+
+        $payload = $this->buildReschedulePayload($booking, $schedule);
+
+        return $this->handleModificationAction(
+            $company,
+            $booking,
+            'reschedule',
+            $request,
+            $payload,
+            fn (Booking $lockedBooking) => app(RescheduleBookingAction::class)->execute($lockedBooking, $schedule),
+            'booking_rescheduled'
+        );
+    }
+
+    public function restore(Company $company, Booking $booking, Request $request): RedirectResponse
+    {
+        $this->assertCompanyCanAccessBooking($company, $booking);
+        $this->assertNoPendingBookingActionRequest($booking);
+
+        $reactivateAction = app(ReactivateBookingAction::class);
+        abort_unless($reactivateAction->canReactivate($booking), 422);
+
+        $payload = [
+            'previous_status' => $this->bookingStatusValue($booking),
+            'restored_status' => $reactivateAction->resolveTargetStatus($booking)->value,
+            'departure_date' => Carbon::parse($booking->departure_date)->toDateString(),
+        ];
+
+        return $this->handleModificationAction(
+            $company,
+            $booking,
+            'restore',
+            $request,
+            $payload,
+            fn (Booking $lockedBooking) => $reactivateAction->execute($lockedBooking),
+            'booking_reactivated'
+        );
+    }
+
     public function actionRequests(Company $company, Request $request): Response
     {
         $companyType = $company->type->value ?? $company->type;
@@ -780,6 +913,7 @@ class BookingIndexController extends Controller
                 'target_action' => $actionRequest->target_action,
                 'status' => $actionRequest->status,
                 'reason' => $actionRequest->reason,
+                'payload' => $actionRequest->payload,
                 'created_at' => $actionRequest->created_at?->toIso8601String(),
                 'booking' => [
                     'id' => $actionRequest->booking?->id,
@@ -1009,6 +1143,16 @@ class BookingIndexController extends Controller
         $this->assertCanReviewBookingActionRequest($company, $bookingActionRequest);
         abort_unless($bookingActionRequest->status === 'pending', 422);
 
+        if (in_array($bookingActionRequest->target_action, ['reschedule', 'restore'], true)) {
+            $this->applyApprovedModificationAction(
+                $bookingActionRequest,
+                $company,
+                request()->user()
+            );
+
+            return back()->with('success', 'Booking action request approved.');
+        }
+
         $this->applyBookingAction(
             $bookingActionRequest->booking,
             $bookingActionRequest->target_action,
@@ -1078,6 +1222,149 @@ class BookingIndexController extends Controller
         );
 
         return back()->with('success', 'Booking '.($action === 'cancel' ? 'cancelled' : 'refunded').'.');
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     */
+    private function handleModificationAction(
+        Company $company,
+        Booking $booking,
+        string $action,
+        Request $request,
+        array $payload,
+        \Closure $applyCallback,
+        string $notificationStage
+    ): RedirectResponse {
+        $companyType = $company->type->value ?? $company->type;
+        $reason = $request->string('reason')->trim()->toString() ?: null;
+
+        if ($companyType === 'agent') {
+            BookingActionRequest::query()->updateOrCreate(
+                [
+                    'booking_id' => $booking->id,
+                    'requester_company_id' => $company->id,
+                    'target_action' => $action,
+                    'status' => 'pending',
+                ],
+                [
+                    'requester_user_id' => $request->user()->id,
+                    'reason' => $reason,
+                    'payload' => $payload,
+                ]
+            );
+
+            return back()->with('success', ucfirst($action).' request sent to vendor.');
+        }
+
+        abort_unless($companyType === 'vendor', 404);
+
+        DB::transaction(function () use ($booking, $applyCallback, $company, $request, $action, $reason, $payload, $notificationStage): void {
+            $lockedBooking = Booking::query()
+                ->whereKey($booking->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            $updatedBooking = $applyCallback($lockedBooking);
+
+            BookingActionRequest::query()->create([
+                'booking_id' => $lockedBooking->id,
+                'requester_company_id' => $company->id,
+                'requester_user_id' => $request->user()->id,
+                'target_action' => $action,
+                'status' => 'approved',
+                'reason' => $reason,
+                'payload' => $payload,
+                'reviewer_company_id' => $company->id,
+                'reviewer_user_id' => $request->user()->id,
+                'reviewed_at' => now(),
+            ]);
+
+            app(NotifyBookingPaymentEventAction::class)->execute($updatedBooking->fresh(), $notificationStage);
+        });
+
+        return back()->with('success', 'Booking '.($action === 'reschedule' ? 'rescheduled' : 'reactivated').'.');
+    }
+
+    private function applyApprovedModificationAction(
+        BookingActionRequest $bookingActionRequest,
+        Company $company,
+        ?User $reviewerUser
+    ): void {
+        $notificationStage = $bookingActionRequest->target_action === 'reschedule'
+            ? 'booking_rescheduled'
+            : 'booking_reactivated';
+
+        DB::transaction(function () use ($bookingActionRequest, $company, $reviewerUser, $notificationStage): void {
+            $lockedRequest = BookingActionRequest::query()
+                ->whereKey($bookingActionRequest->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            abort_unless($lockedRequest->status === 'pending', 422);
+
+            $lockedBooking = Booking::query()
+                ->whereKey($lockedRequest->booking_id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            if ($lockedRequest->target_action === 'reschedule') {
+                $scheduleId = (int) data_get($lockedRequest->payload, 'requested_schedule_id');
+
+                $schedule = TourSchedule::query()
+                    ->whereKey($scheduleId)
+                    ->where('tour_id', $lockedBooking->tour_id)
+                    ->where('company_id', $lockedBooking->vendor_id)
+                    ->firstOrFail();
+
+                $updatedBooking = app(RescheduleBookingAction::class)->execute($lockedBooking, $schedule);
+            } else {
+                $updatedBooking = app(ReactivateBookingAction::class)->execute($lockedBooking);
+            }
+
+            $lockedRequest->update([
+                'status' => 'approved',
+                'reviewer_company_id' => $company->id,
+                'reviewer_user_id' => $reviewerUser?->id,
+                'reviewed_at' => now(),
+            ]);
+
+            app(NotifyBookingPaymentEventAction::class)->execute($updatedBooking->fresh(), $notificationStage);
+        });
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function buildReschedulePayload(Booking $booking, TourSchedule $schedule): array
+    {
+        $rescheduleAction = app(RescheduleBookingAction::class);
+        $pricePreview = $rescheduleAction->previewPricingChange($booking, $schedule);
+
+        return [
+            'requested_departure_date' => Carbon::parse($schedule->departure_date)->toDateString(),
+            'requested_schedule_id' => $schedule->id,
+            'previous_departure_date' => Carbon::parse($booking->departure_date)->toDateString(),
+            'previous_status' => $this->bookingStatusValue($booking),
+            'price_before' => (float) $booking->grand_total,
+            'price_after' => $pricePreview['grand_total'],
+            'price_difference' => $pricePreview['price_difference'],
+            'pax_total' => (int) ($booking->pax_adult ?? 0) + (int) ($booking->pax_child ?? 0),
+        ];
+    }
+
+    private function assertNoPendingBookingActionRequest(Booking $booking): void
+    {
+        $hasPending = BookingActionRequest::query()
+            ->where('booking_id', $booking->id)
+            ->where('status', 'pending')
+            ->exists();
+
+        if ($hasPending) {
+            throw ValidationException::withMessages([
+                'booking_action' => 'This booking already has a pending correction request.',
+            ]);
+        }
     }
 
     /**

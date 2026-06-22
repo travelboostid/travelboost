@@ -104,6 +104,14 @@ class BookingPaymentNotification extends Notification
                 'Booking refunded',
                 "Booking {$bookingNumber} has been marked as refunded.",
             ],
+            'booking_rescheduled' => [
+                'Booking rescheduled',
+                "Booking {$bookingNumber} has been rescheduled to a new departure date.",
+            ],
+            'booking_reactivated' => [
+                'Booking reactivated',
+                "Booking {$bookingNumber} has been reactivated and is active again.",
+            ],
             default => [
                 'Booking payment update',
                 "There is a payment update for booking {$bookingNumber}.",

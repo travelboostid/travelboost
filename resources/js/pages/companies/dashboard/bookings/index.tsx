@@ -1,3 +1,6 @@
+import BookingSchedulePicker, {
+    type RescheduleScheduleOption,
+} from '@/components/booking/booking-schedule-picker';
 import {
     ManualPaymentDialog,
     type ManualPaymentData,
@@ -66,11 +69,13 @@ import {
     CalendarClockIcon,
     ChevronDown,
     CircleSlashIcon,
+    Clock3Icon,
     CreditCardIcon,
     EditIcon,
     EyeIcon,
     FileCheckIcon,
     FileTextIcon,
+    HistoryIcon,
     MoreHorizontal,
     RotateCcwIcon,
     Search,
@@ -191,11 +196,13 @@ type BookingResource = {
     document_followup: FollowupPayload;
     pending_action_request?: {
         id: number;
-        target_action: 'cancel' | 'refund';
+        target_action: 'cancel' | 'refund' | 'reschedule' | 'restore';
         status: string;
     } | null;
     can_cancel?: boolean;
     can_refund?: boolean;
+    can_reschedule?: boolean;
+    can_reactivate?: boolean;
     can_reorder?: boolean;
     proforma_invoice_available?: boolean;
     down_payment_detail: PaymentDetail | null;
@@ -982,16 +989,20 @@ function RowActions({
     const [vendorMethodDialogOpen, setVendorMethodDialogOpen] =
         React.useState(false);
     const [actionDialog, setActionDialog] = React.useState<
-        'cancel' | 'refund' | null
+        'cancel' | 'refund' | 'reschedule' | 'restore' | null
     >(null);
     const [correctionAction, setCorrectionAction] = React.useState<
-        'cancel' | 'refund'
+        'cancel' | 'refund' | 'reschedule' | 'restore'
     >('cancel');
+    const [selectedSchedule, setSelectedSchedule] =
+        React.useState<RescheduleScheduleOption | null>(null);
     const [actionReason, setActionReason] = React.useState('');
     const [processingAction, setProcessingAction] = React.useState<
         | 'accept'
         | 'cancel'
         | 'refund'
+        | 'reschedule'
+        | 'restore'
         | 'reorder'
         | 'pay_vendor_manual'
         | 'pay_vendor_online'
@@ -1040,7 +1051,14 @@ function RowActions({
     const hasPendingActionRequest = Boolean(booking.pending_action_request);
     const canCancel = Boolean(booking.can_cancel) && !hasPendingActionRequest;
     const canRefund = Boolean(booking.can_refund) && !hasPendingActionRequest;
+    const canReschedule =
+        Boolean(booking.can_reschedule) && !hasPendingActionRequest;
+    const canReactivate =
+        Boolean(booking.can_reactivate) && !hasPendingActionRequest;
     const canReorder = Boolean(booking.can_reorder);
+    const canOpenCorrection =
+        canCancel || canRefund || canReschedule || canReactivate;
+    const activeCorrectionAction = isAgent ? correctionAction : actionDialog;
     const invoiceOptions = booking.invoice_options ?? [];
     const manualPaymentId = booking.manual_payment?.id;
     const isPayVendorFollowup =
@@ -1089,21 +1107,43 @@ function RowActions({
         );
     };
     const submitBookingAction = () => {
-        if (!actionDialog) return;
+        const action = isAgent ? correctionAction : actionDialog;
 
-        setProcessingAction(actionDialog);
+        if (!action) {
+            return;
+        }
+
+        if (action === 'reschedule' && !selectedSchedule) {
+            return;
+        }
+
+        setProcessingAction(action);
         router.post(
-            `/companies/${companyUsername}/dashboard/bookings/${booking.id}/${actionDialog}`,
-            { reason: actionReason },
+            `/companies/${companyUsername}/dashboard/bookings/${booking.id}/${action}`,
+            {
+                reason: actionReason,
+                ...(action === 'reschedule' && selectedSchedule
+                    ? { schedule_id: selectedSchedule.id }
+                    : {}),
+            },
             {
                 preserveScroll: true,
                 onSuccess: () => {
                     setActionDialog(null);
                     setActionReason('');
+                    setSelectedSchedule(null);
                 },
                 onFinish: () => setProcessingAction(null),
             },
         );
+    };
+    const openCorrectionDialog = (
+        action: 'cancel' | 'refund' | 'reschedule' | 'restore',
+    ) => {
+        setCorrectionAction(action);
+        setActionDialog(action);
+        setSelectedSchedule(null);
+        setActionReason('');
     };
     const submitReorder = () => {
         setProcessingAction('reorder');
@@ -1400,22 +1440,26 @@ function RowActions({
                         </Link>
                     </DropdownMenuItem>
                     {isAgent &&
-                        (canCancel || canRefund || hasPendingActionRequest) && (
+                        (canOpenCorrection || hasPendingActionRequest) && (
                             <>
                                 <DropdownMenuSeparator />
-                                {(canCancel || canRefund) && (
+                                {canOpenCorrection && (
                                     <DropdownMenuItem
                                         disabled={hasPendingActionRequest}
                                         onSelect={(event) => {
                                             event.preventDefault();
-                                            setCorrectionAction(
-                                                canCancel && canRefund
+                                            const defaultAction = canReschedule
+                                                ? 'reschedule'
+                                                : canReactivate
+                                                  ? 'restore'
+                                                  : canCancel && canRefund
                                                     ? 'cancel'
                                                     : canRefund
                                                       ? 'refund'
-                                                      : 'cancel',
-                                            );
-                                            setActionDialog('cancel');
+                                                      : canCancel
+                                                        ? 'cancel'
+                                                        : 'reschedule';
+                                            openCorrectionDialog(defaultAction);
                                         }}
                                     >
                                         <CircleSlashIcon className="mr-2 h-4 w-4" />
@@ -1441,33 +1485,59 @@ function RowActions({
                                 )}
                             </>
                         )}
-                    {!isAgent && (canCancel || canRefund) && (
-                        <>
-                            <DropdownMenuSeparator />
-                            {canCancel && (
-                                <DropdownMenuItem
-                                    onSelect={(event) => {
-                                        event.preventDefault();
-                                        setActionDialog('cancel');
-                                    }}
-                                >
-                                    <CircleSlashIcon className="mr-2 h-4 w-4" />
-                                    <FormattedMessage defaultMessage="Cancel" />
-                                </DropdownMenuItem>
-                            )}
-                            {canRefund && (
-                                <DropdownMenuItem
-                                    onSelect={(event) => {
-                                        event.preventDefault();
-                                        setActionDialog('refund');
-                                    }}
-                                >
-                                    <Undo2Icon className="mr-2 h-4 w-4" />
-                                    <FormattedMessage defaultMessage="Refund" />
-                                </DropdownMenuItem>
-                            )}
-                        </>
-                    )}
+                    {!isAgent &&
+                        (canCancel ||
+                            canRefund ||
+                            canReschedule ||
+                            canReactivate) && (
+                            <>
+                                <DropdownMenuSeparator />
+                                {canReschedule && (
+                                    <DropdownMenuItem
+                                        onSelect={(event) => {
+                                            event.preventDefault();
+                                            openCorrectionDialog('reschedule');
+                                        }}
+                                    >
+                                        <Clock3Icon className="mr-2 h-4 w-4" />
+                                        <FormattedMessage defaultMessage="Reschedule" />
+                                    </DropdownMenuItem>
+                                )}
+                                {canReactivate && (
+                                    <DropdownMenuItem
+                                        onSelect={(event) => {
+                                            event.preventDefault();
+                                            openCorrectionDialog('restore');
+                                        }}
+                                    >
+                                        <HistoryIcon className="mr-2 h-4 w-4" />
+                                        <FormattedMessage defaultMessage="Reactivate" />
+                                    </DropdownMenuItem>
+                                )}
+                                {canCancel && (
+                                    <DropdownMenuItem
+                                        onSelect={(event) => {
+                                            event.preventDefault();
+                                            openCorrectionDialog('cancel');
+                                        }}
+                                    >
+                                        <CircleSlashIcon className="mr-2 h-4 w-4" />
+                                        <FormattedMessage defaultMessage="Cancel" />
+                                    </DropdownMenuItem>
+                                )}
+                                {canRefund && (
+                                    <DropdownMenuItem
+                                        onSelect={(event) => {
+                                            event.preventDefault();
+                                            openCorrectionDialog('refund');
+                                        }}
+                                    >
+                                        <Undo2Icon className="mr-2 h-4 w-4" />
+                                        <FormattedMessage defaultMessage="Refund" />
+                                    </DropdownMenuItem>
+                                )}
+                            </>
+                        )}
                 </DropdownMenuContent>
             </DropdownMenu>
 
@@ -1763,10 +1833,11 @@ function RowActions({
                     if (!open) {
                         setActionDialog(null);
                         setActionReason('');
+                        setSelectedSchedule(null);
                     }
                 }}
             >
-                <DialogContent className="w-full max-w-sm">
+                <DialogContent className="w-full max-w-lg">
                     <DialogHeader>
                         <DialogTitle className="capitalize">
                             {isAgent
@@ -1777,36 +1848,60 @@ function RowActions({
                                   ? intl.formatMessage({
                                         defaultMessage: 'Cancel booking',
                                     })
-                                  : intl.formatMessage({
-                                        defaultMessage: 'Refund booking',
-                                    })}
+                                  : actionDialog === 'refund'
+                                    ? intl.formatMessage({
+                                          defaultMessage: 'Refund booking',
+                                      })
+                                    : actionDialog === 'reschedule'
+                                      ? intl.formatMessage({
+                                            defaultMessage: 'Reschedule booking',
+                                        })
+                                      : intl.formatMessage({
+                                            defaultMessage:
+                                                'Reactivate booking',
+                                        })}
                         </DialogTitle>
                         <DialogDescription>
                             {isAgent
                                 ? intl.formatMessage({
                                       defaultMessage:
-                                          'Choose the type and add a reason. The vendor will review your request.',
+                                          'Choose the correction type and add a reason. The vendor will review your request.',
                                   })
                                 : actionDialog === 'cancel'
                                   ? intl.formatMessage({
                                         defaultMessage:
                                             'Are you sure you want to cancel this booking?',
                                     })
-                                  : intl.formatMessage({
-                                        defaultMessage:
-                                            'Are you sure you want to refund this booking?',
-                                    })}
+                                  : actionDialog === 'refund'
+                                    ? intl.formatMessage({
+                                          defaultMessage:
+                                              'Are you sure you want to refund this booking?',
+                                      })
+                                    : actionDialog === 'reschedule'
+                                      ? intl.formatMessage({
+                                            defaultMessage:
+                                                'Choose a new departure date for this booking.',
+                                        })
+                                      : intl.formatMessage({
+                                            defaultMessage:
+                                                'Restore this cancelled booking to an active status.',
+                                        })}
                         </DialogDescription>
                     </DialogHeader>
                     <div className="grid gap-3">
                         {isAgent && (
                             <RadioGroup
                                 value={correctionAction}
-                                onValueChange={(value) =>
-                                    setCorrectionAction(
-                                        value as 'cancel' | 'refund',
-                                    )
-                                }
+                                onValueChange={(value) => {
+                                    const nextAction = value as
+                                        | 'cancel'
+                                        | 'refund'
+                                        | 'reschedule'
+                                        | 'restore';
+                                    setCorrectionAction(nextAction);
+                                    setActionDialog(nextAction);
+                                    setSelectedSchedule(null);
+                                }}
                                 className="grid grid-cols-2 gap-2"
                             >
                                 <Label
@@ -1833,7 +1928,55 @@ function RowActions({
                                     />
                                     <FormattedMessage defaultMessage="Refund" />
                                 </Label>
+                                <Label
+                                    htmlFor="correction-reschedule"
+                                    className="flex cursor-pointer items-center gap-2 rounded-md border px-2.5 py-1.5 text-xs font-medium transition-colors hover:bg-muted/50 has-[[data-state=checked]]:border-primary has-[[data-state=checked]]:bg-primary/5 has-[[data-state=disabled]]:cursor-not-allowed has-[[data-state=disabled]]:opacity-50"
+                                >
+                                    <RadioGroupItem
+                                        value="reschedule"
+                                        id="correction-reschedule"
+                                        disabled={!canReschedule}
+                                        className="h-3.5 w-3.5"
+                                    />
+                                    <FormattedMessage defaultMessage="Reschedule" />
+                                </Label>
+                                <Label
+                                    htmlFor="correction-restore"
+                                    className="flex cursor-pointer items-center gap-2 rounded-md border px-2.5 py-1.5 text-xs font-medium transition-colors hover:bg-muted/50 has-[[data-state=checked]]:border-primary has-[[data-state=checked]]:bg-primary/5 has-[[data-state=disabled]]:cursor-not-allowed has-[[data-state=disabled]]:opacity-50"
+                                >
+                                    <RadioGroupItem
+                                        value="restore"
+                                        id="correction-restore"
+                                        disabled={!canReactivate}
+                                        className="h-3.5 w-3.5"
+                                    />
+                                    <FormattedMessage defaultMessage="Reactivation" />
+                                </Label>
                             </RadioGroup>
+                        )}
+                        {activeCorrectionAction === 'reschedule' && (
+                            <BookingSchedulePicker
+                                companyUsername={companyUsername}
+                                bookingId={booking.id}
+                                selectedScheduleId={
+                                    selectedSchedule?.id ?? null
+                                }
+                                onSelect={setSelectedSchedule}
+                            />
+                        )}
+                        {activeCorrectionAction === 'restore' && (
+                            <div className="rounded-lg border bg-muted/30 px-3 py-3 text-sm text-muted-foreground">
+                                <FormattedMessage
+                                    defaultMessage="This will reactivate the cancelled booking on {date} and restore its previous payment status."
+                                    values={{
+                                        date: booking.departure_date
+                                            ? dayjs(
+                                                  booking.departure_date,
+                                              ).format('DD MMM YYYY')
+                                            : '-',
+                                    }}
+                                />
+                            </div>
                         )}
                         <div className="grid gap-1.5">
                             <Label
@@ -1861,11 +2004,11 @@ function RowActions({
                             type="button"
                             size="sm"
                             variant={
-                                !isAgent && actionDialog === 'refund'
+                                actionDialog === 'refund' ||
+                                actionDialog === 'reschedule' ||
+                                actionDialog === 'restore'
                                     ? 'default'
-                                    : isAgent && correctionAction === 'refund'
-                                      ? 'default'
-                                      : 'destructive'
+                                    : 'destructive'
                             }
                             disabled={
                                 processingAction !== null ||
@@ -1875,41 +2018,72 @@ function RowActions({
                                 (isAgent &&
                                     correctionAction === 'refund' &&
                                     !canRefund) ||
+                                (isAgent &&
+                                    correctionAction === 'reschedule' &&
+                                    !canReschedule) ||
+                                (isAgent &&
+                                    correctionAction === 'restore' &&
+                                    !canReactivate) ||
                                 (!isAgent &&
                                     actionDialog === 'cancel' &&
                                     !canCancel) ||
                                 (!isAgent &&
                                     actionDialog === 'refund' &&
-                                    !canRefund)
+                                    !canRefund) ||
+                                (!isAgent &&
+                                    actionDialog === 'reschedule' &&
+                                    (!canReschedule || !selectedSchedule)) ||
+                                (!isAgent &&
+                                    actionDialog === 'restore' &&
+                                    !canReactivate) ||
+                                ((isAgent ? correctionAction : actionDialog) ===
+                                    'reschedule' &&
+                                    !selectedSchedule)
                             }
-                            onClick={() => {
-                                if (isAgent) {
-                                    setActionDialog(correctionAction);
-                                }
-                                submitBookingAction();
-                            }}
+                            onClick={submitBookingAction}
                             className="capitalize"
                         >
                             {processingAction !== null
                                 ? intl.formatMessage({
                                       defaultMessage: 'Processing...',
                                   })
-                                : !isAgent && actionDialog === 'cancel'
-                                  ? intl.formatMessage({
-                                        defaultMessage: 'Yes, cancel booking',
-                                    })
-                                  : !isAgent && actionDialog === 'refund'
-                                    ? intl.formatMessage({
-                                          defaultMessage: 'Yes, refund booking',
-                                      })
-                                    : isAgent && correctionAction === 'cancel'
+                                : isAgent
+                                  ? correctionAction === 'cancel'
                                       ? intl.formatMessage({
                                             defaultMessage:
                                                 'Request cancellation',
                                         })
-                                      : intl.formatMessage({
-                                            defaultMessage: 'Request refund',
-                                        })}
+                                      : correctionAction === 'refund'
+                                        ? intl.formatMessage({
+                                              defaultMessage: 'Request refund',
+                                          })
+                                        : correctionAction === 'reschedule'
+                                          ? intl.formatMessage({
+                                                defaultMessage:
+                                                    'Request reschedule',
+                                            })
+                                          : intl.formatMessage({
+                                                defaultMessage:
+                                                    'Request reactivation',
+                                            })
+                                  : actionDialog === 'cancel'
+                                    ? intl.formatMessage({
+                                          defaultMessage: 'Yes, cancel booking',
+                                      })
+                                    : actionDialog === 'refund'
+                                      ? intl.formatMessage({
+                                            defaultMessage:
+                                                'Yes, refund booking',
+                                        })
+                                      : actionDialog === 'reschedule'
+                                        ? intl.formatMessage({
+                                              defaultMessage:
+                                                  'Confirm reschedule',
+                                          })
+                                        : intl.formatMessage({
+                                              defaultMessage:
+                                                  'Confirm reactivation',
+                                          })}
                         </Button>
                     </DialogFooter>
                 </DialogContent>
