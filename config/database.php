@@ -113,6 +113,20 @@ return [
             // 'encrypt' => env('DB_ENCRYPT', 'yes'),
             // 'trust_server_certificate' => env('DB_TRUST_SERVER_CERTIFICATE', 'false'),
         ],
+        'main' => [
+            'driver' => 'pgsql',
+            'url' => env('MAIN_DB_URL'),
+            'host' => env('MAIN_DB_HOST', '127.0.0.1'),
+            'port' => env('MAIN_DB_PORT', '5432'),
+            'database' => env('MAIN_DB_DATABASE', 'forge'),
+            'username' => env('MAIN_DB_USERNAME', 'forge'),
+            'password' => env('MAIN_DB_PASSWORD', ''),
+            'charset' => 'utf8',
+            'prefix' => '',
+            'prefix_indexes' => true,
+            'search_path' => 'public',
+            'sslmode' => env('DB_SSLMODE', 'prefer'),
+        ],
 
     ],
 
