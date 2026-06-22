@@ -12,6 +12,7 @@ use Bavix\Wallet\Traits\HasWallets;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Notifications\Notifiable;
 
@@ -210,6 +211,16 @@ class Company extends Model implements Customer, Wallet
     public function companySetting(): HasOne
     {
         return $this->hasOne(CompanySettings::class, 'company_id');
+    }
+
+    public function ownedTourWaitingLists(): HasMany
+    {
+        return $this->hasMany(TourWaitingList::class, 'vendor_id');
+    }
+
+    public function createdTourWaitingLists(): HasMany
+    {
+        return $this->hasMany(TourWaitingList::class, 'created_by_company_id');
     }
 
     public function withdrawals()
