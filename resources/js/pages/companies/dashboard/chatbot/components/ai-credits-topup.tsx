@@ -1,5 +1,9 @@
 import { ApiError } from '@/api/api-instance';
 import { useCreateAiCreditTopupPayment } from '@/api/payment/payment';
+import {
+    ManualPaymentDialog,
+    type ManualPaymentData,
+} from '@/components/booking/ManualPaymentDialog';
 import { PaymentMethodDialog } from '@/components/payment/payment-method-dialog';
 import { Button } from '@/components/ui/button';
 import {
@@ -20,6 +24,7 @@ import {
     refreshChatbotPendingTopup,
 } from '@/lib/refresh-chatbot-page';
 import { cn, formatIDR } from '@/lib/utils';
+import { router } from '@inertiajs/react';
 import { ArrowRightIcon, PlusIcon, SparklesIcon } from 'lucide-react';
 import { cloneElement, isValidElement, useState } from 'react';
 import { FormattedMessage } from 'react-intl';
@@ -50,6 +55,8 @@ export function AiCreditsTopupDialog({ children }: AiCreditsTopupDialogProps) {
     const { pendingTopup } = usePageProps<ChatbotPageProps>();
     const [amountDialogOpen, setAmountDialogOpen] = useState(false);
     const [methodDialogOpen, setMethodDialogOpen] = useState(false);
+    const [manualDialogOpen, setManualDialogOpen] = useState(false);
+    const [isSubmittingManual, setIsSubmittingManual] = useState(false);
     const [amount, setAmount] = useState<number | null>(null);
     const isValidAmount = amount !== null && amount >= MIN_AMOUNT;
     const { company } = usePageSharedDataProps();
@@ -122,6 +129,43 @@ export function AiCreditsTopupDialog({ children }: AiCreditsTopupDialogProps) {
 
                     toast.error(message);
                 },
+            },
+        );
+    };
+
+    const handleManualSubmit = (data: ManualPaymentData) => {
+        if (!data.proofFile) return;
+
+        setIsSubmittingManual(true);
+        const formData = new FormData();
+        formData.append('sender_bank_name', data.senderBankName);
+        formData.append('sender_account_number', data.senderAccountNumber);
+        formData.append('transfer_amount', String(data.transferAmount));
+        formData.append('payment_date', data.paymentDate);
+        formData.append('proof', data.proofFile);
+
+        router.post(
+            `/companies/${company.username}/dashboard/chatbot/manual-topup`,
+            formData,
+            {
+                forceFormData: true,
+                preserveScroll: true,
+                onSuccess: () => {
+                    setManualDialogOpen(false);
+                    resetAmountDialog();
+                    refreshChatbotPendingTopup();
+                    toast.success('Manual top-up request submitted.');
+                },
+                onError: (errors) => {
+                    toast.error(
+                        String(
+                            errors.amount ||
+                                errors.transfer_amount ||
+                                'Failed to submit manual top-up.',
+                        ),
+                    );
+                },
+                onFinish: () => setIsSubmittingManual(false),
             },
         );
     };
@@ -236,16 +280,31 @@ export function AiCreditsTopupDialog({ children }: AiCreditsTopupDialogProps) {
                     </div>
 
                     <DialogFooter className="flex-col gap-2 border-t bg-muted/20 px-6 py-4 sm:flex-col">
-                        <Button
-                            type="button"
-                            size="lg"
-                            className="w-full gap-2"
-                            disabled={!isValidAmount}
-                            onClick={handleContinueToMethods}
-                        >
-                            <FormattedMessage defaultMessage="Choose payment method" />
-                            <ArrowRightIcon className="size-4" />
-                        </Button>
+                        <div className="flex w-full flex-col gap-2 sm:flex-row">
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="lg"
+                                className="w-full gap-2 sm:w-1/2"
+                                disabled={!isValidAmount}
+                                onClick={() => {
+                                    setAmountDialogOpen(false);
+                                    setManualDialogOpen(true);
+                                }}
+                            >
+                                <FormattedMessage defaultMessage="Manual Bank Transfer" />
+                            </Button>
+                            <Button
+                                type="button"
+                                size="lg"
+                                className="w-full gap-2 sm:w-1/2"
+                                disabled={!isValidAmount}
+                                onClick={handleContinueToMethods}
+                            >
+                                <FormattedMessage defaultMessage="Online Payment" />
+                                <ArrowRightIcon className="size-4" />
+                            </Button>
+                        </div>
                         <p className="flex w-full items-center justify-center gap-1.5 text-center text-[11px] text-muted-foreground">
                             <PlusIcon className="size-3.5" />
                             <FormattedMessage defaultMessage="Credits are added after payment is confirmed" />
@@ -269,6 +328,18 @@ export function AiCreditsTopupDialog({ children }: AiCreditsTopupDialogProps) {
                 }
                 loading={topup.isPending}
                 onConfirm={handlePay}
+            />
+            <ManualPaymentDialog
+                open={manualDialogOpen}
+                onClose={() => setManualDialogOpen(false)}
+                onSubmit={handleManualSubmit}
+                isSubmitting={isSubmittingManual}
+                amount={amount ?? 0}
+                vendorBank={{
+                    bankName: 'BCA',
+                    accountName: 'PT Erasoft Teknologi Indonesia',
+                    accountNumber: '123456789',
+                }}
             />
         </>
     );

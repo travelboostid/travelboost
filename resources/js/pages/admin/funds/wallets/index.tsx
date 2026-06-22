@@ -168,7 +168,7 @@ export default function WalletsPage({ data }: WalletsPageProps) {
             sorting: [{ id: 'id', desc: true }],
             columnPinning: { right: ['actions'] },
         },
-        getRowId: (_row) => row.id.toString(),
+        getRowId: (_row) => _row.id.toString(),
     });
 
     return (
