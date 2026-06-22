@@ -107,7 +107,8 @@ Runs `scripts/dev-deploy.mjs`. Each step prints `> command` and streams output s
     - `sudo supervisorctl restart all`
 3. **Frontend** (unless `--skip-frontend`):
     - `pnpm install --frozen-lockfile` and `pnpm build` locally
-    - `rsync -avz --delete public/build/` to the VPS (`scp` fallback)
+    - `rsync -rlvz --delete --no-perms --chmod=D755,F644 public/build/` to the VPS (`scp` fallback)
+    - `find public/build -type d/f -exec chmod 755/644` on VPS to ensure Caddy can serve assets
 
 User media on live servers uses S3 (`FILESYSTEM_DISK=s3`). Frontend assets are served from VPS disk (`public/build/`), not S3 — see [Object Storage (S3)](./object-storage.md).
 
@@ -170,7 +171,14 @@ pnpm dev:setenv    # pick the target environment preset for Vite env vars
 pnpm build
 ```
 
-Copy `public/build/` to `~/travelboost/public/build/` on the server (replace existing files). Or use `pnpm dev:deploy -- --skip-backend` to build and rsync automatically.
+Copy `public/build/` to `~/travelboost/public/build/` on the server. After copying, run:
+
+```bash
+find ~/travelboost/public/build -type d -exec chmod 755 {} +
+find ~/travelboost/public/build -type f -exec chmod 644 {} +
+```
+
+Or use `pnpm dev:deploy -- --skip-backend` to build, rsync, and fix permissions automatically.
 
 ### Restart services
 
