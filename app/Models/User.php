@@ -14,6 +14,7 @@ use Illuminate\Auth\MustVerifyEmail as MustVerifyEmailTrait;
 use Illuminate\Contracts\Auth\MustVerifyEmail as MustVerifyEmailContract;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laratrust\Contracts\LaratrustUser;
@@ -119,6 +120,16 @@ class User extends Authenticatable implements Customer, LaratrustUser, MustVerif
     public function bookings()
     {
         return $this->hasMany(Booking::class);
+    }
+
+    public function createdTourWaitingLists(): HasMany
+    {
+        return $this->hasMany(TourWaitingList::class, 'created_by_user_id');
+    }
+
+    public function customerTourWaitingLists(): HasMany
+    {
+        return $this->hasMany(TourWaitingList::class, 'customer_user_id');
     }
 
     public function tourLikes()

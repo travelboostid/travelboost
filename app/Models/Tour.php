@@ -7,6 +7,7 @@ use App\Events\TourCreated;
 use App\Events\TourUpdated;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Tour extends Model
 {
@@ -153,6 +154,11 @@ class Tour extends Model
     public function bookings()
     {
         return $this->hasMany(Booking::class, 'tour_id');
+    }
+
+    public function waitingLists(): HasMany
+    {
+        return $this->hasMany(TourWaitingList::class);
     }
 
     public function commissionRules()

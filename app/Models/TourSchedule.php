@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class TourSchedule extends Model
 {
@@ -36,5 +37,10 @@ class TourSchedule extends Model
     public function tour()
     {
         return $this->belongsTo(Tour::class, 'tour_id'); // ✅
+    }
+
+    public function waitingListSelections(): HasMany
+    {
+        return $this->hasMany(TourWaitingListSchedule::class);
     }
 }

@@ -37,6 +37,7 @@ use App\Http\Controllers\Companies\Dashboard\TourCommissionRuleController;
 use App\Http\Controllers\Companies\Dashboard\TourController;
 use App\Http\Controllers\Companies\Dashboard\TourPriceController;
 use App\Http\Controllers\Companies\Dashboard\TourScheduleController;
+use App\Http\Controllers\Companies\Dashboard\TourWaitingListController;
 use App\Http\Controllers\Companies\Dashboard\VendorRegistrationController;
 use App\Http\Controllers\Companies\Dashboard\VendorTourCatalogController;
 use App\Http\Controllers\Companies\Dashboard\VisaCategoryController;
@@ -93,6 +94,8 @@ Route::prefix('companies')->middleware(['can:access-company-pages', 'use-analyti
         Route::middleware(['agent.subscription.active'])->post('vendor-registrations/register', [VendorRegistrationController::class, 'register'])->name('vendor-registrations.register');
         Route::post('tours/{tour}/notify-agents', [VendorTourCatalogController::class, 'notifyAgents'])->name('tours.notify-agents');
         Route::resource('tours', TourController::class);
+        Route::post('tours/{tour}/waiting-lists', [TourWaitingListController::class, 'store'])
+            ->name('tours.waiting-lists.store');
 
         Route::delete('/tours/{tour}/schedules/{schedule}', [TourScheduleController::class, 'destroy'])
             ->name('tours.schedules.destroy');
@@ -118,6 +121,7 @@ Route::prefix('companies')->middleware(['can:access-company-pages', 'use-analyti
         Route::resource('agent-tours', AgentTourController::class);
         Route::resource('categories', CategoryController::class);
         Route::resource('price-categories', PriceCategoryController::class);
+        Route::post('wallets/manual-topup', [WalletController::class, 'storeManualTopup'])->name('wallets.manual-topup');
         Route::resource('wallets', WalletController::class);
         Route::resource('payments', PaymentController::class);
         Route::get('commission-history', [AgentCommissionHistoryController::class, 'index'])->name('commission-history.index');
@@ -205,6 +209,7 @@ Route::prefix('companies')->middleware(['can:access-company-pages', 'use-analyti
             ->name('bookings.manual-payments.accept');
         Route::post('bookings/{booking}/manual-payments/{payment}/decline', [BookingIndexController::class, 'declineManualPayment'])
             ->name('bookings.manual-payments.decline');
+        Route::post('chatbot/manual-topup', [ChatbotController::class, 'storeManualTopup'])->name('chatbot.manual-topup');
         Route::singleton('chatbot', ChatbotController::class);
         Route::singleton('page', PageController::class);
         Route::singleton('agent-subscriptions', AgentSubscriptionController::class);
