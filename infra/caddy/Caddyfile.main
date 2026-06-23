@@ -5,11 +5,22 @@
 	}
 }
 
+(cache_static) {
+	@vite_assets path /build/assets/*
+	header @vite_assets Cache-Control "public, max-age=31536000, immutable"
+
+	@static_images path /images/*
+	header @static_images Cache-Control "public, max-age=604800"
+
+	@fonts path /fonts/*
+	header @fonts Cache-Control "public, max-age=604800"
+}
+
 :8081 {
 	bind 127.0.0.1
 	root * /home/travelboost/travelboost/public
 	encode zstd gzip
-	import snippets/cache_static.caddy
+	import cache_static
 	php_fastcgi unix//run/php/php8.5-fpm.sock
 	file_server
 }
@@ -23,7 +34,7 @@ travelboost.co.id, *.travelboost.co.id {
 
 	root * /home/travelboost/travelboost/public
 	encode zstd gzip
-	import snippets/cache_static.caddy
+	import cache_static
 	php_fastcgi unix//run/php/php8.5-fpm.sock
 	file_server
 }
@@ -35,7 +46,7 @@ https:// {
 
 	root * /home/travelboost/travelboost/public
 	encode zstd gzip
-	import snippets/cache_static.caddy
+	import cache_static
 	php_fastcgi unix//run/php/php8.5-fpm.sock
 	file_server
 }
