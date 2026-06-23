@@ -9,6 +9,7 @@ import {
     type ContentStyleProps,
 } from '../../components/content-shared';
 import { imageField } from '../../components/fields';
+import { PuckImage } from '../../components/puck-image';
 
 export type WallQuote = {
     quote: string;
@@ -155,7 +156,7 @@ export const TestimonialWallComponentConfig: ComponentConfig<TestimonialWallComp
                             </blockquote>
                             <div className="mt-5 flex items-center gap-3">
                                 {q.avatar ? (
-                                    <img
+                                    <PuckImage
                                         src={q.avatar}
                                         alt={q.author}
                                         className="size-10 rounded-full object-cover ring-2 ring-primary/20"

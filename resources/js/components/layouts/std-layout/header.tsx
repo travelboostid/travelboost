@@ -1,4 +1,5 @@
 // import AppLogoIcon from '@/components/app-logo-icon';
+import { OptimizedImage } from '@/components/optimized-image';
 import { Button } from '@/components/ui/button';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
 import { show as loginAsAgent } from '@/routes/companies/login';
@@ -62,16 +63,22 @@ export function Header() {
                         href="/"
                         className="flex items-center gap-2 flex-none"
                     >
-                        <img
+                        <OptimizedImage
                             src="/images/logo/hori.png"
                             alt="Travelboost Affiliate Logo"
-                            className="h-12 w-auto block dark:hidden drop-shadow-sm"
+                            width={160}
+                            height={48}
+                            priority
+                            className="block h-12 w-auto dark:hidden drop-shadow-sm"
                         />
 
-                        <img
+                        <OptimizedImage
                             src="/images/logo/hori-wt.png"
                             alt="Travelboost Logo"
-                            className="h-12 w-auto hidden dark:block drop-shadow-sm"
+                            width={160}
+                            height={48}
+                            priority
+                            className="hidden h-12 w-auto dark:block drop-shadow-sm"
                         />
                         {/* <span className="text-xl font-bold text-foreground">
               TravelBoost

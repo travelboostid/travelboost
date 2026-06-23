@@ -11,7 +11,8 @@ import {
     defaultCtaActions,
     type CtaStyleProps,
 } from '../../components/cta-shared';
-import { imageField } from '../../components/fields';
+import { heroImageField } from '../../components/fields';
+import { PuckImage } from '../../components/puck-image';
 
 export type Cta4ComponentProps = CtaStyleProps & {
     badge: string;
@@ -27,7 +28,7 @@ export const Cta4ComponentConfig: ComponentConfig<Cta4ComponentProps> = {
     fields: {
         ...ctaContentFields,
         ...ctaStyleFields,
-        backgroundUrl: imageField('Background Image'),
+        backgroundUrl: heroImageField('Background Image'),
         overlay: {
             type: 'select',
             label: 'Overlay',
@@ -82,9 +83,10 @@ export const Cta4ComponentConfig: ComponentConfig<Cta4ComponentProps> = {
                 )}
             >
                 {backgroundUrl ? (
-                    <img
+                    <PuckImage
                         src={backgroundUrl}
                         alt=""
+                        priority
                         className="absolute inset-0 size-full object-cover"
                     />
                 ) : (

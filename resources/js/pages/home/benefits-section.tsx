@@ -1,3 +1,4 @@
+import { OptimizedImage } from '@/components/optimized-image';
 import { BarChart3, LayoutDashboard, RefreshCw } from 'lucide-react';
 
 export function BenefitsSection() {
@@ -59,10 +60,12 @@ export function BenefitsSection() {
                     {/* IMAGE */}
                     <div className="relative">
                         <div className="aspect-[4/3] rounded-2xl overflow-hidden shadow-xl">
-                            <img
+                            <OptimizedImage
                                 src="/images/travel-dashboard.jpg"
                                 alt="TravelBoost Dashboard"
-                                className="w-full h-full object-cover"
+                                width={1024}
+                                height={1024}
+                                className="h-full w-full object-cover"
                             />
                         </div>
                     </div>

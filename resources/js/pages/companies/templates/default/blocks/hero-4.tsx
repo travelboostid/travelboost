@@ -1,7 +1,7 @@
 import { cn } from '@/lib/utils';
 import type { ComponentConfig } from '@puckeditor/core';
 import type { LinkButtonComponentProps } from '../../base/blocks/link-button';
-import { imageField } from '../../components/fields';
+import { heroImageField } from '../../components/fields';
 import {
     HeroActions,
     HeroBadge,
@@ -35,7 +35,7 @@ export const Hero4ComponentConfig: ComponentConfig<Hero4ComponentProps> = {
     fields: {
         ...heroContentFields,
         ...heroStyleFields,
-        imageUrl: imageField('Hero Image'),
+        imageUrl: heroImageField('Hero Image'),
         imagePosition: {
             type: 'select',
             label: 'Image Position',

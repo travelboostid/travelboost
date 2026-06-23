@@ -3,7 +3,7 @@ import { cn } from '@/lib/utils';
 import type { ComponentConfig } from '@puckeditor/core';
 import { SearchIcon } from 'lucide-react';
 import type { LinkButtonComponentProps } from '../../base/blocks/link-button';
-import { imageField } from '../../components/fields';
+import { heroImageField } from '../../components/fields';
 import {
     HeroActions,
     HeroBadge,
@@ -16,6 +16,7 @@ import {
     heroStyleFields,
     type HeroStyleProps,
 } from '../../components/hero-shared';
+import { PuckImage } from '../../components/puck-image';
 import { LUCIDE_ICON_NAMES, LucideIconRenderer } from '../utils';
 
 export type Hero6ComponentProps = HeroStyleProps & {
@@ -36,7 +37,7 @@ export const Hero6ComponentConfig: ComponentConfig<Hero6ComponentProps> = {
     fields: {
         ...heroContentFields,
         ...heroStyleFields,
-        backgroundUrl: imageField('Background Image'),
+        backgroundUrl: heroImageField('Background Image'),
         showSearchBar: {
             type: 'radio',
             label: 'Show Search Bar',
@@ -145,9 +146,10 @@ export const Hero6ComponentConfig: ComponentConfig<Hero6ComponentProps> = {
             >
                 {backgroundUrl && (
                     <>
-                        <img
+                        <PuckImage
                             src={backgroundUrl}
                             alt=""
+                            priority
                             className="absolute inset-0 size-full object-cover opacity-20"
                         />
                         <div className="absolute inset-0 bg-linear-to-b from-primary/80 to-primary" />

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Tenant;
 use App\Http\Controllers\Controller;
 use App\Models\AffiliateProfile;
 use Illuminate\Support\Facades\Context;
+use Illuminate\Support\Facades\View;
 use Inertia\Inertia;
 
 class HomeController extends Controller
@@ -19,6 +20,10 @@ class HomeController extends Controller
         }
 
         $company->load('settings');
+
+        View::share([
+            'tenantLandingPageData' => $company->settings?->landing_page_data,
+        ]);
 
         return Inertia::render('companies/landing-page', [
             'company' => $company,

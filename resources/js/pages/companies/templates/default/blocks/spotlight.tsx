@@ -11,6 +11,7 @@ import {
     type ContentStyleProps,
 } from '../../components/content-shared';
 import { imageField } from '../../components/fields';
+import { PuckImage } from '../../components/puck-image';
 
 export type SpotlightComponentProps = ContentStyleProps & {
     badge: string;
@@ -156,7 +157,7 @@ export const SpotlightComponentConfig: ComponentConfig<SpotlightComponentProps> 
                                 </div>
                             ))}
                             {imageUrl ? (
-                                <img
+                                <PuckImage
                                     src={imageUrl}
                                     alt={title}
                                     className="relative aspect-[4/5] w-full rounded-3xl object-cover shadow-2xl ring-1 ring-border/50"

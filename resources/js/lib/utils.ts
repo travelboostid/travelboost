@@ -15,15 +15,20 @@ export function toUrl(url: NonNullable<InertiaLinkProps['href']>): string {
 export function extractImageSrc(
     media: MediaResource,
     defaultImg: string = DEFAULT_IMAGE,
+    variant: 'thumb' | 'small' | 'medium' | 'large' | 'original' = 'small',
 ) {
     const files = (media?.data?.files as any[]) || [];
-    const src = files.find((f: any) => f.code === 'small')?.url || defaultImg;
+    const src =
+        files.find((f: any) => f.code === variant)?.url ||
+        files.find((f: any) => f.code === 'small')?.url ||
+        defaultImg;
     const srcSet = files.length
         ? files
               .filter((f) => f.width)
               .map((f) => `${f.url} ${f.width}w`)
               .join(', ')
         : '';
+
     return { src, srcSet };
 }
 

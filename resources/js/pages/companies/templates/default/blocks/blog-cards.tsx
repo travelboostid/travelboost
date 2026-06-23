@@ -13,6 +13,7 @@ import {
     type ContentStyleProps,
 } from '../../components/content-shared';
 import { imageField } from '../../components/fields';
+import { PuckImage } from '../../components/puck-image';
 
 export type BlogPost = {
     image: string;
@@ -157,7 +158,7 @@ export const BlogCardsComponentConfig: ComponentConfig<BlogCardsComponentProps> 
                             className="group overflow-hidden pt-0 transition hover:-translate-y-1 hover:shadow-lg"
                         >
                             {post.image ? (
-                                <img
+                                <PuckImage
                                     src={post.image}
                                     alt={post.title}
                                     className="aspect-video w-full object-cover transition duration-300 group-hover:scale-105"

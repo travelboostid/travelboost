@@ -13,6 +13,7 @@ import {
     type ContentStyleProps,
 } from '../../components/content-shared';
 import { imageField } from '../../components/fields';
+import { PuckImage } from '../../components/puck-image';
 
 export type DestinationItem = {
     image: string;
@@ -151,7 +152,7 @@ export const DestinationsComponentConfig: ComponentConfig<DestinationsComponentP
                         >
                             <div className="relative">
                                 {dest.image ? (
-                                    <img
+                                    <PuckImage
                                         src={dest.image}
                                         alt={dest.title}
                                         className="aspect-[4/3] w-full object-cover transition duration-500 group-hover:scale-105"

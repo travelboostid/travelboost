@@ -12,6 +12,7 @@ import {
     type ContentStyleProps,
 } from '../../components/content-shared';
 import { imageField, linkButtonActionsField } from '../../components/fields';
+import { PuckImage } from '../../components/puck-image';
 
 export type SplitContentComponentProps = ContentStyleProps & {
     badge: string;
@@ -145,7 +146,7 @@ export const SplitContentComponentConfig: ComponentConfig<SplitContentComponentP
             );
 
             const imageBlock = imageUrl ? (
-                <img
+                <PuckImage
                     src={imageUrl}
                     alt={header}
                     className="aspect-[4/3] w-full rounded-2xl object-cover shadow-xl"

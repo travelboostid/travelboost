@@ -2,6 +2,7 @@ import { cn } from '@/lib/utils';
 import type { ComponentConfig } from '@puckeditor/core';
 import { ImageIcon } from 'lucide-react';
 import { imageField } from '../../components/fields';
+import { PuckImage } from '../../components/puck-image';
 
 export type ImageComponentProps = {
     imageUrl: string;
@@ -139,7 +140,11 @@ export const ImageComponentConfig: ComponentConfig<ImageComponentProps> = {
         return (
             <figure className={cn(!fullWidth && 'flex flex-col items-center')}>
                 {imageUrl ? (
-                    <img src={imageUrl} alt={alt} className={imageClasses} />
+                    <PuckImage
+                        src={imageUrl}
+                        alt={alt}
+                        className={imageClasses}
+                    />
                 ) : (
                     <div
                         className={cn(
