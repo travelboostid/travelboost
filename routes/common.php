@@ -15,7 +15,6 @@ use App\Http\Controllers\Webhooks\PrismaLinkWebhookController;
 use App\Http\Middleware\DomainResolver;
 use App\Models\CompanyTeam;
 use App\Models\User;
-use App\Support\DebugPerfLogger;
 use Illuminate\Auth\Events\Verified;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -278,36 +277,3 @@ Route::get('/auth/google/callback', [GoogleAuthController::class, 'callback']);
 Route::get('/caddy/verify-domain', [CaddyController::class, 'verifyDomain'])->withoutMiddleware([
     DomainResolver::class,
 ]);
-
-if (config('app.debug') || env('PERF_DEBUG', false)) {
-    Route::post('/__debug/perf-log', function (Request $request) {
-        DebugPerfLogger::log(
-            (string) $request->input('location', 'unknown'),
-            (string) $request->input('message', ''),
-            (array) $request->input('data', []),
-            (string) $request->input('hypothesisId', ''),
-        );
-
-        return response()->noContent();
-    });
-
-    Route::get('/__debug/perf-logs', function () {
-        $path = DebugPerfLogger::logPath();
-
-        if (! is_file($path)) {
-            return response()->json(['logs' => []]);
-        }
-
-        $lines = array_values(array_filter(
-            file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) ?: [],
-            static fn (string $line): bool => str_contains($line, '"sessionId":"4b26bb"'),
-        ));
-
-        return response()->json([
-            'logs' => array_map(
-                static fn (string $line) => json_decode($line, true),
-                array_slice($lines, -50),
-            ),
-        ]);
-    });
-}

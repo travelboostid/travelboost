@@ -4,7 +4,6 @@ import CompanyDashboardLayout from '@/components/layouts/company-dashboard';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
-import { debugPerfLog } from '@/lib/debug-perf-log';
 import { router } from '@inertiajs/react';
 import { AlertCircle, SearchIcon } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
@@ -34,23 +33,6 @@ export default function Page({
     const [search, setSearch] = useState(filters.search ?? '');
     const [showInactive, setShowInactive] = useState(false);
     const { company } = usePageSharedDataProps();
-
-    // #region agent log
-    useEffect(() => {
-        debugPerfLog({
-            location: 'vendor-tours/index.tsx:mounted',
-            message: 'vendor catalog page mounted',
-            data: {
-                tourCount: data.length,
-                scheduleCount: data.reduce(
-                    (sum, tour) => sum + (tour.schedules?.length ?? 0),
-                    0,
-                ),
-            },
-            hypothesisId: 'B,C',
-        });
-    }, [data]);
-    // #endregion
 
     useEffect(() => {
         if ((filters.search ?? '') === search) {

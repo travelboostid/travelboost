@@ -13,7 +13,6 @@ use App\Models\TourCommissionAdditionalRule;
 use App\Models\TourCommissionRule;
 use App\Models\VendorAgentPartner;
 use App\Notifications\TourAgentPromotionNotification;
-use App\Support\DebugPerfLogger;
 use App\Support\ResolvesTourScheduleDisplayPrice;
 use Inertia\Inertia;
 
@@ -23,8 +22,6 @@ class VendorTourCatalogController extends Controller
 
     public function index(Company $company, string $username)
     {
-        $startedAt = microtime(true);
-
         $vendor = Company::where('username', $username)->firstOrFail();
 
         $agentTourIds = $vendor->agentTours()->pluck('tour_id');
@@ -157,33 +154,14 @@ class VendorTourCatalogController extends Controller
             ->with('agentTier')
             ->first();
 
-        $payload = [
+        return Inertia::render('companies/dashboard/vendor-tours/index', [
             'data' => $tours,
             'filters' => request()->only(['category', 'search']),
             'categories' => $categories,
             'username' => $username,
             'partnership' => $partnership,
             'vendor' => $vendor,
-        ];
-
-        $payloadJson = json_encode($payload) ?: '';
-        $metrics = [
-            'duration_ms' => (int) round((microtime(true) - $startedAt) * 1000),
-            'tour_count' => $tours->count(),
-            'schedule_count' => $tours->sum(fn ($tour) => $tour->schedules?->count() ?? 0),
-            'payload_bytes' => strlen($payloadJson),
-            'memory_mb' => round(memory_get_peak_usage(true) / 1024 / 1024, 2),
-        ];
-
-        DebugPerfLogger::log(
-            'VendorTourCatalogController.php:index',
-            'vendor tour catalog index completed',
-            $metrics,
-            'A,B'
-        );
-        DebugPerfLogger::attachResponseHeaders($metrics);
-
-        return Inertia::render('companies/dashboard/vendor-tours/index', $payload);
+        ]);
     }
 
     public function copy(Company $company, string $vendor, Tour $tour)

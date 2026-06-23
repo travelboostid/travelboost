@@ -9,7 +9,6 @@ use App\Models\TourAvailability;
 use App\Models\TourCategory;
 use App\Models\TourWaitingListSchedule;
 use App\Models\VendorAgentPartner;
-use App\Support\DebugPerfLogger;
 use App\Support\ResolvesTourScheduleDisplayPrice;
 use Inertia\Inertia;
 
@@ -19,16 +18,10 @@ class TourController extends Controller
 
     public function index()
     {
-        $startedAt = microtime(true);
-        $stepMs = static function (float $stepStartedAt): int {
-            return (int) round((microtime(true) - $stepStartedAt) * 1000);
-        };
-
         $tenant = request()->attributes->get('tenant');
 
         abort_unless($tenant instanceof Company, 404);
 
-        $stepStartedAt = microtime(true);
         $tenant->load([
             'agentTours' => function ($query) {
                 $query->where('status', 'active')
@@ -41,7 +34,6 @@ class TourController extends Controller
             },
             'settings',
         ]);
-        $loadAgentToursMs = $stepMs($stepStartedAt);
 
         $tourMap = $tenant->agentTours->mapWithKeys(function ($agentTour) {
             return [$agentTour->tour_id => $agentTour->tour->company_id ?? null];
@@ -50,16 +42,13 @@ class TourController extends Controller
         $tourIds = $tourMap->keys();
         $vendorIds = $tourMap->values()->unique();
 
-        $stepStartedAt = microtime(true);
         $partnerships = VendorAgentPartner::whereIn('vendor_id', $vendorIds)
             ->where('agent_id', $tenant->id)
             ->get()
             ->keyBy('vendor_id');
-        $partnershipsMs = $stepMs($stepStartedAt);
 
         $minCutoffDate = now()->toDateString();
 
-        $stepStartedAt = microtime(true);
         $availabilities = TourAvailability::query()
             ->whereIn('tour_id', $tourIds)
             ->whereIn('company_id', $vendorIds)
@@ -76,16 +65,12 @@ class TourController extends Controller
             ])
             ->get()
             ->groupBy('tour_id');
-        $availabilitiesMs = $stepMs($stepStartedAt);
 
         $user = request()->user();
-        $stepStartedAt = microtime(true);
         $likedTourIds = $user && $tourIds->isNotEmpty()
             ? $user->tourLikes()->whereIn('tour_id', $tourIds)->pluck('tour_id')
             : collect();
-        $likesMs = $stepMs($stepStartedAt);
 
-        $stepStartedAt = microtime(true);
         $tenant->agentTours->each(function ($agentTour) use ($availabilities, $likedTourIds, $partnerships) {
             if (! $agentTour->tour) {
                 return;
@@ -136,17 +121,14 @@ class TourController extends Controller
             $agentTour->show_vendor_name = $showVendor;
             $agentTour->agent_status = $statusVal;
         });
-        $transformMs = $stepMs($stepStartedAt);
 
         $validAgentTours = $tenant->agentTours->filter(function ($at) {
             return $at->tour !== null;
         })->values();
 
-        $stepStartedAt = microtime(true);
         $categories = TourCategory::where('company_id', $tenant->id)
             ->orderBy('position_no')
             ->get();
-        $categoriesMs = $stepMs($stepStartedAt);
 
         $phone = $tenant->customer_service_phone ?: $tenant->phone;
         $customer = request()->user();
@@ -158,7 +140,7 @@ class TourController extends Controller
                 ->count()
             : 0;
 
-        $payload = [
+        return Inertia::render('companies/agent-tours', [
             'data' => $validAgentTours,
             'company' => $tenant,
             'vendor' => $tenant,
@@ -166,31 +148,6 @@ class TourController extends Controller
             'categories' => $categories,
             'phone' => $phone,
             'activeWaitingListScheduleCount' => $activeWaitingListScheduleCount,
-        ];
-
-        $payloadJson = json_encode($payload) ?: '';
-        $metrics = [
-            'duration_ms' => (int) round((microtime(true) - $startedAt) * 1000),
-            'tour_count' => $validAgentTours->count(),
-            'schedule_count' => $validAgentTours->sum(fn ($agentTour) => $agentTour->tour?->schedules?->count() ?? 0),
-            'payload_bytes' => strlen($payloadJson),
-            'memory_mb' => round(memory_get_peak_usage(true) / 1024 / 1024, 2),
-            'load_agent_tours_ms' => $loadAgentToursMs,
-            'partnerships_ms' => $partnershipsMs,
-            'availabilities_ms' => $availabilitiesMs,
-            'likes_ms' => $likesMs,
-            'transform_ms' => $transformMs,
-            'categories_ms' => $categoriesMs,
-        ];
-
-        DebugPerfLogger::log(
-            'Tenant/TourController.php:index',
-            'tenant tours index completed',
-            $metrics,
-            'A,B'
-        );
-        DebugPerfLogger::attachResponseHeaders($metrics);
-
-        return Inertia::render('companies/agent-tours', $payload);
+        ]);
     }
 }

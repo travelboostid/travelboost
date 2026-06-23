@@ -1,9 +1,8 @@
 import type { Company, TourCategoryResource, TourResource } from '@/api/model';
 import TenantLayout from '@/components/layouts/tenant-layout';
-import { debugPerfLog } from '@/lib/debug-perf-log';
 import { usePage } from '@inertiajs/react';
 import { SearchIcon } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import TourCard from './dashboard/vendor-tours/components/TourCard';
 import { EmptyTours } from './empty-tours';
 
@@ -28,24 +27,6 @@ export default function Page({ data, categories }: ArticlePageProps) {
     const [search, setSearch] = useState('');
     const [category, setCategory] = useState<number | ''>('');
     const { url } = usePage();
-
-    // #region agent log
-    useEffect(() => {
-        debugPerfLog({
-            location: 'agent-tours.tsx:mounted',
-            message: 'tenant tours page mounted',
-            data: {
-                tourCount: data.length,
-                scheduleCount: data.reduce(
-                    (sum, item) => sum + (item.tour?.schedules?.length ?? 0),
-                    0,
-                ),
-            },
-            hypothesisId: 'B,C',
-        });
-    }, [data]);
-    // #endregion
-
     const autoOpenTourId = Number(
         new URLSearchParams(url.split('?')[1] ?? '').get('tour') ?? 0,
     );

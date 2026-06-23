@@ -14,18 +14,8 @@ import { OnlinePaymentHost } from './components/payment/online-payment-host';
 import { Toaster } from './components/ui/sonner';
 import { TooltipProvider } from './components/ui/tooltip';
 import { initializeTheme } from './hooks/use-appearance';
-import { debugPerfLog, getNavigationTiming } from './lib/debug-perf-log';
 import { NuqsAdapter } from './lib/nuqs-inertia-adapter';
 dayjs.extend(relativeTime);
-
-// #region agent log
-debugPerfLog({
-    location: 'app.tsx:bundle-start',
-    message: 'JS bundle executing',
-    data: { pathname: window.location.pathname },
-    hypothesisId: 'C',
-});
-// #endregion
 
 router.on('navigate', (event) => {
     window.gtag?.('event', 'page_view', {
@@ -63,18 +53,6 @@ createInertiaApp({
         ),
     setup({ el, App, props }) {
         const root = createRoot(el);
-
-        // #region agent log
-        debugPerfLog({
-            location: 'app.tsx:inertia-setup',
-            message: 'Inertia setup started',
-            data: {
-                pageComponent: props.initialPage?.component,
-                ...getNavigationTiming(),
-            },
-            hypothesisId: 'C',
-        });
-        // #endregion
 
         // work around. need more proper solution
         const isOnDesignerPage =
