@@ -113,7 +113,7 @@ class DashboardBookingController extends Controller
         $bookingNumber = null;
         $dashboardUser = request()->user();
         $agent = $this->dashboardAgent($company, $tour);
-        $agentOptions = $this->agentOptionsForDashboardBooking($company);
+        $agentOptions = $this->agentOptionsForDashboardBooking($company, $tour);
         $existingBooking = null;
 
         if ($dashboardUser && $schedule && $isScheduleBookable && $requestedBookingNumber !== '') {
@@ -1223,7 +1223,22 @@ class DashboardBookingController extends Controller
             ]);
         }
 
+        if (! $this->agentHasActiveTourInCatalog($normalizedAgentId, $tour)) {
+            throw ValidationException::withMessages([
+                'agent_id' => 'Please select an agent who has saved this tour to their catalog.',
+            ]);
+        }
+
         return $partnership->agent;
+    }
+
+    private function agentHasActiveTourInCatalog(int $agentId, Tour $tour): bool
+    {
+        return AgentTour::query()
+            ->where('company_id', $agentId)
+            ->where('tour_id', $tour->id)
+            ->where('status', 'active')
+            ->exists();
     }
 
     private function resolveBookingOwner(Request $request, array $data): User
@@ -1466,15 +1481,21 @@ class DashboardBookingController extends Controller
     /**
      * @return Collection<int, array{id: int, name: string, username: string, email: string|null}>
      */
-    private function agentOptionsForDashboardBooking(Company $company): Collection
+    private function agentOptionsForDashboardBooking(Company $company, Tour $tour): Collection
     {
         if (($company->type->value ?? $company->type) !== 'vendor') {
             return collect();
         }
 
+        $catalogedAgentIds = AgentTour::query()
+            ->where('tour_id', $tour->id)
+            ->where('status', 'active')
+            ->pluck('company_id');
+
         return $company->agentPartners()
             ->with('agent:id,name,username,email')
             ->where('status', VendorAgentPartnerStatus::ACTIVE->value)
+            ->whereIn('agent_id', $catalogedAgentIds)
             ->whereHas('agent.agentSubscription', fn (Builder $query): Builder => $this->eligibleAgentSubscriptionConstraint($query))
             ->get()
             ->map(fn (VendorAgentPartner $partner): ?array => $partner->agent ? [

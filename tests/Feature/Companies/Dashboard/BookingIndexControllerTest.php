@@ -4103,6 +4103,37 @@ test('booking index exposes continue booking action for awaiting payment booking
         ->where('data.data.0.continue_booking_url', "/companies/{$vendor->username}/dashboard/bookings/create/{$tour->id}?date={$departureDate}&booking_number=BKG-CONTINUE-WP"));
 });
 
+test('booking index hides continue booking action for agents without catalog access to the tour', function () {
+    $vendor = Company::factory()->create(['type' => 'vendor']);
+    $agent = Company::factory()->create(['type' => 'agent']);
+    $tour = Tour::factory()->create(['company_id' => $vendor->id]);
+    $departureDate = now()->addMonth()->toDateString();
+
+    CompanyTeam::create([
+        'company_id' => $agent->id,
+        'user_id' => $this->user->id,
+        'status' => CompanyTeamStatus::ACTIVE,
+        'is_owner' => true,
+        'accepted_at' => now(),
+    ]);
+
+    Booking::factory()->create([
+        'vendor_id' => $vendor->id,
+        'agent_id' => $agent->id,
+        'tour_id' => $tour->id,
+        'status' => BookingStatus::AWAITING_PAYMENT,
+        'booking_number' => 'BKG-AGENT-NO-CATALOG',
+        'departure_date' => $departureDate,
+    ]);
+
+    $response = $this->actingAs($this->user)
+        ->get("/companies/{$agent->username}/dashboard/bookings");
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->where('data.data.0.continue_booking_url', null));
+});
+
 test('booking index exposes completed document detail links', function () {
     Storage::fake('public');
     Storage::disk('public')->put('travel-documents/passports/complete-passport.pdf', 'passport');

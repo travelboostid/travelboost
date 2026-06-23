@@ -179,7 +179,7 @@ function dashboardBookingPayload(Tour $tour, TourSchedule $schedule, Company $ve
     ];
 }
 
-function createActiveDashboardAgentPartner(Company $vendor, int $packageId = 2, array $attributes = []): Company
+function createActiveDashboardAgentPartner(Company $vendor, int $packageId = 2, array $attributes = [], ?Tour $catalogTour = null): Company
 {
     $agent = Company::factory()->create(array_merge([
         'type' => 'agent',
@@ -199,6 +199,14 @@ function createActiveDashboardAgentPartner(Company $vendor, int $packageId = 2, 
         'status' => VendorAgentPartnerStatus::ACTIVE,
         'accepted_at' => now(),
     ]);
+
+    if ($catalogTour !== null) {
+        AgentTour::create([
+            'company_id' => $agent->id,
+            'tour_id' => $catalogTour->id,
+            'status' => 'active',
+        ]);
+    }
 
     return $agent;
 }
@@ -272,7 +280,7 @@ test('dashboard booking create page uses customer wizard with dashboard endpoint
     $user = User::factory()->create();
     $operatorRole = "company:{$vendor->id}:operator";
     attachDashboardUserToCompany($user, $vendor, $operatorRole, 'Operator');
-    $agent = createActiveDashboardAgentPartner($vendor);
+    $agent = createActiveDashboardAgentPartner($vendor, catalogTour: $tour);
     $customer = User::factory()->create([
         'company_id' => $agent->id,
         'name' => 'Existing Customer',
@@ -314,7 +322,7 @@ test('dashboard booking create resume exposes stored input by audit payload', fu
     $dashboardUser = User::factory()->create();
     $creator = User::factory()->create(['name' => 'Original Staff']);
     attachDashboardUserToCompany($dashboardUser, $vendor);
-    $agent = createActiveDashboardAgentPartner($vendor);
+    $agent = createActiveDashboardAgentPartner($vendor, catalogTour: $tour);
     $supportRole = "company:{$agent->id}:support";
     Role::query()->create([
         'name' => $supportRole,
@@ -445,8 +453,8 @@ test('vendor dashboard booking create exposes active partners including free tri
     ['vendor' => $vendor, 'tour' => $tour, 'schedule' => $schedule] = createPricedDashboardTour();
     $user = User::factory()->create();
     attachDashboardUserToCompany($user, $vendor);
-    $freeTrialAgent = createActiveDashboardAgentPartner($vendor, 1, ['name' => 'Free Trial Agent']);
-    $paidAgent = createActiveDashboardAgentPartner($vendor, 2, ['name' => 'Paid Agent']);
+    $freeTrialAgent = createActiveDashboardAgentPartner($vendor, 1, ['name' => 'Free Trial Agent'], $tour);
+    $paidAgent = createActiveDashboardAgentPartner($vendor, 2, ['name' => 'Paid Agent'], $tour);
 
     $response = $this->actingAs($user)
         ->get("/companies/{$vendor->username}/dashboard/bookings/create/{$tour->id}?date={$schedule->departure_date}");
@@ -475,6 +483,39 @@ test('vendor dashboard booking create exposes no agent options when there are no
         ->component('tours/bookings/create')
         ->where('requiresAgentSelection', true)
         ->has('agentOptions', 0));
+});
+
+test('vendor dashboard booking create only exposes agents who saved the tour to their catalog', function () {
+    ['vendor' => $vendor, 'tour' => $tour, 'schedule' => $schedule] = createPricedDashboardTour();
+    $user = User::factory()->create();
+    attachDashboardUserToCompany($user, $vendor);
+    $catalogedAgent = createActiveDashboardAgentPartner($vendor, 2, ['name' => 'Cataloged Agent'], $tour);
+    createActiveDashboardAgentPartner($vendor, 2, ['name' => 'Partner Without Catalog']);
+
+    $response = $this->actingAs($user)
+        ->get("/companies/{$vendor->username}/dashboard/bookings/create/{$tour->id}?date={$schedule->departure_date}");
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->component('tours/bookings/create')
+        ->has('agentOptions', 1)
+        ->where('agentOptions.0.id', $catalogedAgent->id)
+        ->where('agentOptions.0.name', 'Cataloged Agent'));
+});
+
+test('vendor dashboard booking reserve rejects active partners without catalog access to the tour', function () {
+    ['vendor' => $vendor, 'tour' => $tour, 'schedule' => $schedule] = createPricedDashboardTour();
+    $dashboardUser = User::factory()->create();
+    attachDashboardUserToCompany($dashboardUser, $vendor);
+    $agent = createActiveDashboardAgentPartner($vendor, 2, ['name' => 'Partner Without Catalog']);
+    $payload = dashboardBookingPayload($tour, $schedule, $vendor, $agent, 'guest-without-account@example.test');
+
+    $this->actingAs($dashboardUser)
+        ->from("/companies/{$vendor->username}/dashboard/bookings/create/{$tour->id}?date={$schedule->departure_date}")
+        ->post("/companies/{$vendor->username}/dashboard/bookings/create/{$tour->id}/reserve", $payload)
+        ->assertSessionHasErrors('agent_id');
+
+    expect(Booking::query()->count())->toBe(0);
 });
 
 test('dashboard booking create exposes commission values from selected schedule price category', function () {
@@ -538,7 +579,7 @@ test('dashboard reserve without booking number creates one booking and reuses it
     $dashboardUser = User::factory()->create();
     $adminRole = "company:{$vendor->id}:admin";
     attachDashboardUserToCompany($dashboardUser, $vendor, $adminRole, 'Admin');
-    $agent = createActiveDashboardAgentPartner($vendor);
+    $agent = createActiveDashboardAgentPartner($vendor, catalogTour: $tour);
     $payload = dashboardBookingPayload($tour, $schedule, $vendor, $agent, 'guest-without-account@example.test');
     $payload['booking_number'] = null;
 
@@ -570,7 +611,7 @@ test('dashboard reserve reuses an existing booking number even when the owner ch
     ['vendor' => $vendor, 'tour' => $tour, 'schedule' => $schedule] = createPricedDashboardTour();
     $dashboardUser = User::factory()->create();
     attachDashboardUserToCompany($dashboardUser, $vendor);
-    $agent = createActiveDashboardAgentPartner($vendor);
+    $agent = createActiveDashboardAgentPartner($vendor, catalogTour: $tour);
     $previousOwner = User::factory()->create([
         'email' => 'previous-owner@example.test',
     ]);
@@ -611,7 +652,7 @@ test('dashboard reserve rejects more dependent bed passengers than twin or doubl
     ['vendor' => $vendor, 'tour' => $tour, 'schedule' => $schedule] = createPricedDashboardTour();
     $dashboardUser = User::factory()->create();
     attachDashboardUserToCompany($dashboardUser, $vendor);
-    $agent = createActiveDashboardAgentPartner($vendor);
+    $agent = createActiveDashboardAgentPartner($vendor, catalogTour: $tour);
 
     $payload = dashboardBookingPayload($tour, $schedule, $vendor, $agent);
     $payload['pax_adult'] = 3;
@@ -808,7 +849,7 @@ test('vendor dashboard booking reserve accepts active partners on the free trial
     ['vendor' => $vendor, 'tour' => $tour, 'schedule' => $schedule] = createPricedDashboardTour();
     $dashboardUser = User::factory()->create();
     attachDashboardUserToCompany($dashboardUser, $vendor);
-    $agent = createActiveDashboardAgentPartner($vendor, 1, ['name' => 'Free Trial Agent']);
+    $agent = createActiveDashboardAgentPartner($vendor, 1, ['name' => 'Free Trial Agent'], $tour);
     $payload = dashboardBookingPayload($tour, $schedule, $vendor, $agent, 'guest-without-account@example.test');
 
     $this->actingAs($dashboardUser)
@@ -859,7 +900,7 @@ test('dashboard booking store falls back to dashboard user when contact email ha
     ['vendor' => $vendor, 'tour' => $tour, 'schedule' => $schedule] = createPricedDashboardTour();
     $dashboardUser = User::factory()->create();
     attachDashboardUserToCompany($dashboardUser, $vendor);
-    $agent = createActiveDashboardAgentPartner($vendor);
+    $agent = createActiveDashboardAgentPartner($vendor, catalogTour: $tour);
 
     $response = $this->actingAs($dashboardUser)
         ->post("/companies/{$vendor->username}/dashboard/bookings/create/{$tour->id}", dashboardBookingPayload(
@@ -882,7 +923,7 @@ test('dashboard booking store persists passenger and contact notes', function ()
     ['vendor' => $vendor, 'tour' => $tour, 'schedule' => $schedule] = createPricedDashboardTour();
     $dashboardUser = User::factory()->create();
     attachDashboardUserToCompany($dashboardUser, $vendor);
-    $agent = createActiveDashboardAgentPartner($vendor);
+    $agent = createActiveDashboardAgentPartner($vendor, catalogTour: $tour);
     $payload = dashboardBookingPayload(
         $tour,
         $schedule,
@@ -929,7 +970,7 @@ test('vendor dashboard booking store accepts active partners on the free trial p
     ['vendor' => $vendor, 'tour' => $tour, 'schedule' => $schedule] = createPricedDashboardTour();
     $dashboardUser = User::factory()->create();
     attachDashboardUserToCompany($dashboardUser, $vendor);
-    $agent = createActiveDashboardAgentPartner($vendor, 1, ['name' => 'Free Trial Agent']);
+    $agent = createActiveDashboardAgentPartner($vendor, 1, ['name' => 'Free Trial Agent'], $tour);
 
     $this->actingAs($dashboardUser)
         ->from("/companies/{$vendor->username}/dashboard/bookings/create/{$tour->id}?date={$schedule->departure_date}")
@@ -950,7 +991,7 @@ test('dashboard booking store without booking number generates one booking numbe
     ['vendor' => $vendor, 'tour' => $tour, 'schedule' => $schedule] = createPricedDashboardTour();
     $dashboardUser = User::factory()->create();
     attachDashboardUserToCompany($dashboardUser, $vendor);
-    $agent = createActiveDashboardAgentPartner($vendor);
+    $agent = createActiveDashboardAgentPartner($vendor, catalogTour: $tour);
     $payload = dashboardBookingPayload(
         $tour,
         $schedule,
@@ -975,7 +1016,7 @@ test('dashboard booking store reuses an existing booking number even when the ow
     ['vendor' => $vendor, 'tour' => $tour, 'schedule' => $schedule] = createPricedDashboardTour();
     $dashboardUser = User::factory()->create();
     attachDashboardUserToCompany($dashboardUser, $vendor);
-    $agent = createActiveDashboardAgentPartner($vendor);
+    $agent = createActiveDashboardAgentPartner($vendor, catalogTour: $tour);
     $previousOwner = User::factory()->create([
         'email' => 'store-previous-owner@example.test',
     ]);

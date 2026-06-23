@@ -12,6 +12,7 @@ use App\Enums\BookingStatus;
 use App\Enums\PaymentStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\UpdateBookingRequest;
+use App\Models\AgentTour;
 use App\Models\BankAccount;
 use App\Models\Booking;
 use App\Models\BookingActionRequest;
@@ -3196,6 +3197,16 @@ class BookingIndexController extends Controller
         }
 
         if (! $booking->tour_id || ! $booking->departure_date || blank($booking->booking_number)) {
+            return null;
+        }
+
+        $companyType = $company->type->value ?? $company->type;
+
+        if ($companyType === 'agent' && ! AgentTour::query()
+            ->where('company_id', $company->id)
+            ->where('tour_id', $booking->tour_id)
+            ->where('status', 'active')
+            ->exists()) {
             return null;
         }
 
