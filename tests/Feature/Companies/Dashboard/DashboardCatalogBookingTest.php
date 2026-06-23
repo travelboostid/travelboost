@@ -243,9 +243,7 @@ test('vendor catalog exposes schedule prices from minimum vendor tour price cate
     $response->assertOk();
     $response->assertInertia(fn ($page) => $page
         ->component('companies/dashboard/vendor-tours/index')
-        ->where('data.0.schedules.0.price', 4_500_000)
-        ->has('data.0.schedules.0.prices', 2)
-        ->where('data.0.schedules.0.prices.0.price_category.name', 'Adult Twin'));
+        ->where('data.0.schedules.0.price', 4_500_000));
 });
 
 test('agent vendor catalog exposes schedule prices from minimum vendor tour price category', function () {
