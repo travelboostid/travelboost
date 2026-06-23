@@ -12,7 +12,7 @@ class CompanyFactory extends Factory
     public function definition()
     {
         return [
-            'username' => fake()->userName(),
+            'username' => strtolower(fake()->userName()),
             'type' => fake()->randomElement(['agent', 'vendor']),
             'name' => fake()->company(),
             'email' => fake()->unique()->companyEmail,
