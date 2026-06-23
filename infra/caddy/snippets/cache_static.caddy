@@ -1,0 +1,10 @@
+# Long-lived cache for fingerprinted Vite assets.
+@vite_assets path /build/assets/*
+header @vite_assets Cache-Control "public, max-age=31536000, immutable"
+
+# Marketing and logo images change infrequently.
+@static_images path /images/*
+header @static_images Cache-Control "public, max-age=604800"
+
+@fonts path /fonts/*
+header @fonts Cache-Control "public, max-age=604800"

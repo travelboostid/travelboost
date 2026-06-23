@@ -9,6 +9,7 @@
 	bind 127.0.0.1
 	root * /home/travelboost/travelboost/public
 	encode zstd gzip
+	import snippets/cache_static.caddy
 	php_fastcgi unix//run/php/php8.5-fpm.sock
 	file_server
 }
@@ -22,6 +23,7 @@ travelboost.co.id, *.travelboost.co.id {
 
 	root * /home/travelboost/travelboost/public
 	encode zstd gzip
+	import snippets/cache_static.caddy
 	php_fastcgi unix//run/php/php8.5-fpm.sock
 	file_server
 }
@@ -33,6 +35,7 @@ https:// {
 
 	root * /home/travelboost/travelboost/public
 	encode zstd gzip
+	import snippets/cache_static.caddy
 	php_fastcgi unix//run/php/php8.5-fpm.sock
 	file_server
 }

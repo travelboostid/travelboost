@@ -232,13 +232,7 @@ class MediaController extends Controller
      */
     private function photoVariants(): array
     {
-        return [
-            ['code' => 'original', 'width' => 0, 'height' => 0, 'always_resized' => false, 'quality' => 85],
-            ['code' => 'large', 'width' => 720, 'height' => 720, 'always_resized' => false, 'quality' => 85],
-            ['code' => 'medium', 'width' => 480, 'height' => 480, 'always_resized' => false, 'quality' => 75],
-            ['code' => 'small', 'width' => 320, 'height' => 320, 'always_resized' => true, 'quality' => 75],
-            ['code' => 'thumb', 'width' => 240, 'height' => 240, 'always_resized' => true, 'quality' => 75],
-        ];
+        return config('media.image_variants.photo', []);
     }
 
     /**
@@ -246,12 +240,6 @@ class MediaController extends Controller
      */
     private function imageVariants(): array
     {
-        return [
-            ['code' => 'original', 'width' => 0, 'height' => 0, 'always_resized' => false, 'quality' => 85],
-            ['code' => 'large', 'width' => 1080, 'height' => 0, 'always_resized' => false, 'quality' => 85],
-            ['code' => 'medium', 'width' => 720, 'height' => 0, 'always_resized' => false, 'quality' => 85],
-            ['code' => 'small', 'width' => 480, 'height' => 0, 'always_resized' => true, 'quality' => 75],
-            ['code' => 'thumb', 'width' => 320, 'height' => 0, 'always_resized' => true, 'quality' => 75],
-        ];
+        return config('media.image_variants.image', []);
     }
 }
