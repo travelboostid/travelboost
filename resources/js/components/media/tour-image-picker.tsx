@@ -1,5 +1,5 @@
 import type { Media, MediaResource } from '@/api/model';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import {
     Dialog,
     DialogClose,
@@ -53,8 +53,11 @@ export function TourImagePicker({
 
     return (
         <Dialog onOpenChange={setOpen} open={open}>
-            <DialogTrigger>
-                <div className="flex flex-col items-center justify-items-center gap-2 cursor-pointer">
+            <DialogTrigger asChild>
+                <button
+                    type="button"
+                    className="flex w-full cursor-pointer flex-col items-center justify-items-center gap-2"
+                >
                     <div className="mx-auto w-full max-w-xl overflow-hidden rounded-2xl border bg-muted shadow-sm">
                         <img
                             className="aspect-video w-full object-cover"
@@ -66,11 +69,11 @@ export function TourImagePicker({
                             srcSet={srcSet || undefined}
                         />
                     </div>
-                    <Button className="w-fit cursor-pointer" type="button">
+                    <span className={buttonVariants({ className: 'w-fit' })}>
                         <CameraIcon />
                         Change
-                    </Button>
-                </div>
+                    </span>
+                </button>
             </DialogTrigger>
             <DialogContent className="w-full max-w-200">
                 <ImageMediaUploader
@@ -86,6 +89,7 @@ export function TourImagePicker({
                         <button
                             className="cursor-pointer rounded-md border-2 border-dashed p-4 text-center"
                             onClick={open}
+                            type="button"
                         >
                             <UploadCloudIcon
                                 size={48}
@@ -112,7 +116,7 @@ export function TourImagePicker({
                     onChange={handleSelectedMedia}
                 />
                 <DialogFooter>
-                    <DialogClose>
+                    <DialogClose asChild>
                         <Button type="button">Cancel</Button>
                     </DialogClose>
                 </DialogFooter>
