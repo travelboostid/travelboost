@@ -34,6 +34,23 @@ export default function Page({
     const [showInactive, setShowInactive] = useState(false);
     const { company } = usePageSharedDataProps();
 
+    // #region agent log
+    useEffect(() => {
+        debugPerfLog({
+            location: 'vendor-tours/index.tsx:mounted',
+            message: 'vendor catalog page mounted',
+            data: {
+                tourCount: data.length,
+                scheduleCount: data.reduce(
+                    (sum, tour) => sum + (tour.schedules?.length ?? 0),
+                    0,
+                ),
+            },
+            hypothesisId: 'B,C',
+        });
+    }, [data]);
+    // #endregion
+
     useEffect(() => {
         if ((filters.search ?? '') === search) {
             return;

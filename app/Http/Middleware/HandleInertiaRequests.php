@@ -6,6 +6,7 @@ use App\Models\AffiliateProfile;
 use App\Models\AppConfig;
 use App\Models\Company;
 use App\Models\Domain;
+use App\Support\DebugPerfLogger;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -22,6 +23,8 @@ class HandleInertiaRequests extends Middleware
     // For example create UseCompanyProps -> Share props.company -> only applied to routes who use the middleware
     public function share(Request $request): array
     {
+        $shareStartedAt = microtime(true);
+
         // Compute unread count once per request. Two eager count() calls
         // would otherwise double-hit the notifications table on every
         // Inertia response.
@@ -29,14 +32,31 @@ class HandleInertiaRequests extends Middleware
             ? (int) $request->user()->unreadNotifications()->count()
             : 0;
 
+        $authUser = $request->user()?->load(['companies']);
+        $permissions = $request->user()?->allPermissions()->pluck('name')->toArray() ?? [];
+        $roles = $request->user()?->roles->pluck('name')->toArray() ?? [];
+
+        DebugPerfLogger::log(
+            'HandleInertiaRequests.php:share',
+            'inertia shared props prepared',
+            [
+                'durationMs' => (int) round((microtime(true) - $shareStartedAt) * 1000),
+                'path' => $request->path(),
+                'permissionCount' => count($permissions),
+                'companyCount' => $authUser?->companies?->count() ?? 0,
+                'unreadNotificationsCount' => $unreadNotificationsCount,
+            ],
+            'D'
+        );
+
         return [
             ...parent::share($request),
             'name' => config('app.name'),
             'appDomain' => env('APP_HOST', 'localhost'),
             'auth' => [
-                'user' => $request->user()?->load(['companies']),
-                'permissions' => $request->user()?->allPermissions()->pluck('name')->toArray(),
-                'roles' => $request->user()?->roles->pluck('name')->toArray(),
+                'user' => $authUser,
+                'permissions' => $permissions,
+                'roles' => $roles,
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
             'flash' => [

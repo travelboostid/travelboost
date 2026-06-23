@@ -29,6 +29,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->validateCsrfTokens(except: [
             'webhooks/*',
+            '__debug/*',
         ]);
         $middleware->redirectGuestsTo(function (Request $request) {
             if ($request->routeIs('verification.verify')) {
