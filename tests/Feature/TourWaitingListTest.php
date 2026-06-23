@@ -5,6 +5,7 @@ use App\Enums\TourWaitingListStatus;
 use App\Models\AgentTour;
 use App\Models\Company;
 use App\Models\CompanyTeam;
+use App\Models\Domain;
 use App\Models\Tour;
 use App\Models\TourAvailability;
 use App\Models\TourSchedule;
@@ -241,6 +242,12 @@ test('customer has a global limit of two active waiting listed schedules', funct
         fn (int $days): TourSchedule => waitingListScheduleFixture($tour, departureInDays: $days),
     );
     $agent = Company::factory()->create(['type' => 'agent']);
+    Domain::create([
+        'subdomain' => $agent->username,
+        'owner_type' => Company::class,
+        'owner_id' => $agent->id,
+        'subdomain_enabled' => true,
+    ]);
     AgentTour::query()->create([
         'company_id' => $agent->id,
         'tour_id' => $tour->id,
@@ -270,6 +277,12 @@ test('terminal customer requests no longer count toward the global limit', funct
         fn (int $days): TourSchedule => waitingListScheduleFixture($tour, departureInDays: $days),
     );
     $agent = Company::factory()->create(['type' => 'agent']);
+    Domain::create([
+        'subdomain' => $agent->username,
+        'owner_type' => Company::class,
+        'owner_id' => $agent->id,
+        'subdomain_enabled' => true,
+    ]);
     AgentTour::query()->create([
         'company_id' => $agent->id,
         'tour_id' => $tour->id,
@@ -299,6 +312,12 @@ test('guest cannot submit a customer waiting list', function () {
     ['tour' => $tour] = waitingListTourFixture();
     $schedule = waitingListScheduleFixture($tour);
     $agent = Company::factory()->create(['type' => 'agent']);
+    Domain::create([
+        'subdomain' => $agent->username,
+        'owner_type' => Company::class,
+        'owner_id' => $agent->id,
+        'subdomain_enabled' => true,
+    ]);
     AgentTour::query()->create([
         'company_id' => $agent->id,
         'tour_id' => $tour->id,
