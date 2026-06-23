@@ -169,6 +169,7 @@ test('booking report includes down payment and full payment bookings with their 
         'tour_id' => $this->tour->id,
         'departure_date' => '2026-08-15',
         'status' => BookingStatus::DOWN_PAYMENT,
+        'created_at' => now()->addSecond(),
     ]);
 
     $downPaymentBooking->payments()->create([
