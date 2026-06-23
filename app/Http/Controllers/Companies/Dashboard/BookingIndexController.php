@@ -35,6 +35,7 @@ use App\Services\BookingService;
 use App\Services\BookingTravelDocumentService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
@@ -160,6 +161,9 @@ class BookingIndexController extends Controller
 
         $bookings = $bookingQuery
             ->with($this->bookingIndexRelationships())
+            ->withExists(['actionRequests as was_rescheduled' => function ($query): void {
+                $query->where('target_action', 'reschedule')->where('status', 'approved');
+            }])
             ->withSum(['payments as paid_amount' => function ($query): void {
                 $query->where('status', 'paid');
             }], 'amount')
@@ -208,6 +212,7 @@ class BookingIndexController extends Controller
             $booking->can_reactivate = app(ReactivateBookingAction::class)->canReactivate($booking);
             $booking->can_reorder = $this->canReorderBooking($booking);
             $booking->proforma_invoice_available = $this->proformaInvoiceAvailable($booking);
+            $booking->was_rescheduled = (bool) ($booking->was_rescheduled ?? false);
 
             return $booking;
         });
@@ -757,7 +762,7 @@ class BookingIndexController extends Controller
         return $this->handleBookingAction($company, $booking, 'refund', $request);
     }
 
-    public function rescheduleOptions(Company $company, Booking $booking): \Illuminate\Http\JsonResponse
+    public function rescheduleOptions(Company $company, Booking $booking): JsonResponse
     {
         $this->assertCompanyCanAccessBooking($company, $booking);
         abort_unless(app(RescheduleBookingAction::class)->canReschedule($booking), 422);
@@ -796,7 +801,7 @@ class BookingIndexController extends Controller
                 return $rescheduleAction->canReschedule($booking);
             })
             ->values()
-            ->map(function (TourSchedule $schedule) use ($booking, $rescheduleAction, $currentDeparture): array {
+            ->map(function (TourSchedule $schedule) use ($booking, $rescheduleAction): array {
                 $departureDate = Carbon::parse($schedule->departure_date)->toDateString();
                 $prices = $schedule->prices ?? collect();
                 $priceFrom = $prices->isNotEmpty()
@@ -2285,6 +2290,16 @@ class BookingIndexController extends Controller
             ->sortBy(fn (Payment $payment): string => (string) ($payment->paid_at ?? $payment->created_at))
             ->values();
 
+        if ($paymentType === 'full_payment') {
+            $typedFullPayments = $paidPayments
+                ->filter(fn (Payment $payment): bool => $this->bookingPaymentType($payment) === 'full_payment')
+                ->values();
+
+            if ($typedFullPayments->count() > 1) {
+                return $this->combinedFullPaymentDetailPayload($booking, $typedFullPayments, $paymentReceiverService);
+            }
+        }
+
         $payment = $paidPayments
             ->filter(fn (Payment $payment): bool => $this->bookingPaymentType($payment) === $paymentType)
             ->sortByDesc(fn (Payment $payment): string => (string) ($payment->paid_at ?? $payment->created_at))
@@ -2304,6 +2319,46 @@ class BookingIndexController extends Controller
         if ($receiptGroup !== null) {
             $detail['receipt_group'] = $receiptGroup;
         }
+
+        return $detail;
+    }
+
+    /**
+     * @param  Collection<int, Payment>  $fullPayments
+     * @return array<string, mixed>
+     */
+    private function combinedFullPaymentDetailPayload(
+        Booking $booking,
+        Collection $fullPayments,
+        BookingPaymentReceiverService $paymentReceiverService,
+    ): array {
+        $latestPayment = $fullPayments->last();
+        $detail = $this->singlePaymentDetailPayload($booking, $latestPayment, 'full_payment', $paymentReceiverService);
+        $detail['amount'] = round($fullPayments->sum(fn (Payment $payment): float => (float) $payment->amount), 2);
+
+        $agentReceiptGroup = $this->paymentReceiptGroupPayload($booking, $latestPayment, 'full_payment', $paymentReceiverService);
+
+        if ($agentReceiptGroup !== null) {
+            $detail['receipt_group'] = $agentReceiptGroup;
+
+            return $detail;
+        }
+
+        $detail['receipt_group'] = $fullPayments
+            ->values()
+            ->map(function (Payment $payment, int $index) use ($booking, $fullPayments, $paymentReceiverService): array {
+                $title = match (true) {
+                    $index === 0 => 'Original Full Payment',
+                    $index === 1 && $fullPayments->count() === 2 => 'Additional Payment (Reschedule)',
+                    default => 'Additional Payment '.($index + 1),
+                };
+
+                return [
+                    'title' => $title,
+                    'detail' => $this->singlePaymentDetailPayload($booking, $payment, 'full_payment', $paymentReceiverService),
+                ];
+            })
+            ->all();
 
         return $detail;
     }
@@ -2800,6 +2855,19 @@ class BookingIndexController extends Controller
         }
 
         if ($remainingBalance <= 0) {
+            $paidAmount = (float) ($booking->paid_amount ?? 0);
+            $creditAmount = max(0.0, $paidAmount - (float) $booking->grand_total);
+
+            if ($creditAmount > 0.01) {
+                return [
+                    ...$basePayload,
+                    'state' => 'credit',
+                    'label' => 'Credit Balance',
+                    'credit_amount' => $creditAmount,
+                    'amount_due' => 0.0,
+                ];
+            }
+
             return [
                 ...$basePayload,
                 'state' => 'completed',

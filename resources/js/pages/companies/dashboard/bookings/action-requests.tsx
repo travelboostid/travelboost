@@ -6,13 +6,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { formatIDR } from '@/constants/booking';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
 import { cn } from '@/lib/utils';
-import CorrectionSummaryCards, {
-    actionBadgeClassName,
-} from '@/pages/companies/dashboard/bookings/components/booking-correction/correction-summary-cards';
 import {
     CorrectionChangeSummary,
     type CorrectionPayload,
 } from '@/pages/companies/dashboard/bookings/components/booking-correction/correction-change-summary';
+import CorrectionSummaryCards, {
+    actionBadgeClassName,
+} from '@/pages/companies/dashboard/bookings/components/booking-correction/correction-summary-cards';
 import {
     approve,
     index as bookingCorrectionRoute,
@@ -355,30 +355,6 @@ export default function Page({
                     onValueChange={handleActionChange}
                     className="gap-4"
                 >
-                    <TabsList className="mx-auto flex !h-auto w-full max-w-full gap-2 overflow-x-auto bg-transparent p-0 [-ms-overflow-style:none] [scrollbar-width:none] md:justify-center [&::-webkit-scrollbar]:hidden">
-                        {tabs.map((tab) => {
-                            const Icon = tab.icon;
-                            const count =
-                                actionRequiredCounts[tab.countKey] ?? 0;
-
-                            return (
-                                <TabsTrigger
-                                    key={tab.value}
-                                    value={tab.value}
-                                    className="!h-8 shrink-0 rounded-full border border-border bg-background px-2.5 text-[0.72rem] leading-none shadow-sm data-[state=active]:border-primary/40 data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none sm:text-xs md:px-3"
-                                >
-                                    <Icon className="size-3.5" />
-                                    <span>{tab.label}</span>
-                                    {canReviewRequests && count > 0 && (
-                                        <span className="ml-0.5 inline-flex h-[1.125rem] min-w-[1.125rem] items-center justify-center rounded-full border border-rose-200 bg-rose-50 px-1.5 text-[0.62rem] font-semibold leading-none text-rose-700 dark:border-rose-900/60 dark:bg-rose-950/40 dark:text-rose-300">
-                                            {count > 99 ? '99+' : count}
-                                        </span>
-                                    )}
-                                </TabsTrigger>
-                            );
-                        })}
-                    </TabsList>
-
                     <div className="mx-auto w-full max-w-3xl">
                         <div className="relative">
                             <span className="pointer-events-none absolute left-2 top-1/2 flex size-6 -translate-y-1/2 items-center justify-center rounded-lg bg-primary/10 text-primary ring-1 ring-primary/15 dark:bg-primary/15">
@@ -412,6 +388,30 @@ export default function Page({
                             )}
                         </div>
                     </div>
+
+                    <TabsList className="mx-auto flex !h-auto w-fit max-w-full gap-1.5 overflow-x-auto bg-transparent p-0 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                        {tabs.map((tab) => {
+                            const Icon = tab.icon;
+                            const count =
+                                actionRequiredCounts[tab.countKey] ?? 0;
+
+                            return (
+                                <TabsTrigger
+                                    key={tab.value}
+                                    value={tab.value}
+                                    className="!h-7 shrink-0 rounded-full border border-border bg-background px-2 text-[0.68rem] leading-none shadow-sm data-[state=active]:border-primary/40 data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none sm:px-2.5 sm:text-[0.72rem]"
+                                >
+                                    <Icon className="size-3" />
+                                    <span>{tab.label}</span>
+                                    {canReviewRequests && count > 0 && (
+                                        <span className="ml-0.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full border border-rose-200 bg-rose-50 px-1 text-[0.58rem] font-semibold leading-none text-rose-700 dark:border-rose-900/60 dark:bg-rose-950/40 dark:text-rose-300">
+                                            {count > 99 ? '99+' : count}
+                                        </span>
+                                    )}
+                                </TabsTrigger>
+                            );
+                        })}
+                    </TabsList>
 
                     <TabsContent value={activeAction} className="mt-1">
                         <RequestList

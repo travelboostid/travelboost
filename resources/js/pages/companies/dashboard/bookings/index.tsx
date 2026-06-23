@@ -49,6 +49,7 @@ import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
 import { openOnlinePayment } from '@/lib/open-online-payment';
 import { hasOnlinePaymentInstructions } from '@/lib/payment-instructions';
 import { cn } from '@/lib/utils';
+import { CorrectionChangeSummary } from '@/pages/companies/dashboard/bookings/components/booking-correction/correction-change-summary';
 import { Head, Link, router } from '@inertiajs/react';
 import {
     flexRender,
@@ -208,6 +209,7 @@ type BookingResource = {
     down_payment_detail: PaymentDetail | null;
     full_payment_detail: PaymentDetail | null;
     departure_date: string | null;
+    was_rescheduled?: boolean;
     created_at: string;
     tour: { id: number; name: string } | null;
     vendor: { id: number; name: string } | null;
@@ -1854,7 +1856,8 @@ function RowActions({
                                       })
                                     : actionDialog === 'reschedule'
                                       ? intl.formatMessage({
-                                            defaultMessage: 'Reschedule booking',
+                                            defaultMessage:
+                                                'Reschedule booking',
                                         })
                                       : intl.formatMessage({
                                             defaultMessage:
@@ -1964,6 +1967,44 @@ function RowActions({
                                 onSelect={setSelectedSchedule}
                             />
                         )}
+                        {activeCorrectionAction === 'reschedule' &&
+                            selectedSchedule && (
+                                <div className="space-y-2">
+                                    <CorrectionChangeSummary
+                                        targetAction="reschedule"
+                                        currentDeparture={
+                                            booking.departure_date
+                                        }
+                                        payload={{
+                                            previous_departure_date:
+                                                booking.departure_date,
+                                            requested_departure_date:
+                                                selectedSchedule.departure_date,
+                                            price_before: Number(
+                                                booking.grand_total ?? 0,
+                                            ),
+                                            price_after:
+                                                selectedSchedule.price_preview
+                                                    .grand_total,
+                                            price_difference:
+                                                selectedSchedule.price_preview
+                                                    .price_difference,
+                                        }}
+                                    />
+                                    {selectedSchedule.price_preview
+                                        .price_difference > 0 && (
+                                        <p className="rounded-md border border-amber-200/70 bg-amber-50/80 px-3 py-2 text-xs text-amber-800 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-200">
+                                            <FormattedMessage defaultMessage="The customer will need to pay the additional balance. Booking status may change to down payment after reschedule." />
+                                        </p>
+                                    )}
+                                    {selectedSchedule.price_preview
+                                        .price_difference < 0 && (
+                                        <p className="rounded-md border border-emerald-200/70 bg-emerald-50/80 px-3 py-2 text-xs text-emerald-800 dark:border-emerald-900/50 dark:bg-emerald-950/30 dark:text-emerald-200">
+                                            <FormattedMessage defaultMessage="A credit balance may be available. Contact the vendor to arrange a refund for the price difference." />
+                                        </p>
+                                    )}
+                                </div>
+                            )}
                         {activeCorrectionAction === 'restore' && (
                             <div className="rounded-lg border bg-muted/30 px-3 py-3 text-sm text-muted-foreground">
                                 <FormattedMessage
@@ -2149,11 +2190,22 @@ function buildColumns(
             id: 'departure_date',
             accessorKey: 'departure_date',
             header: intl.formatMessage({ defaultMessage: 'Departure Date' }),
-            cell: ({ cell }) => {
-                const val = cell.getValue<string>();
+            cell: ({ row }) => {
+                const val = row.original.departure_date;
+
                 return (
-                    <div className="whitespace-nowrap text-xs text-slate-500 dark:text-slate-300">
-                        {val ? dayjs(val).format('DD MMM YYYY') : '—'}
+                    <div className="flex items-center gap-2 whitespace-nowrap text-xs text-slate-500 dark:text-slate-300">
+                        <span>
+                            {val ? dayjs(val).format('DD MMM YYYY') : '—'}
+                        </span>
+                        {row.original.was_rescheduled && (
+                            <Badge
+                                variant="secondary"
+                                className="bg-sky-100 px-1.5 py-0 text-[10px] font-semibold uppercase tracking-wide text-sky-700 dark:bg-sky-950/50 dark:text-sky-300"
+                            >
+                                <FormattedMessage defaultMessage="Rescheduled" />
+                            </Badge>
+                        )}
                     </div>
                 );
             },

@@ -7,6 +7,7 @@ use App\Enums\VendorAgentPartnerStatus;
 use App\Models\AgentSubscriptionPackage;
 use App\Models\AgentTier;
 use App\Models\Booking;
+use App\Models\BookingActionRequest;
 use App\Models\BookingAddon;
 use App\Models\BookingPassenger;
 use App\Models\BookingRoom;
@@ -627,6 +628,92 @@ test('booking index exposes down payment and full payment details', function () 
         ->where('data.data.0.full_payment_detail.receipt.order_id', 'full-order-123')
         ->where('data.data.0.full_payment_detail.receipt.transaction_id', 'midtrans-transaction-123')
         ->where('data.data.0.full_payment_detail.receipt.status', 'settlement'));
+});
+
+test('booking index sums multiple full payments and exposes grouped receipts after reschedule top-up', function () {
+    $vendor = Company::factory()->create(['type' => 'vendor']);
+
+    CompanyTeam::create([
+        'company_id' => $vendor->id,
+        'user_id' => $this->user->id,
+        'status' => CompanyTeamStatus::ACTIVE,
+        'is_owner' => true,
+        'accepted_at' => now(),
+    ]);
+
+    $tour = Tour::factory()->create(['company_id' => $vendor->id]);
+    $booking = Booking::factory()->create([
+        'vendor_id' => $vendor->id,
+        'tour_id' => $tour->id,
+        'status' => BookingStatus::FULL_PAYMENT,
+        'grand_total' => 14_625_000,
+    ]);
+
+    Payment::create([
+        'owner_type' => User::class,
+        'owner_id' => $booking->user_id,
+        'payable_type' => Booking::class,
+        'payable_id' => $booking->id,
+        'provider' => 'midtrans',
+        'payment_method' => 'snap',
+        'amount' => 10_125_000,
+        'status' => PaymentStatus::PAID,
+        'paid_at' => '2026-06-01 10:00:00',
+        'payload' => [
+            'payment_type' => 'full_payment',
+            'payment_receiver_type' => 'vendor',
+            'midtrans' => [
+                'order_id' => 'original-full-order',
+                'transaction_id' => 'original-full-tx',
+                'transaction_status' => 'settlement',
+            ],
+        ],
+    ]);
+
+    Payment::create([
+        'owner_type' => User::class,
+        'owner_id' => $booking->user_id,
+        'payable_type' => Booking::class,
+        'payable_id' => $booking->id,
+        'provider' => 'midtrans',
+        'payment_method' => 'snap',
+        'amount' => 4_500_000,
+        'status' => PaymentStatus::PAID,
+        'paid_at' => '2026-06-22 10:00:00',
+        'payload' => [
+            'payment_type' => 'full_payment',
+            'payment_receiver_type' => 'vendor',
+            'midtrans' => [
+                'order_id' => 'reschedule-top-up-order',
+                'transaction_id' => 'reschedule-top-up-tx',
+                'transaction_status' => 'settlement',
+            ],
+        ],
+    ]);
+
+    BookingActionRequest::create([
+        'booking_id' => $booking->id,
+        'requester_company_id' => $vendor->id,
+        'requester_user_id' => $this->user->id,
+        'target_action' => 'reschedule',
+        'status' => 'approved',
+        'reason' => 'Customer requested new date',
+        'reviewer_company_id' => $vendor->id,
+        'reviewer_user_id' => $this->user->id,
+        'reviewed_at' => now(),
+    ]);
+
+    $response = $this->actingAs($this->user)
+        ->get("/companies/{$vendor->username}/dashboard/bookings");
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->where('data.data.0.full_payment_detail.amount', 14_625_000)
+        ->where('data.data.0.full_payment_detail.receipt_group.0.title', 'Original Full Payment')
+        ->where('data.data.0.full_payment_detail.receipt_group.1.title', 'Additional Payment (Reschedule)')
+        ->where('data.data.0.full_payment_detail.receipt_group.0.detail.amount', 10_125_000)
+        ->where('data.data.0.full_payment_detail.receipt_group.1.detail.amount', 4_500_000)
+        ->where('data.data.0.was_rescheduled', true));
 });
 
 test('booking index infers legacy paid midtrans full payment detail when payment type is missing', function () {
