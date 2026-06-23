@@ -4,6 +4,7 @@ import CompanyDashboardLayout from '@/components/layouts/company-dashboard';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
+import { debugPerfLog } from '@/lib/debug-perf-log';
 import { router } from '@inertiajs/react';
 import { AlertCircle, SearchIcon } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
