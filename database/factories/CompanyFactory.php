@@ -12,7 +12,7 @@ class CompanyFactory extends Factory
     public function definition()
     {
         return [
-            'username' => strtolower(fake()->userName()),
+            'username' => strtolower(preg_replace('/[^a-zA-Z0-9]/', '', fake()->unique()->userName())),
             'type' => fake()->randomElement(['agent', 'vendor']),
             'name' => fake()->company(),
             'email' => fake()->unique()->companyEmail,
