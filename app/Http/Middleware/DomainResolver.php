@@ -6,6 +6,7 @@ use App\Models\AffiliateProfile;
 use App\Models\Company;
 use App\Models\Domain;
 use Closure;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Context;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
@@ -103,11 +104,25 @@ class DomainResolver
         if (Str::endsWith($this->currentHost, '.'.$this->appHost)) {
             $subdomain = Str::before($this->currentHost, '.'.$this->appHost);
 
-            return Domain::where('subdomain', $subdomain)->with('owner')->first();
+            return Cache::remember(
+                "domain:subdomain:{$subdomain}",
+                now()->addMinutes(5),
+                fn (): ?Domain => Domain::query()
+                    ->where('subdomain', $subdomain)
+                    ->with('owner')
+                    ->first(),
+            );
         }
 
         // Fall back to custom domain lookup
-        return Domain::where('domain', $this->currentHost)->with('owner')->first();
+        return Cache::remember(
+            "domain:host:{$this->currentHost}",
+            now()->addMinutes(5),
+            fn (): ?Domain => Domain::query()
+                ->where('domain', $this->currentHost)
+                ->with('owner')
+                ->first(),
+        );
     }
 
     /** Check if the current host is an internal subdomain (e.g. affiliate) */
