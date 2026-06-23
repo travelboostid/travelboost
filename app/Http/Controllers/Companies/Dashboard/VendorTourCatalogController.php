@@ -14,10 +14,13 @@ use App\Models\TourCommissionRule;
 use App\Models\VendorAgentPartner;
 use App\Notifications\TourAgentPromotionNotification;
 use App\Support\DebugPerfLogger;
+use App\Support\ResolvesTourScheduleDisplayPrice;
 use Inertia\Inertia;
 
 class VendorTourCatalogController extends Controller
 {
+    use ResolvesTourScheduleDisplayPrice;
+
     public function index(Company $company, string $username)
     {
         $startedAt = microtime(true);
@@ -35,20 +38,18 @@ class VendorTourCatalogController extends Controller
             ->orderBy('position_no')
             ->get();
 
-        $vendor = Company::where('username', $username)->firstOrFail();
+        $catalogRelations = array_merge([
+            'company:id,username,name',
+            'company.companySetting',
+            'category',
+            'image',
+            'document',
+            'productCommissionCategory',
+            'commissionRules.scheduleAdjustments',
+        ], $this->catalogScheduleRelations());
 
         $tours = $toursQuery
-            ->with([
-                'company:id,username,name',
-                'company.companySetting',
-                'category',
-                'image',
-                'document',
-                'productCommissionCategory',
-                'commissionRules.scheduleAdjustments',
-                'schedules.availability',
-                'schedules.prices.priceCategory',
-            ])
+            ->with($catalogRelations)
             ->when(request('category'), function ($query, $categoryId) use ($vendor) {
                 $query->where(function ($q) use ($categoryId, $vendor) {
                     $q->where('category_id', $categoryId)
@@ -71,19 +72,9 @@ class VendorTourCatalogController extends Controller
             ->whereHas('tour', function ($q) {
                 $q->where('status', 'active');
             })
-            ->with(['tour' => function ($q) {
+            ->with(['tour' => function ($q) use ($catalogRelations) {
                 $q->where('status', 'active')
-                    ->with([
-                        'company:id,username,name',
-                        'company.companySetting',
-                        'category',
-                        'image',
-                        'document',
-                        'productCommissionCategory',
-                        'commissionRules.scheduleAdjustments',
-                        'schedules.availability',
-                        'schedules.prices.priceCategory',
-                    ]);
+                    ->with($catalogRelations);
             }])
             ->get()
             ->pluck('tour')
@@ -112,24 +103,11 @@ class VendorTourCatalogController extends Controller
             ->unique('id')
             ->sortByDesc('created_at')
             ->values()
-            ->loadMissing([
-                'company:id,username,name',
-                'company.companySetting',
-                'category',
-                'image',
-                'document',
-                'productCommissionCategory',
-                'commissionRules.scheduleAdjustments',
-                'schedules.availability',
-                'schedules.prices.priceCategory',
-            ])
+            ->loadMissing($catalogRelations)
             ->map(function ($tour) use ($copiedTourIds, $company, $copiedAgentTours, $username, $globalCommissionRules, $additionalCommissionRules) {
                 $tour->has_copied = $copiedTourIds->contains($tour->id);
                 $bookingDeadlineDays = (int) ($tour->company?->companySetting?->booking_deadline ?? 0);
-                $tour->schedules?->each(function ($schedule) use ($bookingDeadlineDays): void {
-                    $schedule->setAttribute('price', $this->lowestDiscountedSchedulePrice($schedule->prices));
-                    $schedule->setAttribute('booking_deadline_days', $bookingDeadlineDays);
-                });
+                $this->prepareCatalogSchedules($tour, $bookingDeadlineDays);
 
                 $copiedAgentTour = $copiedAgentTours->get($tour->id);
                 $tour->agent_status = $copiedAgentTour?->status;
@@ -295,27 +273,5 @@ class VendorTourCatalogController extends Controller
         }
 
         return redirect($url);
-    }
-
-    private function lowestDiscountedSchedulePrice($prices): float
-    {
-        return (float) $prices
-            ->map(function ($price): float {
-                $basePrice = (float) $price->price;
-                $promotionRate = (float) ($price->promotion_rate ?? 0);
-                $promotion = (float) ($price->promotion ?? 0);
-
-                if ($promotionRate > 0) {
-                    return max(0.0, (float) round($basePrice - (($basePrice * $promotionRate) / 100)));
-                }
-
-                if ($promotion > 0) {
-                    return max(0.0, (float) round($basePrice - $promotion));
-                }
-
-                return $basePrice;
-            })
-            ->filter(fn (float $price): bool => $price > 0)
-            ->min();
     }
 }

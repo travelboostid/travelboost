@@ -920,6 +920,27 @@ export default function AgentVendorTourCard({
                                                                         );
                                                                     },
                                                                 )
+                                                            ) : Number(
+                                                                  schedule.price,
+                                                              ) > 0 ? (
+                                                                <div className="grid gap-2 border-t border-slate-100 px-5 py-4 text-sm dark:border-slate-800 sm:grid-cols-[minmax(0,1fr)_minmax(150px,0.65fr)_minmax(210px,0.75fr)] sm:items-center">
+                                                                    <div>
+                                                                        <p className="font-medium text-slate-800 dark:text-slate-100">
+                                                                            <FormattedMessage defaultMessage="Starting price" />
+                                                                        </p>
+                                                                    </div>
+                                                                    <div>
+                                                                        <p className="font-semibold text-slate-800 dark:text-slate-100">
+                                                                            {formatCurrency(
+                                                                                schedule.price,
+                                                                                currency,
+                                                                            )}
+                                                                        </p>
+                                                                    </div>
+                                                                    <div className="text-xs text-slate-500 dark:text-slate-400">
+                                                                        <FormattedMessage defaultMessage="Open tour edit for full category pricing." />
+                                                                    </div>
+                                                                </div>
                                                             ) : (
                                                                 <div className="border-t border-slate-100 px-5 py-5 text-sm font-medium text-slate-400 dark:border-slate-800">
                                                                     <FormattedMessage defaultMessage="No pricing category available." />

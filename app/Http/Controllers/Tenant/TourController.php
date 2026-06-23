@@ -10,10 +10,13 @@ use App\Models\TourCategory;
 use App\Models\TourWaitingListSchedule;
 use App\Models\VendorAgentPartner;
 use App\Support\DebugPerfLogger;
+use App\Support\ResolvesTourScheduleDisplayPrice;
 use Inertia\Inertia;
 
 class TourController extends Controller
 {
+    use ResolvesTourScheduleDisplayPrice;
+
     public function index()
     {
         $startedAt = microtime(true);
@@ -189,63 +192,5 @@ class TourController extends Controller
         DebugPerfLogger::attachResponseHeaders($metrics);
 
         return Inertia::render('companies/agent-tours', $payload);
-    }
-
-    private function scheduleDisplayPrice($prices, mixed $masterPrice): float
-    {
-        $priority = [
-            'adult double',
-            'adult twin',
-            'adult extra bed',
-            'adult single',
-        ];
-
-        foreach ($priority as $categoryName) {
-            $matchingPrice = $prices->first(function ($price) use ($categoryName): bool {
-                $name = strtolower(trim((string) ($price->priceCategory?->name ?? '')));
-                $normalized = preg_replace('/[^a-z0-9]+/', ' ', $name) ?? '';
-                $normalized = trim($normalized);
-
-                return $normalized === $categoryName;
-            });
-
-            if ($matchingPrice !== null) {
-                $discounted = $this->lowestDiscountedSchedulePrice(collect([$matchingPrice]));
-
-                if ($discounted > 0) {
-                    return $discounted;
-                }
-            }
-        }
-
-        $fallback = $this->lowestDiscountedSchedulePrice($prices);
-
-        if ($fallback > 0) {
-            return $fallback;
-        }
-
-        return (float) ($masterPrice ?? 0);
-    }
-
-    private function lowestDiscountedSchedulePrice($prices): float
-    {
-        return (float) ($prices
-            ->map(function ($price): float {
-                $basePrice = (float) $price->price;
-                $promotionRate = (float) ($price->promotion_rate ?? 0);
-                $promotion = (float) ($price->promotion ?? 0);
-
-                if ($promotionRate > 0) {
-                    return max(0.0, (float) round($basePrice - (($basePrice * $promotionRate) / 100)));
-                }
-
-                if ($promotion > 0) {
-                    return max(0.0, (float) round($basePrice - $promotion));
-                }
-
-                return $basePrice;
-            })
-            ->filter(fn (float $price): bool => $price > 0)
-            ->min() ?? 0);
     }
 }
