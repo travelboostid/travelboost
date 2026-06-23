@@ -15,7 +15,7 @@ class AttachDebugPerfHeaders
     {
         $response = $next($request);
 
-        if (! config('app.debug')) {
+        if (! config('app.debug') && ! (bool) env('PERF_DEBUG', false)) {
             return $response;
         }
 

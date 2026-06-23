@@ -279,7 +279,7 @@ Route::get('/caddy/verify-domain', [CaddyController::class, 'verifyDomain'])->wi
     DomainResolver::class,
 ]);
 
-if (config('app.debug')) {
+if (config('app.debug') || env('PERF_DEBUG', false)) {
     Route::post('/__debug/perf-log', function (Request $request) {
         DebugPerfLogger::log(
             (string) $request->input('location', 'unknown'),

@@ -4,9 +4,14 @@ namespace App\Support;
 
 class DebugPerfLogger
 {
+    public static function enabled(): bool
+    {
+        return (bool) config('app.debug') || (bool) env('PERF_DEBUG', false);
+    }
+
     public static function log(string $location, string $message, array $data = [], string $hypothesisId = ''): void
     {
-        if (! config('app.debug')) {
+        if (! self::enabled()) {
             return;
         }
 
@@ -31,7 +36,7 @@ class DebugPerfLogger
      */
     public static function attachResponseHeaders(array $metrics): void
     {
-        if (! config('app.debug')) {
+        if (! self::enabled()) {
             return;
         }
 
