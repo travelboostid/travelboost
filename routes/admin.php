@@ -87,6 +87,8 @@ Route::prefix('admin')
             Route::prefix('funds')->name('funds.')->group(function () {
                 Route::resource('withdrawals', WithdrawalController::class);
                 Route::resource('wallets', WalletController::class);
+                Route::post('wallet-transactions/{payment}/approve', [WalletTransactionController::class, 'approve'])->name('wallet-transactions.approve');
+                Route::post('wallet-transactions/{payment}/reject', [WalletTransactionController::class, 'reject'])->name('wallet-transactions.reject');
                 Route::resource('wallet-transactions', WalletTransactionController::class);
                 Route::resource('bank-accounts', BankAccountController::class);
                 Route::resource('payments', PaymentController::class);

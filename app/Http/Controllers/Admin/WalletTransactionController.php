@@ -5,9 +5,12 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\IndexWalletTransactionRequest;
 use App\Models\Company;
+use App\Models\Payment;
 use App\Models\Transaction;
 use App\Models\User;
+use App\Notifications\ManualTopupValidated;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
 class WalletTransactionController extends Controller
@@ -51,5 +54,49 @@ class WalletTransactionController extends Controller
         return Inertia::render('admin/funds/wallet-transactions/index', [
             'data' => $data,
         ]);
+    }
+
+    public function approve(Payment $payment)
+    {
+        if ($payment->status->value !== 'pending') {
+            return back()->withErrors(['message' => 'Payment is not pending.']);
+        }
+
+        DB::transaction(function () use ($payment) {
+            $payment->update(['status' => 'paid']);
+
+            $owner = $payment->owner;
+
+            if ($payment->payable_type === 'wallet-topup-payment') {
+                $wallet = $owner->wallets()->where('slug', config('wallet.wallet.default.slug', 'main'))->first() ?? $owner->wallets()->first();
+
+                if ($wallet) {
+                    $wallet->deposit($payment->amount, [
+                        'description' => 'Manual Wallet Top-up Approval',
+                        'payment_id' => $payment->id,
+                    ], true);
+                }
+            } elseif ($payment->payable_type === 'ai-credit-topup-payment') {
+                $credit = $owner->aiCredit()->firstOrCreate(['company_id' => $owner->id], ['balance' => 0]);
+                $credit->increment('balance', $payment->amount);
+            }
+
+            $owner->notify(new ManualTopupValidated($payment));
+        });
+
+        return back()->with('success', 'Top-up approved successfully.');
+    }
+
+    public function reject(Payment $payment)
+    {
+        if ($payment->status->value !== 'pending') {
+            return back()->withErrors(['message' => 'Payment is not pending.']);
+        }
+
+        $payment->update(['status' => 'failed']);
+
+        $payment->owner->notify(new ManualTopupValidated($payment));
+
+        return back()->with('success', 'Top-up rejected successfully.');
     }
 }

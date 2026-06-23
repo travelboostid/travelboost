@@ -8,10 +8,11 @@ import EmptyWalletTransactions from '../empty-wallet-transactions';
 dayjs.extend(relativeTime);
 
 export type WalletTransaction = {
-    id: number;
+    id: number | string;
     type: 'income' | 'expense';
     amount: number;
     meta?: { description?: string } | null;
+    status?: 'pending' | 'success' | 'failed';
     confirmed?: boolean;
     created_at: string;
 };
@@ -40,9 +41,29 @@ function TransactionItem({ transaction }: { transaction: WalletTransaction }) {
                     <Icon className="size-4" />
                 </div>
                 <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-foreground">
-                        {description}
-                    </p>
+                    <div className="flex items-center gap-2">
+                        <p className="truncate text-sm font-medium text-foreground">
+                            {description}
+                        </p>
+                        {transaction.status === 'pending' && (
+                            <span className="rounded-full bg-yellow-100 px-2 py-0.5 text-[10px] font-semibold text-yellow-800">
+                                Pending
+                            </span>
+                        )}
+                        {transaction.status === 'failed' && (
+                            <span className="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-semibold text-red-800">
+                                Rejected
+                            </span>
+                        )}
+                        {transaction.status === 'success' &&
+                            transaction.meta?.description?.includes(
+                                'Manual Top-up Approval',
+                            ) && (
+                                <span className="rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-semibold text-green-800">
+                                    Approved
+                                </span>
+                            )}
+                    </div>
                     <p className="mt-0.5 text-xs text-muted-foreground">
                         {dayjs(transaction.created_at).format(
                             'DD MMM YYYY, HH:mm',

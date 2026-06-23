@@ -3,13 +3,27 @@ import { DataTable } from '@/components/data-table/data-table';
 import { DataTableColumnHeader } from '@/components/data-table/data-table-column-header';
 import { DataTableToolbar } from '@/components/data-table/data-table-toolbar';
 import AdminDashboardLayout from '@/components/layouts/admin-dashboard';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { useDataTable } from '@/hooks/use-data-table';
 import { formatIDR } from '@/lib/utils';
+import { router } from '@inertiajs/react';
 import type { ColumnDef } from '@tanstack/react-table';
 import dayjs from 'dayjs';
-import { CalendarIcon, CircleDashedIcon } from 'lucide-react';
+import {
+    CalendarIcon,
+    CircleDashedIcon,
+    MoreHorizontalIcon,
+} from 'lucide-react';
 import { useMemo } from 'react';
+import { toast } from 'sonner';
 import { EmptyPayments } from './components/empty-payments';
 
 const STATUS_OPTIONS = [
@@ -33,6 +47,28 @@ type PaymentsPageProps = {
 };
 
 export default function PaymentsPage({ data }: PaymentsPageProps) {
+    const handleApprove = (paymentId: number) => {
+        router.post(
+            `/admin/funds/wallet-transactions/${paymentId}/approve`,
+            {},
+            {
+                onSuccess: () => toast.success('Approved successfully'),
+                preserveScroll: true,
+            },
+        );
+    };
+
+    const handleReject = (paymentId: number) => {
+        router.post(
+            `/admin/funds/wallet-transactions/${paymentId}/reject`,
+            {},
+            {
+                onSuccess: () => toast.success('Rejected successfully'),
+                preserveScroll: true,
+            },
+        );
+    };
+
     const columns = useMemo<ColumnDef<any>[]>(
         () => [
             {
@@ -70,7 +106,7 @@ export default function PaymentsPage({ data }: PaymentsPageProps) {
                     <DataTableColumnHeader column={column} label="Owner" />
                 ),
                 cell: ({ row: _row }) => (
-                    <div>{row.original.owner?.name ?? '-'}</div>
+                    <div>{_row.original.owner?.name ?? '-'}</div>
                 ),
                 meta: {
                     label: 'Owner',
@@ -105,7 +141,27 @@ export default function PaymentsPage({ data }: PaymentsPageProps) {
                 header: ({ column }) => (
                     <DataTableColumnHeader column={column} label="Status" />
                 ),
-                cell: ({ cell }) => <div>{cell.getValue<any>()}</div>,
+                cell: ({ cell }) => {
+                    const status = cell.getValue<string>();
+                    let variant:
+                        | 'default'
+                        | 'secondary'
+                        | 'destructive'
+                        | 'outline'
+                        | null
+                        | undefined = 'secondary';
+                    if (status === 'paid' || status === 'success')
+                        variant = 'default';
+                    else if (status === 'pending') variant = 'outline';
+                    else if (status === 'failed' || status === 'cancelled')
+                        variant = 'destructive';
+
+                    return (
+                        <Badge variant={variant} className="capitalize">
+                            {status}
+                        </Badge>
+                    );
+                },
                 meta: {
                     label: 'Status',
                     placeholder: 'Search status...',
@@ -114,6 +170,22 @@ export default function PaymentsPage({ data }: PaymentsPageProps) {
                     icon: CircleDashedIcon,
                 },
                 enableColumnFilter: true,
+            },
+            {
+                id: 'type',
+                accessorKey: 'payable_type',
+                header: ({ column }) => (
+                    <DataTableColumnHeader column={column} label="Type" />
+                ),
+                cell: ({ cell }) => {
+                    const val = cell.getValue<any>();
+                    if (val === 'wallet-topup-payment')
+                        return <Badge variant="outline">Wallet Top-up</Badge>;
+                    if (val === 'ai-credit-topup-payment')
+                        return <Badge variant="outline">AI Top-up</Badge>;
+                    return <div>{val}</div>;
+                },
+                enableColumnFilter: false,
             },
             {
                 id: 'amount',
@@ -155,7 +227,50 @@ export default function PaymentsPage({ data }: PaymentsPageProps) {
             {
                 id: 'actions',
                 cell: ({ row: _row }) => {
-                    return <div className="flex gap-2">actions</div>;
+                    const payment = _row.original;
+                    const isManualPendingTopup =
+                        (payment.payable_type === 'wallet-topup-payment' ||
+                            payment.payable_type ===
+                                'ai-credit-topup-payment') &&
+                        payment.provider === 'manual' &&
+                        payment.status === 'pending';
+
+                    if (!isManualPendingTopup) return null;
+
+                    return (
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" className="size-8 p-0">
+                                    <span className="sr-only">Open menu</span>
+                                    <MoreHorizontalIcon className="size-4" />
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                                {payment.payload?.proof_path && (
+                                    <DropdownMenuItem asChild>
+                                        <a
+                                            href={`/storage/${payment.payload.proof_path}`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                        >
+                                            View Proof
+                                        </a>
+                                    </DropdownMenuItem>
+                                )}
+                                <DropdownMenuItem
+                                    onClick={() => handleApprove(payment.id)}
+                                >
+                                    Approve
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                    onClick={() => handleReject(payment.id)}
+                                    className="text-destructive focus:text-destructive"
+                                >
+                                    Reject
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    );
                 },
                 size: 32,
             },
@@ -177,7 +292,7 @@ export default function PaymentsPage({ data }: PaymentsPageProps) {
             sorting: [{ id: 'id', desc: true }],
             columnPinning: { right: ['actions'] },
         },
-        getRowId: (_row) => row.id.toString(),
+        getRowId: (_row) => _row.id.toString(),
     });
 
     return (

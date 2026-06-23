@@ -39,7 +39,7 @@ type Props = {
     onClose: () => void;
     onSubmit: (data: ManualPaymentData) => void;
     isSubmitting: boolean;
-    vendorBank: {
+    vendorBank?: {
         bankName: string;
         accountName: string;
         accountNumber: string;
@@ -153,7 +153,7 @@ export function ManualPaymentDialog({
                                     Bank
                                 </span>
                                 <span className="font-semibold">
-                                    {vendorBank.bankName || '—'}
+                                    {vendorBank?.bankName || '—'}
                                 </span>
                             </div>
                             <div className="flex justify-between gap-4">
@@ -161,7 +161,7 @@ export function ManualPaymentDialog({
                                     Account Name
                                 </span>
                                 <span className="text-right font-semibold">
-                                    {vendorBank.accountName || '—'}
+                                    {vendorBank?.accountName || '—'}
                                 </span>
                             </div>
                             <div className="flex justify-between gap-4">
@@ -169,7 +169,7 @@ export function ManualPaymentDialog({
                                     Account Number
                                 </span>
                                 <span className="font-mono font-semibold tracking-wider">
-                                    {vendorBank.accountNumber || '—'}
+                                    {vendorBank?.accountNumber || '—'}
                                 </span>
                             </div>
                             <div className="flex justify-between gap-4 border-t pt-2">

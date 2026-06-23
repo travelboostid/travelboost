@@ -4,7 +4,9 @@ namespace App\Http\Controllers\Companies\Dashboard;
 
 use App\Http\Controllers\Controller;
 use App\Models\Company;
+use App\Models\Payment;
 use App\Models\Wallet;
+use App\Models\WalletTopupPayment;
 use Bavix\Wallet\Models\Transaction;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
@@ -66,8 +68,37 @@ class WalletTransactionsController extends Controller
                 'amount' => abs($t->amount),
                 'meta' => $t->meta,
                 'confirmed' => $t->confirmed,
+                'status' => 'success',
                 'created_at' => $t->created_at,
             ]);
+
+        $pendingOrRejectedTopups = Payment::query()
+            ->whereMorphedTo('owner', $company)
+            ->whereMorphedTo('payable', WalletTopupPayment::class)
+            ->where('provider', 'manual')
+            ->whereIn('status', ['pending', 'failed'])
+            ->whereBetween('created_at', [$from, $to])
+            ->when($type === 'expense', fn (Builder $query) => $query->where('id', '<', 0))
+            ->latest()
+            ->take(50)
+            ->get()
+            ->map(fn (Payment $p) => [
+                'id' => 'p_'.$p->id,
+                'type' => 'income',
+                'amount' => (int) $p->amount,
+                'meta' => [
+                    'description' => 'Manual Top-up',
+                ],
+                'confirmed' => false,
+                'status' => $p->status->value,
+                'created_at' => $p->created_at,
+            ]);
+
+        $allTransactions = collect($transactions)->concat($pendingOrRejectedTopups)
+            ->sortByDesc('created_at')
+            ->values()
+            ->take(50)
+            ->all();
 
         return Inertia::render('companies/dashboard/wallet-transactions/index', [
             'filters' => [
@@ -87,7 +118,7 @@ class WalletTransactionsController extends Controller
             'transaction_count' => $transactionCount,
             'income_amount' => $incomeAmount,
             'expense_amount' => $expenseAmount,
-            'transactions' => $transactions,
+            'transactions' => $allTransactions,
         ]);
     }
 
