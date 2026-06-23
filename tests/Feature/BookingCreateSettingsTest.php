@@ -594,6 +594,67 @@ test('reserve rejects more dependent bed passengers than twin or double base roo
     $response->assertSessionHasErrors('passengers');
 });
 
+test('reserve rejects two child with bed guests sharing only one double room capacity', function () {
+    ['user' => $user, 'company' => $company, 'tour' => $tour, 'schedule' => $schedule] = createBookingCreateScenario('doublechildcapacityvendor');
+
+    $response = $this->actingAs($user)
+        ->from(route('bookings.create', [
+            'username' => $company->username,
+            'tour' => $tour,
+        ]))
+        ->post(route('bookings.reserve', [
+            'username' => $company->username,
+            'tour' => $tour,
+        ]), [
+            'tour_id' => $tour->id,
+            'departure_date' => $schedule->departure_date,
+            'pax_adult' => 3,
+            'pax_child' => 2,
+            'pax_infant' => 0,
+            'booking_number' => 'BKG-DOUBLE-CHILD-CAPACITY',
+            'vendor_id' => $company->id,
+            'passengers' => [
+                [
+                    'first_name' => 'Single',
+                    'last_name' => 'Adult',
+                    'price_category' => 'Adult Single',
+                    'room_type' => 'Single',
+                    'price_amount' => 5_000_000,
+                ],
+                [
+                    'first_name' => 'Double',
+                    'last_name' => 'One',
+                    'price_category' => 'Adult Double',
+                    'room_type' => 'Double',
+                    'price_amount' => 4_000_000,
+                ],
+                [
+                    'first_name' => 'Double',
+                    'last_name' => 'Two',
+                    'price_category' => 'Adult Double',
+                    'room_type' => 'Double',
+                    'price_amount' => 4_000_000,
+                ],
+                [
+                    'first_name' => 'Child',
+                    'last_name' => 'One',
+                    'price_category' => 'Child With Bed',
+                    'room_type' => 'Child With Bed',
+                    'price_amount' => 2_000_000,
+                ],
+                [
+                    'first_name' => 'Child',
+                    'last_name' => 'Two',
+                    'price_category' => 'Child With Bed',
+                    'room_type' => 'Child With Bed',
+                    'price_amount' => 2_000_000,
+                ],
+            ],
+        ]);
+
+    $response->assertSessionHasErrors('passengers');
+});
+
 test('reserve rejects child with bed without a twin or double base room', function () {
     ['user' => $user, 'company' => $company, 'tour' => $tour, 'schedule' => $schedule] = createBookingCreateScenario('childwithbedbasevendor');
 

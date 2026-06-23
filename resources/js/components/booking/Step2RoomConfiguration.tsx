@@ -662,6 +662,17 @@ const isEligibleDependentBaseCategory = (
 const isExtraBedCategory = (priceCategory: string | null | undefined) =>
     isCategoryMatch(priceCategory, EXTRA_BED_CATEGORIES);
 
+export function countEligibleExtraBedSlots(guests: GuestEntry[]): number {
+    const doubleGuests = guests.filter((guest) =>
+        isCategoryMatch(guest.priceCategory, DOUBLE_BED_CATEGORIES),
+    ).length;
+    const twinGuests = guests.filter((guest) =>
+        isCategoryMatch(guest.priceCategory, TWIN_BED_CATEGORIES),
+    ).length;
+
+    return Math.ceil(doubleGuests / 2) + Math.ceil(twinGuests / 2);
+}
+
 export function validateDependentBedPassengerMix(
     guests: GuestEntry[],
 ): RoomArrangementValidationResult {
@@ -673,13 +684,11 @@ export function validateDependentBedPassengerMix(
         return { isValid: true, issues: [] };
     }
 
-    const eligibleBaseGuests = guests.filter((guest) =>
-        isEligibleDependentBaseCategory(guest.priceCategory),
-    );
+    const eligibleExtraBedSlots = countEligibleExtraBedSlots(guests);
 
     if (
-        eligibleBaseGuests.length === 0 ||
-        dependentBedGuests.length > eligibleBaseGuests.length
+        eligibleExtraBedSlots === 0 ||
+        dependentBedGuests.length > eligibleExtraBedSlots
     ) {
         return {
             isValid: false,
