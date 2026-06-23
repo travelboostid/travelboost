@@ -172,7 +172,11 @@ class MediaController extends Controller
 
             Storage::disk('public')->put(
                 $path,
-                (string) $clone->encode(new WebpEncoder(quality: $variant['quality']))
+                (string) $clone->encode(new WebpEncoder(quality: $variant['quality'])),
+                [
+                    'visibility' => 'public',
+                    'CacheControl' => 'public, max-age=31536000, immutable',
+                ],
             );
 
             $files[] = [

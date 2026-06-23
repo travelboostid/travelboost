@@ -16,15 +16,22 @@ export function extractImageSrc(
     media: MediaResource,
     defaultImg: string = DEFAULT_IMAGE,
     variant: 'thumb' | 'small' | 'medium' | 'large' | 'original' = 'small',
+    options?: { maxSrcSetWidth?: number },
 ) {
     const files = (media?.data?.files as any[]) || [];
+    const maxSrcSetWidth = options?.maxSrcSetWidth;
     const src =
         files.find((f: any) => f.code === variant)?.url ||
+        files.find((f: any) => f.code === 'medium')?.url ||
         files.find((f: any) => f.code === 'small')?.url ||
         defaultImg;
     const srcSet = files.length
         ? files
-              .filter((f) => f.width)
+              .filter(
+                  (f) =>
+                      f.width &&
+                      (!maxSrcSetWidth || Number(f.width) <= maxSrcSetWidth),
+              )
               .map((f) => `${f.url} ${f.width}w`)
               .join(', ')
         : '';

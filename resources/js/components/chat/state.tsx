@@ -1,6 +1,7 @@
 import { useOpenChatRoom } from '@/api/chat-room/chat-room';
 import type { ChatMessageResource, ChatRoomResource } from '@/api/model';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
+import { CHAT_ECHO_READY_EVENT, isEchoDeferredPath } from '@/lib/echo-paths';
 import {
     selectChatRooms,
     selectMessage,
@@ -16,7 +17,7 @@ import type { Attachment, ChatActor } from '@/stores/chat/types';
 import { useEcho, useEchoPublic } from '@laravel/echo-react';
 import { MessageSquareIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { useCallback, useEffect, useLayoutEffect } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { useShallow } from 'zustand/react/shallow';
 import { useAnonymousUserContext } from '../anonymous-user-context-provider';
@@ -156,6 +157,9 @@ export function ChatContextProvider({
     const { auth } = usePageSharedDataProps();
     const setActor = useChatStore((state) => state.setActor);
     const reset = useChatStore((state) => state.reset);
+    const [echoListenersReady, setEchoListenersReady] = useState(
+        () => !isEchoDeferredPath(),
+    );
 
     useLayoutEffect(() => {
         setActor(actor);
@@ -167,13 +171,30 @@ export function ChatContextProvider({
         };
     }, [reset]);
 
+    useEffect(() => {
+        if (echoListenersReady) {
+            return;
+        }
+
+        const enableListeners = () => {
+            setEchoListenersReady(true);
+        };
+
+        window.addEventListener(CHAT_ECHO_READY_EVENT, enableListeners);
+
+        return () => {
+            window.removeEventListener(CHAT_ECHO_READY_EVENT, enableListeners);
+        };
+    }, [echoListenersReady]);
+
     return (
         <>
-            {auth?.user ? (
-                <AuthenticatedChatMessageListener />
-            ) : (
-                <UnauthenticatedChatMessageListener />
-            )}
+            {echoListenersReady &&
+                (auth?.user ? (
+                    <AuthenticatedChatMessageListener />
+                ) : (
+                    <UnauthenticatedChatMessageListener />
+                ))}
             {children}
         </>
     );

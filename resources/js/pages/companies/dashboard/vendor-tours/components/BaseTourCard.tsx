@@ -66,6 +66,7 @@ export default function BaseTourCard({
                     <TourMediaImage
                         media={tour.image}
                         alt={tour.name}
+                        priority={imagePriority}
                         sizes={TOUR_CARD_IMAGE_SIZES}
                         width={475}
                         height={267}

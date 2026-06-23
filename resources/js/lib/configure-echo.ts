@@ -1,12 +1,11 @@
+import { isEchoDeferredPath } from '@/lib/echo-paths';
 import { isMarketingPath } from '@/lib/marketing-pages';
 import { configureEcho } from '@laravel/echo-react';
 
 let echoConfigured = false;
 
-export function configureEchoIfNeeded(
-    pathname: string = window.location.pathname,
-): void {
-    if (echoConfigured || isMarketingPath(pathname)) {
+export function configureEchoNow(): void {
+    if (echoConfigured) {
         return;
     }
 
@@ -21,4 +20,18 @@ export function configureEchoIfNeeded(
     });
 
     echoConfigured = true;
+}
+
+export function configureEchoIfNeeded(
+    pathname: string = window.location.pathname,
+): void {
+    if (
+        echoConfigured ||
+        isMarketingPath(pathname) ||
+        isEchoDeferredPath(pathname)
+    ) {
+        return;
+    }
+
+    configureEchoNow();
 }

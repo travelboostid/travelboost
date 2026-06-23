@@ -18,6 +18,7 @@ import {
     TooltipTrigger,
 } from '@/components/ui/tooltip';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
+import { activateChatStack } from '@/lib/activate-chat-stack';
 import { extractDocumentUrl } from '@/lib/utils';
 import { router } from '@inertiajs/react';
 import { IconCalendarEvent, IconPdf } from '@tabler/icons-react';
@@ -116,6 +117,7 @@ export default function PublicTourCard({
     const handleChatInternal = async (targetId: number) => {
         try {
             setInternalStartingChat(true);
+            activateChatStack();
             floatingChat?.setAttachment({
                 type: 'tour',
                 data: tour.id.toString(),

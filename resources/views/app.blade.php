@@ -92,9 +92,20 @@
         />
     @endif
     <link
+        rel="preload"
         href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600|playfair-display:600,700&display=swap"
-        rel="stylesheet"
+        as="style"
+        onload="
+            this.onload = null;
+            this.rel = 'stylesheet';
+        "
     />
+    <noscript>
+        <link
+            href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600|playfair-display:600,700&display=swap"
+            rel="stylesheet"
+        />
+    </noscript>
 
     @php
         $pageProps = $page['props'] ?? [];
