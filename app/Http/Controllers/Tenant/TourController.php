@@ -102,8 +102,10 @@ class TourController extends Controller
                     'departure_date' => $avail->schedule->departure_date,
                     'return_date' => $avail->schedule->return_date,
                     'quota' => (int) $avail->available,
-                    'price' => $this->lowestDiscountedSchedulePrice($avail->schedule->prices),
-                    'prices' => $avail->schedule->prices->values(),
+                    'price' => $this->scheduleDisplayPrice(
+                        $avail->schedule->prices,
+                        $agentTour->tour->showprice ?? null,
+                    ),
                     'agent_price' => 0,
                     'cutoff_date' => $avail->schedule->cutoff_date,
                     'is_active' => (bool) $avail->schedule->is_active,
@@ -187,6 +189,42 @@ class TourController extends Controller
         DebugPerfLogger::attachResponseHeaders($metrics);
 
         return Inertia::render('companies/agent-tours', $payload);
+    }
+
+    private function scheduleDisplayPrice($prices, mixed $masterPrice): float
+    {
+        $priority = [
+            'adult double',
+            'adult twin',
+            'adult extra bed',
+            'adult single',
+        ];
+
+        foreach ($priority as $categoryName) {
+            $matchingPrice = $prices->first(function ($price) use ($categoryName): bool {
+                $name = strtolower(trim((string) ($price->priceCategory?->name ?? '')));
+                $normalized = preg_replace('/[^a-z0-9]+/', ' ', $name) ?? '';
+                $normalized = trim($normalized);
+
+                return $normalized === $categoryName;
+            });
+
+            if ($matchingPrice !== null) {
+                $discounted = $this->lowestDiscountedSchedulePrice(collect([$matchingPrice]));
+
+                if ($discounted > 0) {
+                    return $discounted;
+                }
+            }
+        }
+
+        $fallback = $this->lowestDiscountedSchedulePrice($prices);
+
+        if ($fallback > 0) {
+            return $fallback;
+        }
+
+        return (float) ($masterPrice ?? 0);
     }
 
     private function lowestDiscountedSchedulePrice($prices): float

@@ -119,9 +119,8 @@ test('agent subdomain catalog exposes schedule price from minimum active price c
     $response->assertInertia(fn ($page) => $page
         ->component('companies/agent-tours')
         ->where('activeWaitingListScheduleCount', 0)
-        ->where('data.0.tour.schedules.0.price', 3_000_000)
-        ->has('data.0.tour.schedules.0.prices', 3)
-        ->where('data.0.tour.schedules.0.prices.0.price_category.name', 'Adult Twin'));
+        ->where('data.0.tour.schedules.0.price', 4_500_000)
+        ->missing('data.0.tour.schedules.0.prices'));
 });
 
 test('agent subdomain catalog marks liked tours for authenticated customers', function () {

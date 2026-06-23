@@ -24,14 +24,23 @@ export function debugPerfLog({
     };
 
     // #region agent log
-    fetch('http://127.0.0.1:7542/ingest/b9e8bf3e-2819-4c9d-927a-12d09e0ad2cb', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-Debug-Session-Id': '4b26bb',
-        },
-        body: JSON.stringify(payload),
-    }).catch(() => {});
+    const isLocalIngest =
+        typeof window !== 'undefined' &&
+        ['localhost', '127.0.0.1'].includes(window.location.hostname);
+
+    if (isLocalIngest) {
+        fetch(
+            'http://127.0.0.1:7542/ingest/b9e8bf3e-2819-4c9d-927a-12d09e0ad2cb',
+            {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Debug-Session-Id': '4b26bb',
+                },
+                body: JSON.stringify(payload),
+            },
+        ).catch(() => {});
+    }
 
     fetch('/__debug/perf-log', {
         method: 'POST',
