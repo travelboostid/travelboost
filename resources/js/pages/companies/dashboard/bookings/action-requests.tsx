@@ -1,6 +1,14 @@
 import CompanyDashboardLayout from '@/components/layouts/company-dashboard';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { formatIDR } from '@/constants/booking';
@@ -10,9 +18,8 @@ import {
     CorrectionChangeSummary,
     type CorrectionPayload,
 } from '@/pages/companies/dashboard/bookings/components/booking-correction/correction-change-summary';
-import CorrectionSummaryCards, {
-    actionBadgeClassName,
-} from '@/pages/companies/dashboard/bookings/components/booking-correction/correction-summary-cards';
+import { actionBadgeClassName } from '@/pages/companies/dashboard/bookings/components/booking-correction/correction-summary-cards';
+import ReschedulePriceAdjustmentField from '@/pages/companies/dashboard/bookings/components/booking-correction/reschedule-price-adjustment-field';
 import {
     approve,
     index as bookingCorrectionRoute,
@@ -196,6 +203,10 @@ export default function Page({
     };
     const [processingId, setProcessingId] = useState<number | null>(null);
     const [globalFilter, setGlobalFilter] = useState(search);
+    const [approveDialogRequest, setApproveDialogRequest] =
+        useState<ActionRequest | null>(null);
+    const [applyCustomerPriceAdjustment, setApplyCustomerPriceAdjustment] =
+        useState(true);
 
     const tabs = useMemo(
         () =>
@@ -296,6 +307,7 @@ export default function Page({
     const submitDecision = (
         requestId: number,
         decision: 'approve' | 'reject',
+        options?: { applyCustomerPriceAdjustment?: boolean },
     ) => {
         const routeDefinition =
             decision === 'approve'
@@ -311,12 +323,39 @@ export default function Page({
         setProcessingId(requestId);
         router.post(
             routeDefinition.url,
-            {},
+            decision === 'approve' && options
+                ? {
+                      apply_customer_price_adjustment:
+                          options.applyCustomerPriceAdjustment ?? true,
+                  }
+                : {},
             {
                 preserveScroll: true,
+                onSuccess: () => {
+                    if (decision === 'approve') {
+                        setApproveDialogRequest(null);
+                        setApplyCustomerPriceAdjustment(true);
+                    }
+                },
                 onFinish: () => setProcessingId(null),
             },
         );
+    };
+
+    const handleApproveClick = (request: ActionRequest) => {
+        const priceDifference = Number(request.payload?.price_difference ?? 0);
+
+        if (
+            canReviewRequests &&
+            request.target_action === 'reschedule' &&
+            Math.abs(priceDifference) > 0.01
+        ) {
+            setApplyCustomerPriceAdjustment(true);
+            setApproveDialogRequest(request);
+            return;
+        }
+
+        submitDecision(request.id, 'approve');
     };
 
     return (
@@ -346,10 +385,6 @@ export default function Page({
             />
 
             <div className="mx-auto flex w-full max-w-7xl flex-col gap-4 p-4 md:p-6">
-                <CorrectionSummaryCards
-                    counts={actionRequiredCounts}
-                    canReviewRequests={canReviewRequests}
-                />
                 <Tabs
                     value={activeAction}
                     onValueChange={handleActionChange}
@@ -420,9 +455,85 @@ export default function Page({
                             canReviewRequests={canReviewRequests}
                             processingId={processingId}
                             onSubmitDecision={submitDecision}
+                            onApproveClick={handleApproveClick}
                         />
                     </TabsContent>
                 </Tabs>
+
+                <Dialog
+                    open={approveDialogRequest !== null}
+                    onOpenChange={(open) => {
+                        if (!open) {
+                            setApproveDialogRequest(null);
+                            setApplyCustomerPriceAdjustment(true);
+                        }
+                    }}
+                >
+                    <DialogContent className="max-w-lg">
+                        <DialogHeader>
+                            <DialogTitle>
+                                <FormattedMessage defaultMessage="Approve reschedule" />
+                            </DialogTitle>
+                            <DialogDescription>
+                                <FormattedMessage defaultMessage="Confirm how the price difference should be handled before rescheduling this booking." />
+                            </DialogDescription>
+                        </DialogHeader>
+
+                        {approveDialogRequest && (
+                            <div className="space-y-3">
+                                <CorrectionChangeSummary
+                                    targetAction="reschedule"
+                                    currentDeparture={
+                                        approveDialogRequest.booking
+                                            ?.departure_date ?? null
+                                    }
+                                    payload={
+                                        approveDialogRequest.payload ?? null
+                                    }
+                                />
+                                <ReschedulePriceAdjustmentField
+                                    priceDifference={Number(
+                                        approveDialogRequest.payload
+                                            ?.price_difference ?? 0,
+                                    )}
+                                    value={applyCustomerPriceAdjustment}
+                                    onChange={setApplyCustomerPriceAdjustment}
+                                />
+                            </div>
+                        )}
+
+                        <DialogFooter>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => setApproveDialogRequest(null)}
+                            >
+                                <FormattedMessage defaultMessage="Cancel" />
+                            </Button>
+                            <Button
+                                type="button"
+                                disabled={
+                                    processingId === approveDialogRequest?.id
+                                }
+                                onClick={() => {
+                                    if (!approveDialogRequest) {
+                                        return;
+                                    }
+
+                                    submitDecision(
+                                        approveDialogRequest.id,
+                                        'approve',
+                                        {
+                                            applyCustomerPriceAdjustment,
+                                        },
+                                    );
+                                }}
+                            >
+                                <FormattedMessage defaultMessage="Confirm approval" />
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
             </div>
         </CompanyDashboardLayout>
     );
@@ -434,6 +545,7 @@ function RequestList({
     canReviewRequests,
     processingId,
     onSubmitDecision,
+    onApproveClick,
 }: {
     requests: PaginatedActionRequests;
     emptyLabel: string;
@@ -442,7 +554,9 @@ function RequestList({
     onSubmitDecision: (
         requestId: number,
         decision: 'approve' | 'reject',
+        options?: { applyCustomerPriceAdjustment?: boolean },
     ) => void;
+    onApproveClick: (request: ActionRequest) => void;
 }) {
     if (requests.data.length === 0) {
         return (
@@ -462,6 +576,7 @@ function RequestList({
                         canReviewRequests={canReviewRequests}
                         processingId={processingId}
                         onSubmitDecision={onSubmitDecision}
+                        onApproveClick={onApproveClick}
                     />
                 ))}
             </div>
@@ -534,6 +649,7 @@ function RequestRow({
     canReviewRequests,
     processingId,
     onSubmitDecision,
+    onApproveClick,
 }: {
     request: ActionRequest;
     canReviewRequests: boolean;
@@ -541,7 +657,9 @@ function RequestRow({
     onSubmitDecision: (
         requestId: number,
         decision: 'approve' | 'reject',
+        options?: { applyCustomerPriceAdjustment?: boolean },
     ) => void;
+    onApproveClick: (request: ActionRequest) => void;
 }) {
     const intl = useIntl();
     const canReview = canReviewRequests && request.status === 'pending';
@@ -676,7 +794,7 @@ function RequestRow({
                         type="button"
                         className="gap-2"
                         disabled={processingId === request.id}
-                        onClick={() => onSubmitDecision(request.id, 'approve')}
+                        onClick={() => onApproveClick(request)}
                     >
                         <CheckIcon className="size-4" />
                         <FormattedMessage

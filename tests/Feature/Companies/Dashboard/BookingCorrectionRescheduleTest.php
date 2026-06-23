@@ -1,6 +1,7 @@
 <?php
 
 use App\Actions\Booking\CancelOverdueDownPaymentBookingsAction;
+use App\Actions\Booking\RescheduleBookingAction;
 use App\Enums\BookingStatus;
 use App\Enums\CompanyTeamStatus;
 use App\Enums\PaymentStatus;
@@ -487,4 +488,319 @@ test('vendor direct reschedule reprices booking and downgrades status when new t
         ->and($booking->status)->toBe(BookingStatus::DOWN_PAYMENT)
         ->and($passenger)->not->toBeNull()
         ->and((float) $passenger->price_amount)->toBe(18_900_000.0);
+});
+
+test('vendor direct reschedule can waive customer price adjustment when new total is higher', function () {
+    ['vendor' => $vendor, 'tour' => $tour, 'booking' => $booking, 'newSchedule' => $newSchedule] = createRescheduleScenario();
+    attachCompanyTeam($this->user, $vendor);
+
+    $priceCategory = PriceCategory::create([
+        'company_id' => $vendor->id,
+        'name' => 'Adult Single',
+        'room_type' => 'single',
+    ]);
+
+    TourPrice::create([
+        'company_id' => $vendor->id,
+        'tour_code' => $tour->code,
+        'schedule_id' => $newSchedule->id,
+        'price_category_id' => $priceCategory->id,
+        'currency' => 'IDR',
+        'price' => 21_000_000,
+        'promotion_rate' => 10,
+    ]);
+
+    BookingPassenger::factory()->create([
+        'booking_id' => $booking->id,
+        'price_category' => 'Adult Single',
+        'price_amount' => 9_000_000,
+    ]);
+
+    $booking->update([
+        'status' => BookingStatus::FULL_PAYMENT,
+        'grand_total' => 10_000_000,
+        'platform_fee' => 25_000,
+        'tax_rate' => 0,
+        'tax_amount' => 0,
+        'total_price' => 10_000_000,
+    ]);
+
+    Payment::create([
+        'owner_type' => User::class,
+        'owner_id' => $booking->user_id,
+        'payable_type' => Booking::class,
+        'payable_id' => $booking->id,
+        'provider' => 'manual',
+        'payment_method' => 'bank_transfer',
+        'amount' => 10_000_000,
+        'status' => PaymentStatus::PAID,
+        'payload' => ['payment_type' => 'full_payment'],
+    ]);
+
+    Notification::fake();
+
+    $this->actingAs($this->user)
+        ->post("/companies/{$vendor->username}/dashboard/bookings/{$booking->id}/reschedule", [
+            'schedule_id' => $newSchedule->id,
+            'reason' => 'Vendor absorbs increase',
+            'apply_customer_price_adjustment' => false,
+        ])
+        ->assertRedirect();
+
+    $booking->refresh();
+    $actionRequest = BookingActionRequest::query()
+        ->where('booking_id', $booking->id)
+        ->where('target_action', 'reschedule')
+        ->latest('id')
+        ->first();
+
+    expect($booking->status)->toBe(BookingStatus::FULL_PAYMENT)
+        ->and(data_get($actionRequest?->payload, 'apply_customer_price_adjustment'))->toBeFalse();
+
+    Notification::assertNotSentTo(
+        $booking->user,
+        BookingPaymentNotification::class,
+        fn (BookingPaymentNotification $notification): bool => $notification->stage === 'booking_rescheduled_balance_due'
+    );
+});
+
+test('vendor direct reschedule can waive customer refund when new total is lower', function () {
+    Notification::fake();
+
+    ['vendor' => $vendor, 'tour' => $tour, 'booking' => $booking, 'newSchedule' => $newSchedule] = createRescheduleScenario();
+    attachCompanyTeam($this->user, $vendor);
+
+    $priceCategory = PriceCategory::create([
+        'company_id' => $vendor->id,
+        'name' => 'Adult Single',
+        'room_type' => 'single',
+    ]);
+
+    TourPrice::create([
+        'company_id' => $vendor->id,
+        'tour_code' => $tour->code,
+        'schedule_id' => $newSchedule->id,
+        'price_category_id' => $priceCategory->id,
+        'currency' => 'IDR',
+        'price' => 5_000_000,
+        'promotion_rate' => 0,
+    ]);
+
+    BookingPassenger::factory()->create([
+        'booking_id' => $booking->id,
+        'price_category' => 'Adult Single',
+        'price_amount' => 9_000_000,
+    ]);
+
+    $booking->update([
+        'status' => BookingStatus::FULL_PAYMENT,
+        'grand_total' => 10_000_000,
+        'platform_fee' => 25_000,
+        'tax_rate' => 0,
+        'tax_amount' => 0,
+        'total_price' => 10_000_000,
+    ]);
+
+    Payment::create([
+        'owner_type' => User::class,
+        'owner_id' => $booking->user_id,
+        'payable_type' => Booking::class,
+        'payable_id' => $booking->id,
+        'provider' => 'manual',
+        'payment_method' => 'bank_transfer',
+        'amount' => 10_000_000,
+        'status' => PaymentStatus::PAID,
+        'payload' => ['payment_type' => 'full_payment'],
+    ]);
+
+    $this->actingAs($this->user)
+        ->post("/companies/{$vendor->username}/dashboard/bookings/{$booking->id}/reschedule", [
+            'schedule_id' => $newSchedule->id,
+            'apply_customer_price_adjustment' => false,
+        ])
+        ->assertRedirect();
+
+    $booking->refresh();
+
+    expect($booking->status)->toBe(BookingStatus::FULL_PAYMENT)
+        ->and((float) $booking->grand_total)->toBeLessThan(10_000_000);
+
+    Notification::assertNotSentTo(
+        $booking->user,
+        BookingPaymentNotification::class,
+        fn (BookingPaymentNotification $notification): bool => $notification->stage === 'booking_rescheduled_credit'
+    );
+});
+
+test('vendor can approve agent reschedule request without applying customer price adjustment', function () {
+    Notification::fake();
+
+    ['vendor' => $vendor, 'agent' => $agent, 'tour' => $tour, 'booking' => $booking, 'newSchedule' => $newSchedule, 'newDeparture' => $newDeparture] = createRescheduleScenario();
+    $vendorUser = User::factory()->create();
+    attachCompanyTeam($vendorUser, $vendor);
+
+    $priceCategory = PriceCategory::create([
+        'company_id' => $vendor->id,
+        'name' => 'Adult Single',
+        'room_type' => 'single',
+    ]);
+
+    TourPrice::create([
+        'company_id' => $vendor->id,
+        'tour_code' => $tour->code,
+        'schedule_id' => $newSchedule->id,
+        'price_category_id' => $priceCategory->id,
+        'currency' => 'IDR',
+        'price' => 21_000_000,
+        'promotion_rate' => 10,
+    ]);
+
+    BookingPassenger::factory()->create([
+        'booking_id' => $booking->id,
+        'price_category' => 'Adult Single',
+        'price_amount' => 9_000_000,
+    ]);
+
+    $booking->update([
+        'status' => BookingStatus::FULL_PAYMENT,
+        'grand_total' => 10_000_000,
+        'platform_fee' => 25_000,
+        'tax_rate' => 0,
+        'tax_amount' => 0,
+        'total_price' => 10_000_000,
+    ]);
+
+    Payment::create([
+        'owner_type' => User::class,
+        'owner_id' => $booking->user_id,
+        'payable_type' => Booking::class,
+        'payable_id' => $booking->id,
+        'provider' => 'manual',
+        'payment_method' => 'bank_transfer',
+        'amount' => 10_000_000,
+        'status' => PaymentStatus::PAID,
+        'payload' => ['payment_type' => 'full_payment'],
+    ]);
+
+    $pricePreview = app(RescheduleBookingAction::class)
+        ->previewPricingChange($booking->fresh(), $newSchedule);
+
+    $actionRequest = BookingActionRequest::create([
+        'booking_id' => $booking->id,
+        'requester_company_id' => $agent->id,
+        'requester_user_id' => $this->user->id,
+        'target_action' => 'reschedule',
+        'status' => 'pending',
+        'reason' => 'Please move to next month',
+        'payload' => [
+            'requested_schedule_id' => $newSchedule->id,
+            'requested_departure_date' => $newDeparture,
+            'previous_departure_date' => $booking->departure_date?->toDateString(),
+            'price_before' => (float) $booking->grand_total,
+            'price_after' => $pricePreview['grand_total'],
+            'price_difference' => $pricePreview['price_difference'],
+        ],
+    ]);
+
+    $this->actingAs($vendorUser)
+        ->post("/companies/{$vendor->username}/dashboard/booking-correction/{$actionRequest->id}/approve", [
+            'apply_customer_price_adjustment' => false,
+        ])
+        ->assertRedirect()
+        ->assertSessionHas('success');
+
+    $booking->refresh();
+    $actionRequest->refresh();
+
+    expect($booking->status)->toBe(BookingStatus::FULL_PAYMENT)
+        ->and(data_get($actionRequest->payload, 'apply_customer_price_adjustment'))->toBeFalse();
+});
+
+test('agent reschedule request always stores customer price adjustment as true even when false is submitted', function () {
+    ['vendor' => $vendor, 'agent' => $agent, 'booking' => $booking, 'newSchedule' => $newSchedule] = createRescheduleScenario();
+    $agentUser = User::factory()->create();
+    attachCompanyTeam($agentUser, $agent);
+
+    $this->actingAs($agentUser)
+        ->post("/companies/{$agent->username}/dashboard/bookings/{$booking->id}/reschedule", [
+            'schedule_id' => $newSchedule->id,
+            'reason' => 'Customer requested new date',
+            'apply_customer_price_adjustment' => false,
+        ])
+        ->assertRedirect();
+
+    $request = BookingActionRequest::query()
+        ->where('booking_id', $booking->id)
+        ->where('target_action', 'reschedule')
+        ->first();
+
+    expect($request)->not->toBeNull()
+        ->and(data_get($request->payload, 'apply_customer_price_adjustment'))->toBeTrue();
+});
+
+test('waived reschedule does not expose credit balance on bookings index', function () {
+    ['vendor' => $vendor, 'tour' => $tour, 'booking' => $booking, 'newSchedule' => $newSchedule] = createRescheduleScenario();
+    attachCompanyTeam($this->user, $vendor);
+
+    $priceCategory = PriceCategory::create([
+        'company_id' => $vendor->id,
+        'name' => 'Adult Single',
+        'room_type' => 'single',
+    ]);
+
+    TourPrice::create([
+        'company_id' => $vendor->id,
+        'tour_code' => $tour->code,
+        'schedule_id' => $newSchedule->id,
+        'price_category_id' => $priceCategory->id,
+        'currency' => 'IDR',
+        'price' => 5_000_000,
+        'promotion_rate' => 0,
+    ]);
+
+    BookingPassenger::factory()->create([
+        'booking_id' => $booking->id,
+        'price_category' => 'Adult Single',
+        'price_amount' => 9_000_000,
+    ]);
+
+    $booking->update([
+        'status' => BookingStatus::FULL_PAYMENT,
+        'grand_total' => 10_000_000,
+        'platform_fee' => 25_000,
+        'tax_rate' => 0,
+        'tax_amount' => 0,
+        'total_price' => 10_000_000,
+    ]);
+
+    Payment::query()->where('payable_id', $booking->id)->delete();
+
+    Payment::create([
+        'owner_type' => User::class,
+        'owner_id' => $booking->user_id,
+        'payable_type' => Booking::class,
+        'payable_id' => $booking->id,
+        'provider' => 'manual',
+        'payment_method' => 'bank_transfer',
+        'amount' => 10_000_000,
+        'status' => PaymentStatus::PAID,
+        'payload' => ['payment_type' => 'full_payment'],
+    ]);
+
+    $this->actingAs($this->user)
+        ->post("/companies/{$vendor->username}/dashboard/bookings/{$booking->id}/reschedule", [
+            'schedule_id' => $newSchedule->id,
+            'apply_customer_price_adjustment' => false,
+        ])
+        ->assertRedirect();
+
+    $this->actingAs($this->user)
+        ->get("/companies/{$vendor->username}/dashboard/bookings")
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('companies/dashboard/bookings/index')
+            ->has('data.data', 1)
+            ->where('data.data.0.booking_number', $booking->booking_number)
+            ->where('data.data.0.payment_followup.state', 'completed')
+            ->where('data.data.0.remaining_balance', 0));
 });

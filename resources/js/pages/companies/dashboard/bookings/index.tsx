@@ -50,6 +50,7 @@ import { openOnlinePayment } from '@/lib/open-online-payment';
 import { hasOnlinePaymentInstructions } from '@/lib/payment-instructions';
 import { cn } from '@/lib/utils';
 import { CorrectionChangeSummary } from '@/pages/companies/dashboard/bookings/components/booking-correction/correction-change-summary';
+import ReschedulePriceAdjustmentField from '@/pages/companies/dashboard/bookings/components/booking-correction/reschedule-price-adjustment-field';
 import { Head, Link, router } from '@inertiajs/react';
 import {
     flexRender,
@@ -999,6 +1000,8 @@ function RowActions({
     const [selectedSchedule, setSelectedSchedule] =
         React.useState<RescheduleScheduleOption | null>(null);
     const [actionReason, setActionReason] = React.useState('');
+    const [applyCustomerPriceAdjustment, setApplyCustomerPriceAdjustment] =
+        React.useState(true);
     const [processingAction, setProcessingAction] = React.useState<
         | 'accept'
         | 'cancel'
@@ -1125,7 +1128,15 @@ function RowActions({
             {
                 reason: actionReason,
                 ...(action === 'reschedule' && selectedSchedule
-                    ? { schedule_id: selectedSchedule.id }
+                    ? {
+                          schedule_id: selectedSchedule.id,
+                          ...(!isAgent
+                              ? {
+                                    apply_customer_price_adjustment:
+                                        applyCustomerPriceAdjustment,
+                                }
+                              : {}),
+                      }
                     : {}),
             },
             {
@@ -1134,6 +1145,7 @@ function RowActions({
                     setActionDialog(null);
                     setActionReason('');
                     setSelectedSchedule(null);
+                    setApplyCustomerPriceAdjustment(true);
                 },
                 onFinish: () => setProcessingAction(null),
             },
@@ -1146,6 +1158,7 @@ function RowActions({
         setActionDialog(action);
         setSelectedSchedule(null);
         setActionReason('');
+        setApplyCustomerPriceAdjustment(true);
     };
     const submitReorder = () => {
         setProcessingAction('reorder');
@@ -1991,17 +2004,32 @@ function RowActions({
                                                     .price_difference,
                                         }}
                                     />
-                                    {selectedSchedule.price_preview
-                                        .price_difference > 0 && (
-                                        <p className="rounded-md border border-amber-200/70 bg-amber-50/80 px-3 py-2 text-xs text-amber-800 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-200">
-                                            <FormattedMessage defaultMessage="The customer will need to pay the additional balance. Booking status may change to down payment after reschedule." />
-                                        </p>
-                                    )}
-                                    {selectedSchedule.price_preview
-                                        .price_difference < 0 && (
-                                        <p className="rounded-md border border-emerald-200/70 bg-emerald-50/80 px-3 py-2 text-xs text-emerald-800 dark:border-emerald-900/50 dark:bg-emerald-950/30 dark:text-emerald-200">
-                                            <FormattedMessage defaultMessage="A credit balance may be available. Contact the vendor to arrange a refund for the price difference." />
-                                        </p>
+                                    {isAgent ? (
+                                        <>
+                                            {selectedSchedule.price_preview
+                                                .price_difference > 0 && (
+                                                <p className="rounded-md border border-amber-200/70 bg-amber-50/80 px-3 py-2 text-xs text-amber-800 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-200">
+                                                    <FormattedMessage defaultMessage="The customer may need to pay an additional balance after reschedule. The vendor will confirm payment terms." />
+                                                </p>
+                                            )}
+                                            {selectedSchedule.price_preview
+                                                .price_difference < 0 && (
+                                                <p className="rounded-md border border-emerald-200/70 bg-emerald-50/80 px-3 py-2 text-xs text-emerald-800 dark:border-emerald-900/50 dark:bg-emerald-950/30 dark:text-emerald-200">
+                                                    <FormattedMessage defaultMessage="A credit balance may be available. Contact the vendor to arrange a refund for the price difference." />
+                                                </p>
+                                            )}
+                                        </>
+                                    ) : (
+                                        <ReschedulePriceAdjustmentField
+                                            priceDifference={
+                                                selectedSchedule.price_preview
+                                                    .price_difference
+                                            }
+                                            value={applyCustomerPriceAdjustment}
+                                            onChange={
+                                                setApplyCustomerPriceAdjustment
+                                            }
+                                        />
                                     )}
                                 </div>
                             )}

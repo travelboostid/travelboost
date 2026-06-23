@@ -11,8 +11,11 @@ use Illuminate\Validation\ValidationException;
 
 class RescheduleBookingAction
 {
-    public function execute(Booking $booking, TourSchedule $targetSchedule): Booking
-    {
+    public function execute(
+        Booking $booking,
+        TourSchedule $targetSchedule,
+        bool $applyCustomerPriceAdjustment = true,
+    ): Booking {
         $booking->loadMissing(['vendor.companySetting', 'tour.company.companySetting']);
 
         $currentStatus = $this->bookingStatusValue($booking);
@@ -63,7 +66,11 @@ class RescheduleBookingAction
         ]);
 
         $booking = $this->repriceBookingForSchedule($booking->fresh(), $targetSchedule);
-        $booking = app(ReconcileBookingPaymentAfterRepriceAction::class)->execute($booking, $priceBefore);
+        $booking = app(ReconcileBookingPaymentAfterRepriceAction::class)->execute(
+            $booking,
+            $priceBefore,
+            $applyCustomerPriceAdjustment,
+        );
 
         app(SyncAvailabilityAction::class)->execute(
             (int) $booking->tour_id,

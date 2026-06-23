@@ -8,13 +8,16 @@ use App\Services\BookingPaymentWorkflowService;
 
 class ReconcileBookingPaymentAfterRepriceAction
 {
-    public function execute(Booking $booking, float $priceBefore): Booking
-    {
+    public function execute(
+        Booking $booking,
+        float $priceBefore,
+        bool $applyCustomerPriceAdjustment = true,
+    ): Booking {
         $booking = $booking->fresh();
         $paidAmount = app(BookingPaymentWorkflowService::class)->finalizablePaidAmount($booking);
         $newTotal = (float) $booking->grand_total;
 
-        if ($paidAmount > 0) {
+        if ($applyCustomerPriceAdjustment && $paidAmount > 0) {
             $targetStatus = $paidAmount >= $newTotal
                 ? BookingStatus::FULL_PAYMENT
                 : BookingStatus::DOWN_PAYMENT;
@@ -23,13 +26,30 @@ class ReconcileBookingPaymentAfterRepriceAction
             $booking = $booking->fresh();
         }
 
-        $this->notifyCustomer($booking, $paidAmount, $newTotal, $priceBefore);
+        $this->notifyCustomer(
+            $booking,
+            $paidAmount,
+            $newTotal,
+            $priceBefore,
+            $applyCustomerPriceAdjustment,
+        );
 
         return $booking;
     }
 
-    private function notifyCustomer(Booking $booking, float $paidAmount, float $newTotal, float $priceBefore): void
-    {
+    private function notifyCustomer(
+        Booking $booking,
+        float $paidAmount,
+        float $newTotal,
+        float $priceBefore,
+        bool $applyCustomerPriceAdjustment,
+    ): void {
+        if (! $applyCustomerPriceAdjustment) {
+            app(NotifyBookingPaymentEventAction::class)->execute($booking, 'booking_rescheduled');
+
+            return;
+        }
+
         $creditAmount = max(0.0, $paidAmount - $newTotal);
         $amountDue = max(0.0, $newTotal - $paidAmount);
 

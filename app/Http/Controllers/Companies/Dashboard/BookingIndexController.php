@@ -369,8 +369,9 @@ class BookingIndexController extends Controller
     {
         $paidAmount = app(BookingPaymentWorkflowService::class)->finalizablePaidAmount($booking);
         $booking->paid_amount = $paidAmount;
-        $booking->remaining_balance = max(0, (float) $booking->grand_total - $paidAmount);
-        $booking->payment_followup = $this->paymentFollowupPayload($company, $booking);
+        $effectiveGrandTotal = $this->effectiveGrandTotalForPayment($booking, $paidAmount);
+        $booking->remaining_balance = max(0, $effectiveGrandTotal - $paidAmount);
+        $booking->payment_followup = $this->paymentFollowupPayload($company, $booking, $effectiveGrandTotal);
         $booking->document_followup = $this->documentFollowupPayload($company, $booking);
     }
 
@@ -837,6 +838,7 @@ class BookingIndexController extends Controller
         $validated = $request->validate([
             'schedule_id' => ['required', 'integer', 'exists:tour_schedules,id'],
             'reason' => ['nullable', 'string', 'max:1000'],
+            'apply_customer_price_adjustment' => ['sometimes', 'boolean'],
         ]);
 
         $schedule = TourSchedule::query()
@@ -845,7 +847,12 @@ class BookingIndexController extends Controller
             ->where('company_id', $booking->vendor_id)
             ->firstOrFail();
 
-        $payload = $this->buildReschedulePayload($booking, $schedule);
+        $applyCustomerPriceAdjustment = $this->resolveApplyCustomerPriceAdjustment(
+            $company,
+            $request->boolean('apply_customer_price_adjustment', true),
+        );
+
+        $payload = $this->buildReschedulePayload($booking, $schedule, $applyCustomerPriceAdjustment);
 
         return $this->handleModificationAction(
             $company,
@@ -853,7 +860,11 @@ class BookingIndexController extends Controller
             'reschedule',
             $request,
             $payload,
-            fn (Booking $lockedBooking) => app(RescheduleBookingAction::class)->execute($lockedBooking, $schedule),
+            fn (Booking $lockedBooking) => app(RescheduleBookingAction::class)->execute(
+                $lockedBooking,
+                $schedule,
+                $applyCustomerPriceAdjustment,
+            ),
             'booking_rescheduled'
         );
     }
@@ -1142,17 +1153,25 @@ class BookingIndexController extends Controller
         return 'Reviewer';
     }
 
-    public function approveActionRequest(Company $company, BookingActionRequest $bookingActionRequest): RedirectResponse
+    public function approveActionRequest(Company $company, BookingActionRequest $bookingActionRequest, Request $request): RedirectResponse
     {
         $bookingActionRequest->loadMissing('booking');
         $this->assertCanReviewBookingActionRequest($company, $bookingActionRequest);
         abort_unless($bookingActionRequest->status === 'pending', 422);
 
         if (in_array($bookingActionRequest->target_action, ['reschedule', 'restore'], true)) {
+            $applyCustomerPriceAdjustment = $bookingActionRequest->target_action === 'reschedule'
+                ? $this->resolveApplyCustomerPriceAdjustment(
+                    $company,
+                    $request->boolean('apply_customer_price_adjustment', true),
+                )
+                : true;
+
             $this->applyApprovedModificationAction(
                 $bookingActionRequest,
                 $company,
-                request()->user()
+                request()->user(),
+                $applyCustomerPriceAdjustment,
             );
 
             return back()->with('success', 'Booking action request approved.');
@@ -1294,13 +1313,20 @@ class BookingIndexController extends Controller
     private function applyApprovedModificationAction(
         BookingActionRequest $bookingActionRequest,
         Company $company,
-        ?User $reviewerUser
+        ?User $reviewerUser,
+        bool $applyCustomerPriceAdjustment = true,
     ): void {
         $notificationStage = $bookingActionRequest->target_action === 'reschedule'
             ? 'booking_rescheduled'
             : 'booking_reactivated';
 
-        DB::transaction(function () use ($bookingActionRequest, $company, $reviewerUser, $notificationStage): void {
+        DB::transaction(function () use (
+            $bookingActionRequest,
+            $company,
+            $reviewerUser,
+            $notificationStage,
+            $applyCustomerPriceAdjustment,
+        ): void {
             $lockedRequest = BookingActionRequest::query()
                 ->whereKey($bookingActionRequest->id)
                 ->lockForUpdate()
@@ -1322,7 +1348,18 @@ class BookingIndexController extends Controller
                     ->where('company_id', $lockedBooking->vendor_id)
                     ->firstOrFail();
 
-                $updatedBooking = app(RescheduleBookingAction::class)->execute($lockedBooking, $schedule);
+                $lockedRequest->update([
+                    'payload' => array_merge(
+                        is_array($lockedRequest->payload) ? $lockedRequest->payload : [],
+                        ['apply_customer_price_adjustment' => $applyCustomerPriceAdjustment],
+                    ),
+                ]);
+
+                $updatedBooking = app(RescheduleBookingAction::class)->execute(
+                    $lockedBooking,
+                    $schedule,
+                    $applyCustomerPriceAdjustment,
+                );
             } else {
                 $updatedBooking = app(ReactivateBookingAction::class)->execute($lockedBooking);
             }
@@ -1341,8 +1378,11 @@ class BookingIndexController extends Controller
     /**
      * @return array<string, mixed>
      */
-    private function buildReschedulePayload(Booking $booking, TourSchedule $schedule): array
-    {
+    private function buildReschedulePayload(
+        Booking $booking,
+        TourSchedule $schedule,
+        bool $applyCustomerPriceAdjustment = true,
+    ): array {
         $rescheduleAction = app(RescheduleBookingAction::class);
         $pricePreview = $rescheduleAction->previewPricingChange($booking, $schedule);
 
@@ -1355,7 +1395,53 @@ class BookingIndexController extends Controller
             'price_after' => $pricePreview['grand_total'],
             'price_difference' => $pricePreview['price_difference'],
             'pax_total' => (int) ($booking->pax_adult ?? 0) + (int) ($booking->pax_child ?? 0),
+            'apply_customer_price_adjustment' => $applyCustomerPriceAdjustment,
         ];
+    }
+
+    private function resolveApplyCustomerPriceAdjustment(Company $company, bool $requested): bool
+    {
+        $companyType = $company->type->value ?? $company->type;
+
+        if ($companyType !== 'vendor') {
+            return true;
+        }
+
+        return $requested;
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    private function latestApprovedReschedulePayload(Booking $booking): ?array
+    {
+        $payload = BookingActionRequest::query()
+            ->where('booking_id', $booking->id)
+            ->where('target_action', 'reschedule')
+            ->where('status', 'approved')
+            ->orderByDesc('reviewed_at')
+            ->orderByDesc('id')
+            ->value('payload');
+
+        return is_array($payload) ? $payload : null;
+    }
+
+    private function effectiveGrandTotalForPayment(Booking $booking, float $paidAmount): float
+    {
+        $grandTotal = (float) $booking->grand_total;
+        $payload = $this->latestApprovedReschedulePayload($booking);
+
+        if ($payload === null) {
+            return $grandTotal;
+        }
+
+        if (data_get($payload, 'apply_customer_price_adjustment', true) !== false) {
+            return $grandTotal;
+        }
+
+        $priceBefore = (float) data_get($payload, 'price_before', $grandTotal);
+
+        return min($grandTotal, $priceBefore);
     }
 
     private function assertNoPendingBookingActionRequest(Booking $booking): void
@@ -2831,10 +2917,12 @@ class BookingIndexController extends Controller
     /**
      * @return array<string, mixed>
      */
-    private function paymentFollowupPayload(Company $company, Booking $booking): array
+    private function paymentFollowupPayload(Company $company, Booking $booking, ?float $effectiveGrandTotal = null): array
     {
         $status = $this->bookingStatusValue($booking);
-        $remainingBalance = max(0.0, (float) ($booking->remaining_balance ?? 0));
+        $paidAmount = (float) ($booking->paid_amount ?? app(BookingPaymentWorkflowService::class)->finalizablePaidAmount($booking));
+        $grandTotalForPayment = $effectiveGrandTotal ?? $this->effectiveGrandTotalForPayment($booking, $paidAmount);
+        $remainingBalance = max(0.0, $grandTotalForPayment - $paidAmount);
         $settings = $this->vendorSettings($booking);
         $deadline = $this->deadlinePayload($booking, $settings?->full_payment_deadline);
         $basePayload = [
@@ -2855,10 +2943,12 @@ class BookingIndexController extends Controller
         }
 
         if ($remainingBalance <= 0) {
-            $paidAmount = (float) ($booking->paid_amount ?? 0);
-            $creditAmount = max(0.0, $paidAmount - (float) $booking->grand_total);
+            $creditAmount = max(0.0, $paidAmount - $grandTotalForPayment);
+            $reschedulePayload = $this->latestApprovedReschedulePayload($booking);
+            $priceAdjustmentWaived = $reschedulePayload !== null
+                && data_get($reschedulePayload, 'apply_customer_price_adjustment', true) === false;
 
-            if ($creditAmount > 0.01) {
+            if ($creditAmount > 0.01 && ! $priceAdjustmentWaived) {
                 return [
                     ...$basePayload,
                     'state' => 'credit',
