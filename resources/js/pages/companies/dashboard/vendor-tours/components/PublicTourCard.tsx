@@ -38,6 +38,7 @@ export default function PublicTourCard({
     onChat,
     onBook,
     startingChat: passedStartingChat,
+    imagePriority = false,
 }: any) {
     const { auth, company } = usePageSharedDataProps();
     const floatingChat = useFloatingChatWidgetContext();
@@ -164,6 +165,7 @@ export default function PublicTourCard({
                 tour={tour}
                 isVendorNameVisible={vendorNameVisible}
                 isVendorInactive={isVendorInactive}
+                imagePriority={imagePriority}
                 imageAction={
                     <button
                         type="button"

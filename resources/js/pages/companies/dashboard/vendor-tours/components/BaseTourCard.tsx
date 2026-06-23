@@ -1,3 +1,7 @@
+import {
+    TOUR_CARD_IMAGE_SIZES,
+    TourMediaImage,
+} from '@/components/tours/tour-media-image';
 import { Badge } from '@/components/ui/badge';
 import {
     Card,
@@ -7,7 +11,6 @@ import {
     CardTitle,
 } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
-import { extractImageSrc } from '@/lib/utils';
 import { Building2, MapPin } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { FormattedMessage } from 'react-intl';
@@ -19,6 +22,7 @@ interface BaseTourCardProps {
     statusSection?: ReactNode;
     footerSection?: ReactNode;
     imageAction?: ReactNode;
+    imagePriority?: boolean;
 }
 
 export default function BaseTourCard({
@@ -28,9 +32,9 @@ export default function BaseTourCard({
     statusSection,
     footerSection,
     imageAction,
+    imagePriority = false,
 }: BaseTourCardProps) {
     const [showInfo, setShowInfo] = useState(false);
-    const { src, srcSet } = extractImageSrc(tour.image as any);
 
     const formatPrice = (price: any) =>
         new Intl.NumberFormat('id-ID', {
@@ -59,10 +63,15 @@ export default function BaseTourCard({
                     </div>
                 )}
                 <div className="relative aspect-video w-full shrink-0 overflow-hidden bg-slate-100 dark:bg-slate-900">
-                    <img
-                        src={src}
-                        srcSet={srcSet}
+                    <TourMediaImage
+                        media={tour.image}
                         alt={tour.name}
+                        sizes={TOUR_CARD_IMAGE_SIZES}
+                        width={475}
+                        height={267}
+                        loading={imagePriority ? 'eager' : 'lazy'}
+                        fetchPriority={imagePriority ? 'high' : 'auto'}
+                        decoding={imagePriority ? 'sync' : 'async'}
                         className="h-full w-full cursor-pointer object-cover transition-transform duration-500 group-hover:scale-105"
                         onClick={() => setShowInfo(true)}
                     />
@@ -130,10 +139,10 @@ export default function BaseTourCard({
                     <DialogTitle className="sr-only">{tour.name}</DialogTitle>
                     <div className="flex h-full max-h-[calc(100dvh-2rem)] flex-col sm:max-h-[85vh]">
                         <div className="relative h-56 sm:h-64 shrink-0 w-full bg-slate-100 dark:bg-slate-800">
-                            <img
-                                src={src}
-                                srcSet={srcSet}
+                            <TourMediaImage
+                                media={tour.image}
                                 alt={tour.name}
+                                sizes="(max-width: 768px) 100vw, 768px"
                                 className="w-full h-full object-cover"
                             />
                             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />

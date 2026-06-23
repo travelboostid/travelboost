@@ -14,6 +14,7 @@ use App\Models\TourCommissionRule;
 use App\Models\VendorAgentPartner;
 use App\Notifications\TourAgentPromotionNotification;
 use App\Support\ResolvesTourScheduleDisplayPrice;
+use App\Support\TourCatalogPreload;
 use Inertia\Inertia;
 
 class VendorTourCatalogController extends Controller
@@ -161,6 +162,7 @@ class VendorTourCatalogController extends Controller
             'username' => $username,
             'partnership' => $partnership,
             'vendor' => $vendor,
+            'lcpImageUrl' => TourCatalogPreload::resolveFirstTourImageUrl($tours),
         ]);
     }
 

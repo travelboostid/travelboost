@@ -81,15 +81,27 @@
         href="https://fonts.bunny.net"
         crossorigin="anonymous"
     />
+    @php
+        $mediaCdnOrigin = \App\Support\MediaCdn::preconnectOrigin();
+    @endphp
+    @if ($mediaCdnOrigin)
+        <link
+            rel="preconnect"
+            href="{{ $mediaCdnOrigin }}"
+            crossorigin="anonymous"
+        />
+    @endif
     <link
         href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600|playfair-display:600,700&display=swap"
         rel="stylesheet"
     />
 
     @php
+        $pageProps = $page['props'] ?? [];
         $performancePreloads = \App\Support\PerformanceHints::forInertiaPage(
             $page['component'] ?? null,
-            $tenantLandingPageData ?? null,
+            $pageProps['tenantLandingPageData'] ?? null,
+            $pageProps['lcpImageUrl'] ?? null,
         );
     @endphp
     @foreach ($performancePreloads as $hint)

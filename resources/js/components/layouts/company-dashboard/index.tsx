@@ -1,4 +1,4 @@
-import FloatingChatWidget from '@/components/chat/floating-chat-widget';
+import DeferredFloatingChatWidget from '@/components/chat/deferred-floating-chat-widget';
 import {
     ChatContextProvider,
     FloatingChatWidgetContextProvider,
@@ -126,7 +126,7 @@ export default function CompanyDashboardLayout(
                             </div>
                         )}
                     </SidebarInset>
-                    <FloatingChatWidget />
+                    <DeferredFloatingChatWidget />
                 </SidebarProvider>
             </FloatingChatWidgetContextProvider>
         </ChatContextProvider>

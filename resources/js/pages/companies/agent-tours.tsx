@@ -90,11 +90,12 @@ export default function Page({ data, categories }: ArticlePageProps) {
             {filteredData.length ? (
                 <div className="space-y-4 p-4">
                     <div className="grid w-full grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                        {filteredData.map((item) => (
+                        {filteredData.map((item, index) => (
                             <TourCard
                                 key={item.id}
                                 tour={item.tour}
                                 fromLogin={false}
+                                imagePriority={index === 0}
                                 autoOpenBookingModal={
                                     autoOpenTourId === Number(item.tour.id)
                                 }

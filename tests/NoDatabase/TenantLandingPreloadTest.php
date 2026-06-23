@@ -81,3 +81,17 @@ it('merges marketing and tenant preload hints for company landing page', functio
 
     expect($hints[0]['href'])->toBe('/storage/images/tenant-hero.webp');
 });
+
+it('reads page props shape used by app blade for preload hints', function () {
+    $pageProps = [
+        'lcpImageUrl' => 'https://cdn.example/medium.webp',
+    ];
+
+    $hints = PerformanceHints::forInertiaPage(
+        'companies/agent-tours',
+        $pageProps['tenantLandingPageData'] ?? null,
+        $pageProps['lcpImageUrl'] ?? null,
+    );
+
+    expect($hints[0]['href'])->toBe('https://cdn.example/medium.webp');
+});

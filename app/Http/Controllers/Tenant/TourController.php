@@ -10,6 +10,7 @@ use App\Models\TourCategory;
 use App\Models\TourWaitingListSchedule;
 use App\Models\VendorAgentPartner;
 use App\Support\ResolvesTourScheduleDisplayPrice;
+use App\Support\TourCatalogPreload;
 use Inertia\Inertia;
 
 class TourController extends Controller
@@ -148,6 +149,7 @@ class TourController extends Controller
             'categories' => $categories,
             'phone' => $phone,
             'activeWaitingListScheduleCount' => $activeWaitingListScheduleCount,
+            'lcpImageUrl' => TourCatalogPreload::resolveFirstTourImageUrl($validAgentTours),
         ]);
     }
 }
