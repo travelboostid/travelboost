@@ -33,7 +33,6 @@ class BookingService
 
             $existingBooking = Booking::query()
                 ->where('booking_number', data_get($data, 'booking_number'))
-                ->where('user_id', $user->id)
                 ->lockForUpdate()
                 ->first();
             $taxRate = (float) (($existingBooking && $existingBooking->tax_rate !== null)
@@ -54,9 +53,9 @@ class BookingService
             $booking = Booking::updateOrCreate(
                 [
                     'booking_number' => data_get($data, 'booking_number'),
-                    'user_id' => $user->id,
                 ],
                 [
+                    'user_id' => $user->id,
                     'vendor_id' => data_get($data, 'vendor_id'),
                     'agent_id' => data_get($data, 'agent_id'),
                     'tour_id' => data_get($data, 'tour_id'),

@@ -566,6 +566,47 @@ test('dashboard reserve without booking number creates one booking and reuses it
     expect($booking->fresh()->contact_phone)->toBe('0899999999');
 });
 
+test('dashboard reserve reuses an existing booking number even when the owner changes', function () {
+    ['vendor' => $vendor, 'tour' => $tour, 'schedule' => $schedule] = createPricedDashboardTour();
+    $dashboardUser = User::factory()->create();
+    attachDashboardUserToCompany($dashboardUser, $vendor);
+    $agent = createActiveDashboardAgentPartner($vendor);
+    $previousOwner = User::factory()->create([
+        'email' => 'previous-owner@example.test',
+    ]);
+    $booking = Booking::factory()->create([
+        'booking_number' => 'DASH-RESUME-OWNER-SWAP',
+        'user_id' => $previousOwner->id,
+        'vendor_id' => $vendor->id,
+        'agent_id' => $agent->id,
+        'tour_id' => $tour->id,
+        'departure_date' => $schedule->departure_date,
+        'status' => BookingStatus::BOOKING_RESERVED,
+        'reserved_type' => 'system',
+        'reserved_expires_at' => now()->addMinutes(10),
+    ]);
+
+    $payload = dashboardBookingPayload(
+        $tour,
+        $schedule,
+        $vendor,
+        $agent,
+        'guest-without-account@example.test',
+        $booking->booking_number,
+    );
+    $payload['contact_phone'] = '08911111111';
+
+    $this->actingAs($dashboardUser)
+        ->post("/companies/{$vendor->username}/dashboard/bookings/create/{$tour->id}/reserve", $payload)
+        ->assertRedirect()
+        ->assertSessionHasNoErrors();
+
+    expect(Booking::query()->count())->toBe(1);
+    expect($booking->fresh()->user_id)->toBe($dashboardUser->id)
+        ->and($booking->fresh()->contact_phone)->toBe('08911111111')
+        ->and($booking->fresh()->booking_number)->toBe('DASH-RESUME-OWNER-SWAP');
+});
+
 test('dashboard reserve rejects more dependent bed passengers than twin or double base rooms', function () {
     ['vendor' => $vendor, 'tour' => $tour, 'schedule' => $schedule] = createPricedDashboardTour();
     $dashboardUser = User::factory()->create();
@@ -928,4 +969,45 @@ test('dashboard booking store without booking number generates one booking numbe
     expect($booking->booking_number)->not->toBeNull()
         ->and($booking->booking_number)->not->toBe('')
         ->and($booking->user_id)->toBe($dashboardUser->id);
+});
+
+test('dashboard booking store reuses an existing booking number even when the owner changes', function () {
+    ['vendor' => $vendor, 'tour' => $tour, 'schedule' => $schedule] = createPricedDashboardTour();
+    $dashboardUser = User::factory()->create();
+    attachDashboardUserToCompany($dashboardUser, $vendor);
+    $agent = createActiveDashboardAgentPartner($vendor);
+    $previousOwner = User::factory()->create([
+        'email' => 'store-previous-owner@example.test',
+    ]);
+    $booking = Booking::factory()->create([
+        'booking_number' => 'DASH-STORE-OWNER-SWAP',
+        'user_id' => $previousOwner->id,
+        'vendor_id' => $vendor->id,
+        'agent_id' => $agent->id,
+        'tour_id' => $tour->id,
+        'departure_date' => $schedule->departure_date,
+        'status' => BookingStatus::BOOKING_RESERVED,
+        'reserved_type' => 'system',
+        'reserved_expires_at' => now()->addMinutes(10),
+    ]);
+
+    $payload = dashboardBookingPayload(
+        $tour,
+        $schedule,
+        $vendor,
+        $agent,
+        'guest-store-without-account@example.test',
+        $booking->booking_number,
+    );
+    $payload['contact_phone'] = '08922222222';
+
+    $this->actingAs($dashboardUser)
+        ->post("/companies/{$vendor->username}/dashboard/bookings/create/{$tour->id}", $payload)
+        ->assertRedirect()
+        ->assertSessionHasNoErrors();
+
+    expect(Booking::query()->count())->toBe(1);
+    expect($booking->fresh()->user_id)->toBe($dashboardUser->id)
+        ->and($booking->fresh()->contact_phone)->toBe('08922222222')
+        ->and($booking->fresh()->booking_number)->toBe('DASH-STORE-OWNER-SWAP');
 });
