@@ -292,7 +292,7 @@ if (config('app.debug') || env('PERF_DEBUG', false)) {
     });
 
     Route::get('/__debug/perf-logs', function () {
-        $path = base_path('debug-4b26bb.log');
+        $path = DebugPerfLogger::logPath();
 
         if (! is_file($path)) {
             return response()->json(['logs' => []]);

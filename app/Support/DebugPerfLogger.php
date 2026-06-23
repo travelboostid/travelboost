@@ -2,11 +2,18 @@
 
 namespace App\Support;
 
+use Throwable;
+
 class DebugPerfLogger
 {
     public static function enabled(): bool
     {
         return (bool) config('app.debug') || (bool) env('PERF_DEBUG', false);
+    }
+
+    public static function logPath(): string
+    {
+        return storage_path('logs/debug-4b26bb.log');
     }
 
     public static function log(string $location, string $message, array $data = [], string $hypothesisId = ''): void
@@ -28,7 +35,11 @@ class DebugPerfLogger
             return;
         }
 
-        file_put_contents(base_path('debug-4b26bb.log'), $entry."\n", FILE_APPEND | LOCK_EX);
+        try {
+            file_put_contents(self::logPath(), $entry."\n", FILE_APPEND | LOCK_EX);
+        } catch (Throwable) {
+            // Never break user-facing requests when debug logging fails.
+        }
     }
 
     /**
