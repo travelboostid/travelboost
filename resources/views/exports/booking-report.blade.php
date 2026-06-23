@@ -5,13 +5,13 @@
 <table>
     <thead>
         <tr>
-            <th colspan="19">TravelBoost Booking List Report</th>
+            <th colspan="20">TravelBoost Booking List Report</th>
         </tr>
         <tr>
-            <th colspan="19">{{ $company->name }}</th>
+            <th colspan="20">{{ $company->name }}</th>
         </tr>
         <tr>
-            <th colspan="19">
+            <th colspan="20">
                 Generated {{ $generatedAt->format('d M Y H:i') }} - Period {{ $filters['period_from'] ?: 'All' }} - {{ $filters['period_to'] ?: 'All' }}
             </th>
         </tr>
@@ -23,6 +23,7 @@
             <th>Tour Name</th>
             <th>Departure Date</th>
             <th>Booking Number</th>
+            <th>Payment Status</th>
             <th>Customer</th>
             <th>Passenger</th>
             <th>Price Category</th>
@@ -68,6 +69,9 @@
                             {{ $row['booking_code'] }}
                         </td>
                         <td rowspan="{{ $rowspan }}">
+                            {{ $row['booking_status'] === 'full payment' ? 'Full Payment' : 'Down Payment' }}
+                        </td>
+                        <td rowspan="{{ $rowspan }}">
                             {{ $row['booking_customer'] }}
                         </td>
                     @endif
@@ -104,11 +108,11 @@
             @endforeach
         @empty
             <tr>
-                <td colspan="19">No booking list data found.</td>
+                <td colspan="20">No booking list data found.</td>
             </tr>
         @endforelse
         <tr>
-            <td colspan="11">TOTAL</td>
+            <td colspan="12">TOTAL</td>
             <td>{{ $rows->sum('pax') }}</td>
             <td>{{ $rows->sum('tour_price_total') }}</td>
             <td>{{ $rows->sum('tax_amount') }}</td>
