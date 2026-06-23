@@ -35,8 +35,6 @@ class DebugPerfLogger
             return;
         }
 
-        foreach ($metrics as $key => $value) {
-            header('X-Debug-'.str_replace('_', '-', $key).': '.$value, false);
-        }
+        request()->attributes->set('debug_perf_metrics', $metrics);
     }
 }

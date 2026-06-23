@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\AttachDebugPerfHeaders;
 use App\Http\Middleware\CheckUserStatus;
 use App\Http\Middleware\DomainResolver;
 use App\Http\Middleware\EnsureAgentSubscriptionIsActive;
@@ -78,6 +79,7 @@ return Application::configure(basePath: dirname(__DIR__))
             DomainResolver::class,
             HandleAppearance::class,
             HandleInertiaRequests::class,
+            AttachDebugPerfHeaders::class,
             AddLinkHeadersForPreloadedAssets::class,
         ]);
         $middleware->priority([
