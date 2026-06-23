@@ -244,7 +244,7 @@ test('customer has a global limit of two active waiting listed schedules', funct
     $agent = Company::factory()->create(['type' => 'agent']);
     Domain::create([
         'subdomain' => $agent->username,
-        'owner_type' => Company::class,
+        'owner_type' => 'company',
         'owner_id' => $agent->id,
         'subdomain_enabled' => true,
     ]);
@@ -279,7 +279,7 @@ test('terminal customer requests no longer count toward the global limit', funct
     $agent = Company::factory()->create(['type' => 'agent']);
     Domain::create([
         'subdomain' => $agent->username,
-        'owner_type' => Company::class,
+        'owner_type' => 'company',
         'owner_id' => $agent->id,
         'subdomain_enabled' => true,
     ]);
@@ -314,7 +314,7 @@ test('guest cannot submit a customer waiting list', function () {
     $agent = Company::factory()->create(['type' => 'agent']);
     Domain::create([
         'subdomain' => $agent->username,
-        'owner_type' => Company::class,
+        'owner_type' => 'company',
         'owner_id' => $agent->id,
         'subdomain_enabled' => true,
     ]);
