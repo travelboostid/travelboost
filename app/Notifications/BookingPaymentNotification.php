@@ -108,6 +108,14 @@ class BookingPaymentNotification extends Notification
                 'Booking rescheduled',
                 "Booking {$bookingNumber} has been rescheduled to a new departure date.",
             ],
+            'booking_rescheduled_balance_due' => [
+                'Reschedule balance due',
+                "Booking {$bookingNumber} has been rescheduled. An additional payment is required to complete the new total.",
+            ],
+            'booking_rescheduled_credit' => [
+                'Reschedule credit available',
+                "Booking {$bookingNumber} has been rescheduled. A credit balance is available — please contact the vendor to arrange a refund.",
+            ],
             'booking_reactivated' => [
                 'Booking reactivated',
                 "Booking {$bookingNumber} has been reactivated and is active again.",

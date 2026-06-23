@@ -6,14 +6,18 @@ use App\Enums\CompanyTeamStatus;
 use App\Enums\PaymentStatus;
 use App\Models\Booking;
 use App\Models\BookingActionRequest;
+use App\Models\BookingPassenger;
 use App\Models\Company;
 use App\Models\CompanyTeam;
 use App\Models\Payment;
+use App\Models\PriceCategory;
 use App\Models\Tour;
 use App\Models\TourAvailability;
+use App\Models\TourPrice;
 use App\Models\TourSchedule;
 use App\Models\User;
 use App\Notifications\BookingPaymentNotification;
+use App\Services\BookingPricingService;
 use Database\Seeders\Common\RolePermissionSeeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
@@ -181,6 +185,18 @@ test('vendor can directly reschedule a full payment booking', function () {
 
     $booking->update(['status' => BookingStatus::FULL_PAYMENT]);
 
+    Payment::create([
+        'owner_type' => User::class,
+        'owner_id' => $booking->user_id,
+        'payable_type' => Booking::class,
+        'payable_id' => $booking->id,
+        'provider' => 'manual',
+        'payment_method' => 'bank_transfer',
+        'amount' => 10_000_000,
+        'status' => PaymentStatus::PAID,
+        'payload' => ['payment_type' => 'full_payment'],
+    ]);
+
     $response = $this->actingAs($this->user)
         ->post("/companies/{$vendor->username}/dashboard/bookings/{$booking->id}/reschedule", [
             'schedule_id' => $newSchedule->id,
@@ -196,17 +212,20 @@ test('system-cancelled booking can be reactivated by vendor to down payment', fu
     Notification::fake();
 
     $vendor = Company::factory()->create(['type' => 'vendor']);
-    $vendor->companySetting()->update(['full_payment_deadline' => 7]);
+    $vendor->settings()->updateOrCreate(
+        ['company_id' => $vendor->id],
+        ['full_payment_deadline' => 7],
+    );
     attachCompanyTeam($this->user, $vendor);
 
     $tour = Tour::factory()->create(['company_id' => $vendor->id]);
-    $departureDate = now()->addDays(5)->toDateString();
+    $departureDate = now()->addDays(20)->toDateString();
     $schedule = TourSchedule::create([
         'tour_id' => $tour->id,
         'tour_code' => $tour->code,
         'company_id' => $vendor->id,
         'departure_date' => $departureDate,
-        'return_date' => now()->addDays(10)->toDateString(),
+        'return_date' => now()->addDays(25)->toDateString(),
         'is_active' => true,
     ]);
     TourAvailability::create([
@@ -241,7 +260,8 @@ test('system-cancelled booking can be reactivated by vendor to down payment', fu
         'payload' => ['payment_type' => 'down_payment'],
     ]);
 
-    $this->travelTo(now()->addDays(10)->startOfDay()->addHour());
+    $this->travelTo(now()->addDays(16)->startOfDay()->addHour());
+
     app(CancelOverdueDownPaymentBookingsAction::class)->execute();
 
     expect($booking->fresh()->status)->toBe(BookingStatus::CANCELLED);
@@ -334,4 +354,137 @@ test('reschedule options endpoint returns alternative schedules lazily', functio
     $response->assertOk()
         ->assertJsonPath('schedules.0.id', $newSchedule->id)
         ->assertJsonPath('schedules.0.departure_date', $newDeparture);
+});
+
+test('reschedule options return schedule-specific pricing previews', function () {
+    ['vendor' => $vendor, 'tour' => $tour, 'booking' => $booking, 'currentSchedule' => $currentSchedule, 'newSchedule' => $newSchedule] = createRescheduleScenario();
+    attachCompanyTeam($this->user, $vendor);
+
+    $priceCategory = PriceCategory::create([
+        'company_id' => $vendor->id,
+        'name' => 'Adult Single',
+        'room_type' => 'single',
+    ]);
+
+    TourPrice::create([
+        'company_id' => $vendor->id,
+        'tour_code' => $tour->code,
+        'schedule_id' => $currentSchedule->id,
+        'price_category_id' => $priceCategory->id,
+        'currency' => 'IDR',
+        'price' => 10_000_000,
+        'promotion_rate' => 10,
+    ]);
+    TourPrice::create([
+        'company_id' => $vendor->id,
+        'tour_code' => $tour->code,
+        'schedule_id' => $newSchedule->id,
+        'price_category_id' => $priceCategory->id,
+        'currency' => 'IDR',
+        'price' => 21_000_000,
+        'promotion_rate' => 10,
+    ]);
+
+    BookingPassenger::factory()->create([
+        'booking_id' => $booking->id,
+        'price_category' => 'Adult Single',
+        'price_amount' => 9_000_000,
+    ]);
+
+    $booking->update([
+        'status' => BookingStatus::FULL_PAYMENT,
+        'grand_total' => 9_025_000,
+        'platform_fee' => 25_000,
+        'tax_rate' => 0,
+        'tax_amount' => 0,
+        'total_price' => 10_000_000,
+    ]);
+
+    $expectedNewTotal = (float) app(BookingPricingService::class)->quoteForBookingData(
+        $tour,
+        $newSchedule->departure_date,
+        [['price_category' => 'Adult Single']],
+    )['grand_total'];
+
+    $response = $this->actingAs($this->user)
+        ->getJson("/companies/{$vendor->username}/dashboard/bookings/{$booking->id}/reschedule-options");
+
+    $response->assertOk();
+
+    $newSchedulePreview = collect($response->json('schedules'))
+        ->firstWhere('id', $newSchedule->id);
+
+    expect($newSchedulePreview)->not->toBeNull()
+        ->and((float) $newSchedulePreview['price_preview']['grand_total'])->toBe($expectedNewTotal)
+        ->and((float) $newSchedulePreview['price_preview']['grand_total'])->not->toBe((float) $booking->grand_total)
+        ->and((float) $newSchedulePreview['price_preview']['price_difference'])->toBe(round($expectedNewTotal - 9_025_000, 2));
+});
+
+test('vendor direct reschedule reprices booking and downgrades status when new total exceeds paid amount', function () {
+    ['vendor' => $vendor, 'tour' => $tour, 'booking' => $booking, 'newSchedule' => $newSchedule] = createRescheduleScenario();
+    attachCompanyTeam($this->user, $vendor);
+
+    $priceCategory = PriceCategory::create([
+        'company_id' => $vendor->id,
+        'name' => 'Adult Single',
+        'room_type' => 'single',
+    ]);
+
+    TourPrice::create([
+        'company_id' => $vendor->id,
+        'tour_code' => $tour->code,
+        'schedule_id' => $newSchedule->id,
+        'price_category_id' => $priceCategory->id,
+        'currency' => 'IDR',
+        'price' => 21_000_000,
+        'promotion_rate' => 10,
+    ]);
+
+    BookingPassenger::factory()->create([
+        'booking_id' => $booking->id,
+        'price_category' => 'Adult Single',
+        'price_amount' => 9_000_000,
+    ]);
+
+    $booking->update([
+        'status' => BookingStatus::FULL_PAYMENT,
+        'grand_total' => 10_000_000,
+        'platform_fee' => 25_000,
+        'tax_rate' => 0,
+        'tax_amount' => 0,
+        'total_price' => 10_000_000,
+    ]);
+
+    Payment::create([
+        'owner_type' => User::class,
+        'owner_id' => $booking->user_id,
+        'payable_type' => Booking::class,
+        'payable_id' => $booking->id,
+        'provider' => 'manual',
+        'payment_method' => 'bank_transfer',
+        'amount' => 10_000_000,
+        'status' => PaymentStatus::PAID,
+        'payload' => ['payment_type' => 'full_payment'],
+    ]);
+
+    $expectedNewTotal = (float) app(BookingPricingService::class)->quoteForBookingData(
+        $tour,
+        $newSchedule->departure_date,
+        [['price_category' => 'Adult Single']],
+    )['grand_total'];
+
+    $this->actingAs($this->user)
+        ->post("/companies/{$vendor->username}/dashboard/bookings/{$booking->id}/reschedule", [
+            'schedule_id' => $newSchedule->id,
+            'reason' => 'Move to pricier date',
+        ])
+        ->assertRedirect();
+
+    $booking->refresh();
+    $passenger = $booking->passengers()->first();
+
+    expect((float) $booking->grand_total)->toBe($expectedNewTotal)
+        ->and($booking->status)->toBe(BookingStatus::DOWN_PAYMENT)
+        ->and($passenger)->not->toBeNull()
+        ->and((float) $passenger->price_amount)->toBe(18_900_000.0);
 });

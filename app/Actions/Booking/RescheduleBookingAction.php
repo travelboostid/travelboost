@@ -56,12 +56,14 @@ class RescheduleBookingAction
         }
 
         $previousDeparture = $currentDeparture;
+        $priceBefore = (float) $booking->grand_total;
 
         $booking->update([
             'departure_date' => $targetDeparture,
         ]);
 
-        $booking = app(BookingPricingService::class)->reconcileSnapshotTotals($booking->fresh());
+        $booking = $this->repriceBookingForSchedule($booking->fresh(), $targetSchedule);
+        $booking = app(ReconcileBookingPaymentAfterRepriceAction::class)->execute($booking, $priceBefore);
 
         app(SyncAvailabilityAction::class)->execute(
             (int) $booking->tour_id,
@@ -94,25 +96,103 @@ class RescheduleBookingAction
      */
     public function previewPricingChange(Booking $booking, TourSchedule $targetSchedule): array
     {
-        $booking->loadMissing(['passengers', 'addons', 'vendor.companySetting', 'tour.company.companySetting']);
+        $booking->loadMissing(['passengers', 'addons', 'vendor.companySetting', 'tour.company.companySetting', 'tour']);
 
         $priceBefore = (float) $booking->grand_total;
-        $previewBooking = $booking->replicate();
-        $previewBooking->departure_date = Carbon::parse($targetSchedule->departure_date)->toDateString();
-        $previewBooking->exists = true;
-        $previewBooking->id = $booking->id;
-        $previewBooking->setRelation('passengers', $booking->passengers);
-        $previewBooking->setRelation('addons', $booking->addons);
-        $previewBooking->setRelation('vendor', $booking->vendor);
-        $previewBooking->setRelation('tour', $booking->tour);
+        $quote = $this->buildScheduleQuote($booking, $targetSchedule);
 
-        $quote = app(BookingPricingService::class)->quoteForBooking($previewBooking);
+        if ($quote === null) {
+            return [
+                'grand_total' => $priceBefore,
+                'price_difference' => 0.0,
+            ];
+        }
+
         $priceAfter = (float) ($quote['grand_total'] ?? $priceBefore);
 
         return [
             'grand_total' => $priceAfter,
             'price_difference' => round($priceAfter - $priceBefore, 2),
         ];
+    }
+
+    private function repriceBookingForSchedule(Booking $booking, TourSchedule $targetSchedule): Booking
+    {
+        $quote = $this->buildScheduleQuote($booking, $targetSchedule);
+
+        if ($quote === null) {
+            return $booking;
+        }
+
+        $totals = app(BookingPricingService::class)->bookingTotalsFromQuote($quote);
+
+        $booking->update($totals);
+
+        $booking->loadMissing('passengers');
+
+        foreach ($booking->passengers->values() as $index => $passenger) {
+            $quotedPassenger = $quote['passengers'][$index] ?? null;
+
+            if (! is_array($quotedPassenger)) {
+                continue;
+            }
+
+            $passenger->update([
+                'price_amount' => $quotedPassenger['price_amount'],
+                'visa_category_item_id' => $quotedPassenger['visa_category_item_id'] ?? null,
+                'visa_type_description' => $quotedPassenger['visa_type_description'] ?? null,
+                'visa_type_price' => $quotedPassenger['visa_type_price'] ?? 0,
+                'visa_type_is_taxable' => (bool) ($quotedPassenger['visa_type_is_taxable'] ?? false),
+            ]);
+        }
+
+        $booking->addons()->delete();
+
+        if (! empty($quote['addons'])) {
+            $booking->addons()->createMany($quote['addons']);
+        }
+
+        return $booking->fresh();
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    private function buildScheduleQuote(Booking $booking, TourSchedule $targetSchedule): ?array
+    {
+        $booking->loadMissing(['passengers', 'addons', 'vendor.companySetting', 'tour.company.companySetting', 'tour']);
+
+        if (! $booking->tour || $booking->passengers->isEmpty()) {
+            return null;
+        }
+
+        $passengers = $booking->passengers
+            ->map(fn ($passenger): array => [
+                'price_category' => (string) $passenger->price_category,
+                'visa_category_item_id' => $passenger->visa_category_item_id,
+            ])
+            ->values()
+            ->all();
+
+        $addons = $booking->addons
+            ->map(fn ($addon): array => [
+                'name' => (string) $addon->name,
+                'price' => (float) $addon->price,
+                'is_taxable' => (bool) $addon->is_taxable,
+                'qty' => 1,
+            ])
+            ->values()
+            ->all();
+
+        return app(BookingPricingService::class)->quoteForBookingData(
+            $booking->tour,
+            $targetSchedule->departure_date,
+            $passengers,
+            $addons,
+            $booking->tax_rate !== null ? (float) $booking->tax_rate : null,
+            includeAgentCommission: true,
+            agentId: $booking->agent_id,
+        );
     }
 
     private function hasSeatAvailability(Booking $booking, TourSchedule $targetSchedule): bool
