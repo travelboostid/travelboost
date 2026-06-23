@@ -56,17 +56,19 @@ export default function BookingSchedulePicker({
     onSelect,
     className,
 }: BookingSchedulePickerProps) {
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
-    const [options, setOptions] = useState<RescheduleOptionsResponse | null>(
-        null,
-    );
+    const requestId = `${companyUsername}:${bookingId}`;
+    const [fetchState, setFetchState] = useState<{
+        requestId: string;
+        options: RescheduleOptionsResponse | null;
+        error: string | null;
+    } | null>(null);
+
+    const loading = fetchState === null || fetchState.requestId !== requestId;
+    const error = !loading && fetchState?.error ? fetchState.error : null;
+    const options = !loading && fetchState?.options ? fetchState.options : null;
 
     useEffect(() => {
         let cancelled = false;
-
-        setLoading(true);
-        setError(null);
 
         axios
             .get<RescheduleOptionsResponse>(
@@ -78,25 +80,28 @@ export default function BookingSchedulePicker({
                     return;
                 }
 
-                setOptions(response.data);
+                setFetchState({
+                    requestId,
+                    options: response.data,
+                    error: null,
+                });
             })
             .catch(() => {
                 if (cancelled) {
                     return;
                 }
 
-                setError('Could not load available schedules.');
-            })
-            .finally(() => {
-                if (!cancelled) {
-                    setLoading(false);
-                }
+                setFetchState({
+                    requestId,
+                    options: null,
+                    error: 'Could not load available schedules.',
+                });
             });
 
         return () => {
             cancelled = true;
         };
-    }, [companyUsername, bookingId]);
+    }, [bookingId, companyUsername, requestId]);
 
     if (loading) {
         return (
