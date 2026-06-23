@@ -2,6 +2,7 @@
 
 use App\Enums\BookingStatus;
 use App\Enums\CompanyTeamStatus;
+use App\Enums\PaymentStatus;
 use App\Models\Booking;
 use App\Models\BookingPassenger;
 use App\Models\Company;
@@ -123,4 +124,71 @@ test('room listing loads rows after both tour and departure date are selected', 
         ->where('roomData.0.first_name', 'John')
         ->where('roomData.0.room_type', 'Twin Room')
         ->where('roomData.0.note', 'Near elevator'));
+});
+
+test('room listing includes down payment and full payment bookings with their payment status', function () {
+    $downPaymentBooking = Booking::factory()->create([
+        'vendor_id' => $this->vendor->id,
+        'tour_id' => $this->tour->id,
+        'departure_date' => '2026-08-15',
+        'status' => BookingStatus::DOWN_PAYMENT,
+    ]);
+
+    BookingPassenger::factory()->create([
+        'booking_id' => $downPaymentBooking->id,
+        'first_name' => 'Jane',
+        'last_name' => 'Doe',
+        'room_type' => 'Single',
+    ]);
+
+    $response = $this->actingAs($this->user)
+        ->get("/companies/{$this->vendor->username}/dashboard/reports/room-listings?tour_id={$this->tour->id}&departure_date=2026-08-15");
+
+    $response->assertOk();
+    $response->assertInertia(fn (Assert $page) => $page
+        ->has('roomData', 2)
+        ->has('agentGroups.0.bookings', 2)
+        ->where('agentGroups.0.bookings.0.payment_status', BookingStatus::FULL_PAYMENT->value)
+        ->where('agentGroups.0.bookings.1.payment_status', BookingStatus::DOWN_PAYMENT->value));
+});
+
+test('booking report includes down payment and full payment bookings with their payment status', function () {
+    $this->booking->payments()->create([
+        'owner_type' => User::class,
+        'owner_id' => $this->user->id,
+        'provider' => 'manual',
+        'payment_method' => 'bank_transfer',
+        'amount' => 1_000_000,
+        'status' => PaymentStatus::PAID,
+        'paid_at' => now(),
+        'payload' => ['payment_type' => 'full_payment'],
+    ]);
+
+    $downPaymentBooking = Booking::factory()->create([
+        'vendor_id' => $this->vendor->id,
+        'tour_id' => $this->tour->id,
+        'departure_date' => '2026-08-15',
+        'status' => BookingStatus::DOWN_PAYMENT,
+        'created_at' => now()->addSecond(),
+    ]);
+
+    $downPaymentBooking->payments()->create([
+        'owner_type' => User::class,
+        'owner_id' => $this->user->id,
+        'provider' => 'manual',
+        'payment_method' => 'bank_transfer',
+        'amount' => 500_000,
+        'status' => PaymentStatus::PAID,
+        'paid_at' => now(),
+        'payload' => ['payment_type' => 'down_payment'],
+    ]);
+
+    $response = $this->actingAs($this->user)
+        ->get("/companies/{$this->vendor->username}/dashboard/reports/bookings");
+
+    $response->assertOk();
+    $response->assertInertia(fn (Assert $page) => $page
+        ->has('rows', 2)
+        ->where('rows.0.booking_status', BookingStatus::DOWN_PAYMENT->value)
+        ->where('rows.1.booking_status', BookingStatus::FULL_PAYMENT->value));
 });

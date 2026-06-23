@@ -7,10 +7,12 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { useDataTable } from '@/hooks/use-data-table';
 import { formatIDR } from '@/lib/utils';
 import EmptyWalletTransactions from '@/pages/companies/dashboard/wallet-transactions/empty-wallet-transactions';
+import { router } from '@inertiajs/react';
 import type { ColumnDef } from '@tanstack/react-table';
 import dayjs from 'dayjs';
 import { CalendarIcon, CircleDashedIcon } from 'lucide-react';
 import { useMemo } from 'react';
+import { toast } from 'sonner';
 type WalletTransactionsPageProps = {
     data: {
         data: any[];
@@ -19,10 +21,12 @@ type WalletTransactionsPageProps = {
         current_page: number;
         last_page: number;
     };
+    pendingTopups?: any[];
 };
 
 export default function WalletTransactionsPage({
     data,
+    pendingTopups = [],
 }: WalletTransactionsPageProps) {
     const columns = useMemo<ColumnDef<any>[]>(
         () => [
@@ -168,8 +172,30 @@ export default function WalletTransactionsPage({
             sorting: [{ id: 'id', desc: true }],
             columnPinning: { right: ['actions'] },
         },
-        getRowId: (_row) => row.id.toString(),
+        getRowId: (_row) => _row.id.toString(),
     });
+
+    const handleApprove = (paymentId: number) => {
+        router.post(
+            `/admin/funds/wallet-transactions/${paymentId}/approve`,
+            {},
+            {
+                onSuccess: () => toast.success('Approved successfully'),
+                preserveScroll: true,
+            },
+        );
+    };
+
+    const handleReject = (paymentId: number) => {
+        router.post(
+            `/admin/funds/wallet-transactions/${paymentId}/reject`,
+            {},
+            {
+                onSuccess: () => toast.success('Rejected successfully'),
+                preserveScroll: true,
+            },
+        );
+    };
 
     return (
         <AdminDashboardLayout

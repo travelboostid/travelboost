@@ -73,18 +73,19 @@ class BookingReportController extends Controller
                         'E' => 32,
                         'F' => 26,
                         'G' => 20,
-                        'H' => 26,
-                        'I' => 34,
-                        'J' => 20,
-                        'K' => 16,
-                        'L' => 8,
-                        'M' => 18,
-                        'N' => 14,
-                        'O' => 16,
+                        'H' => 16,
+                        'I' => 26,
+                        'J' => 34,
+                        'K' => 20,
+                        'L' => 16,
+                        'M' => 8,
+                        'N' => 18,
+                        'O' => 14,
                         'P' => 16,
-                        'Q' => 14,
-                        'R' => 18,
+                        'Q' => 16,
+                        'R' => 14,
                         'S' => 18,
+                        'T' => 18,
                     ];
                 }
 
@@ -95,8 +96,8 @@ class BookingReportController extends Controller
                         ->setWrapText(true)
                         ->setVertical(Alignment::VERTICAL_CENTER);
 
-                    $sheet->getStyle('A1:S3')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT);
-                    $sheet->getStyle('A4:S4')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+                    $sheet->getStyle('A1:T3')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT);
+                    $sheet->getStyle('A4:T4')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
                     $sheet->getDefaultRowDimension()->setRowHeight(-1);
 
                     return [];
@@ -109,17 +110,17 @@ class BookingReportController extends Controller
                             $worksheet = $event->sheet->getDelegate();
                             $highestRow = $worksheet->getHighestRow();
                             $totalRow = $highestRow;
-                            $worksheet->mergeCells('A1:S1');
-                            $worksheet->mergeCells('A2:S2');
-                            $worksheet->mergeCells('A3:S3');
+                            $worksheet->mergeCells('A1:T1');
+                            $worksheet->mergeCells('A2:T2');
+                            $worksheet->mergeCells('A3:T3');
                             $worksheet->freezePane('A5');
-                            $worksheet->setAutoFilter("A4:S{$highestRow}");
+                            $worksheet->setAutoFilter("A4:T{$highestRow}");
                             $worksheet->setShowGridlines(false);
                             $worksheet->getRowDimension(1)->setRowHeight(30);
                             $worksheet->getRowDimension(2)->setRowHeight(22);
                             $worksheet->getRowDimension(3)->setRowHeight(22);
                             $worksheet->getRowDimension(4)->setRowHeight(30);
-                            $worksheet->getStyle('A1:S3')->applyFromArray([
+                            $worksheet->getStyle('A1:T3')->applyFromArray([
                                 'fill' => [
                                     'fillType' => Fill::FILL_SOLID,
                                     'startColor' => ['rgb' => 'EEF4FF'],
@@ -134,8 +135,8 @@ class BookingReportController extends Controller
                             $worksheet->getStyle('A1')->getFont()->setBold(true)->setSize(18)->getColor()->setRGB('0F172A');
                             $worksheet->getStyle('A2')->getFont()->setBold(true)->setSize(12)->getColor()->setRGB('111827');
                             $worksheet->getStyle('A3')->getFont()->setSize(10)->getColor()->setRGB('64748B');
-                            $worksheet->getStyle('A1:S3')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT)->setVertical(Alignment::VERTICAL_CENTER);
-                            $worksheet->getStyle('A4:S4')->applyFromArray([
+                            $worksheet->getStyle('A1:T3')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT)->setVertical(Alignment::VERTICAL_CENTER);
+                            $worksheet->getStyle('A4:T4')->applyFromArray([
                                 'font' => [
                                     'bold' => true,
                                     'color' => ['rgb' => 'FFFFFF'],
@@ -145,8 +146,8 @@ class BookingReportController extends Controller
                                     'startColor' => ['rgb' => '1E293B'],
                                 ],
                             ]);
-                            $worksheet->getStyle('A4:S4')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER)->setVertical(Alignment::VERTICAL_CENTER);
-                            $worksheet->getStyle("A4:S{$highestRow}")->applyFromArray([
+                            $worksheet->getStyle('A4:T4')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER)->setVertical(Alignment::VERTICAL_CENTER);
+                            $worksheet->getStyle("A4:T{$highestRow}")->applyFromArray([
                                 'borders' => [
                                     'allBorders' => [
                                         'borderStyle' => Border::BORDER_THIN,
@@ -154,18 +155,18 @@ class BookingReportController extends Controller
                                     ],
                                 ],
                             ]);
-                            $worksheet->getStyle("A5:S{$highestRow}")->getAlignment()->setVertical(Alignment::VERTICAL_CENTER);
+                            $worksheet->getStyle("A5:T{$highestRow}")->getAlignment()->setVertical(Alignment::VERTICAL_CENTER);
                             $worksheet->getStyle("A5:A{$highestRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-                            $worksheet->getStyle("F5:G{$highestRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-                            $worksheet->getStyle("K5:S{$highestRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
-                            $worksheet->getStyle("L5:L{$highestRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-                            $worksheet->getStyle("K5:K{$highestRow}")->getNumberFormat()->setFormatCode('"Rp" #,##0');
-                            $worksheet->getStyle("M5:S{$highestRow}")->getNumberFormat()->setFormatCode('"Rp" #,##0');
-                            $worksheet->getStyle("L5:L{$highestRow}")->getNumberFormat()->setFormatCode('#,##0');
+                            $worksheet->getStyle("F5:H{$highestRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+                            $worksheet->getStyle("L5:T{$highestRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
+                            $worksheet->getStyle("M5:M{$highestRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+                            $worksheet->getStyle("L5:L{$highestRow}")->getNumberFormat()->setFormatCode('"Rp" #,##0');
+                            $worksheet->getStyle("N5:T{$highestRow}")->getNumberFormat()->setFormatCode('"Rp" #,##0');
+                            $worksheet->getStyle("M5:M{$highestRow}")->getNumberFormat()->setFormatCode('#,##0');
 
                             for ($row = 5; $row < $totalRow; $row++) {
                                 if ($row % 2 === 0) {
-                                    $worksheet->getStyle("A{$row}:S{$row}")->applyFromArray([
+                                    $worksheet->getStyle("A{$row}:T{$row}")->applyFromArray([
                                         'fill' => [
                                             'fillType' => Fill::FILL_SOLID,
                                             'startColor' => ['rgb' => 'F8FAFC'],
@@ -176,7 +177,7 @@ class BookingReportController extends Controller
                                 $worksheet->getRowDimension($row)->setRowHeight(-1);
                             }
 
-                            $worksheet->getStyle("A{$totalRow}:S{$totalRow}")->applyFromArray([
+                            $worksheet->getStyle("A{$totalRow}:T{$totalRow}")->applyFromArray([
                                 'font' => [
                                     'bold' => true,
                                     'color' => ['rgb' => '0F172A'],
@@ -260,6 +261,9 @@ class BookingReportController extends Controller
                 'departure_date' => $departureDate,
                 'return_date' => $this->dateString($schedule?->return_date),
                 'booking_code' => $booking->booking_number,
+                'booking_status' => $booking->status instanceof BookingStatus
+                    ? $booking->status->value
+                    : (string) $booking->status,
                 'booking_contact' => $booking->contact_name ?: $booking->user?->name ?: '-',
                 'booking_customer' => $booking->user?->name ?: $booking->contact_name ?: '-',
                 'contact_email' => $booking->contact_email ?: $booking->user?->email ?: '-',
@@ -312,7 +316,10 @@ class BookingReportController extends Controller
         $companyType = $this->companyType($company);
 
         return Booking::query()
-            ->where('status', BookingStatus::FULL_PAYMENT->value)
+            ->whereIn('status', [
+                BookingStatus::DOWN_PAYMENT->value,
+                BookingStatus::FULL_PAYMENT->value,
+            ])
             ->when($companyType === 'vendor', function (Builder $query) use ($company): void {
                 $query->where('vendor_id', $company->id);
             })

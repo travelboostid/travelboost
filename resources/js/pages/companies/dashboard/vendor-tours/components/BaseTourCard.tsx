@@ -58,7 +58,7 @@ export default function BaseTourCard({
                         </div>
                     </div>
                 )}
-                <div className="relative aspect-[3/2] w-full shrink-0 overflow-hidden bg-slate-100 dark:bg-slate-900">
+                <div className="relative aspect-video w-full shrink-0 overflow-hidden bg-slate-100 dark:bg-slate-900">
                     <img
                         src={src}
                         srcSet={srcSet}

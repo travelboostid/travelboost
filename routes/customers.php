@@ -5,6 +5,7 @@ use App\Http\Controllers\Customers\AuthController;
 use App\Http\Controllers\Customers\ProfileController as CustomerProfileController;
 use App\Http\Controllers\Me\HomeController as MeHomeController;
 use App\Http\Controllers\Tenant\TourController;
+use App\Http\Controllers\Tenant\TourWaitingListController;
 use App\Models\Booking;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
@@ -36,6 +37,8 @@ Route::domain('{username}.'.$appHost)->middleware(['can:access-customer-pages', 
         Route::get('/bookings/{tour}/create', [BookingController::class, 'create'])->name('bookings.create');
         Route::post('/bookings/{tour}/reserve', [BookingController::class, 'reserve'])->name('bookings.reserve');
         Route::post('/bookings/{tour}', [BookingController::class, 'store'])->name('bookings.store');
+        Route::post('/tours/{tour}/waiting-lists', [TourWaitingListController::class, 'store'])
+            ->name('waiting-lists.store');
         Route::post('/bookings/{booking}/release-hold', [BookingController::class, 'releaseHold']);
         Route::put('/bookings/{booking}', [BookingController::class, 'update']);
         Route::post('/bookings/{booking}/travel-documents', [BookingController::class, 'updateTravelDocuments']);

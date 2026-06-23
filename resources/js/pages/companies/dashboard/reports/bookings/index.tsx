@@ -1,4 +1,5 @@
 import CompanyDashboardLayout from '@/components/layouts/company-dashboard';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -35,6 +36,7 @@ type BookingReportRow = {
     departure_date: string | null;
     return_date: string | null;
     booking_code: string;
+    booking_status: 'down payment' | 'full payment';
     booking_contact: string;
     booking_customer: string;
     contact_email: string;
@@ -259,7 +261,7 @@ export default function BookingReportPage({
                             <FormattedMessage defaultMessage="Booking List" />
                         </h1>
                         <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                            <FormattedMessage defaultMessage="Full payment booking report with guest pricing, add-ons, payments, and commission details." />
+                            <FormattedMessage defaultMessage="Down payment and full payment booking report with guest pricing, add-ons, payments, and commission details." />
                         </p>
                     </div>
                     <Button
@@ -398,11 +400,11 @@ export default function BookingReportPage({
                     <CardHeader className="border-b border-slate-100 bg-white px-5 py-4 dark:border-slate-800 dark:bg-slate-950/40">
                         <CardTitle className="flex items-center gap-2 text-base font-semibold text-slate-950 dark:text-slate-100">
                             <CalendarDays className="h-5 w-5 text-primary" />
-                            <FormattedMessage defaultMessage="Full Payment Booking List" />
+                            <FormattedMessage defaultMessage="Booking List" />
                         </CardTitle>
                     </CardHeader>
                     <div className="overflow-x-auto">
-                        <Table className="min-w-[2000px]">
+                        <Table className="min-w-[2120px]">
                             <TableHeader className="bg-slate-50 dark:bg-slate-950/40">
                                 <TableRow className="text-xs uppercase tracking-wide">
                                     <TableHead className="w-14 px-5">
@@ -433,6 +435,9 @@ export default function BookingReportPage({
                                     </TableHead>
                                     <TableHead className="min-w-40">
                                         <FormattedMessage defaultMessage="Booking Number" />
+                                    </TableHead>
+                                    <TableHead className="min-w-36 text-center">
+                                        <FormattedMessage defaultMessage="Payment Status" />
                                     </TableHead>
                                     <TableHead className="min-w-52">
                                         <FormattedMessage defaultMessage="Customer" />
@@ -480,7 +485,7 @@ export default function BookingReportPage({
                                 {rows.length === 0 ? (
                                     <TableRow>
                                         <TableCell
-                                            colSpan={19}
+                                            colSpan={20}
                                             className="h-40 text-center text-slate-500"
                                         >
                                             <FormattedMessage defaultMessage="No booking list data found." />
@@ -567,6 +572,29 @@ export default function BookingReportPage({
                                                             className="whitespace-nowrap font-mono text-xs"
                                                         >
                                                             {row.booking_code}
+                                                        </TableCell>
+                                                        <TableCell
+                                                            rowSpan={
+                                                                passengerCount
+                                                            }
+                                                            className="text-center align-middle"
+                                                        >
+                                                            <Badge
+                                                                variant="outline"
+                                                                className={
+                                                                    row.booking_status ===
+                                                                    'full payment'
+                                                                        ? 'whitespace-nowrap border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300'
+                                                                        : 'whitespace-nowrap border-amber-300 bg-amber-50 text-amber-700 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300'
+                                                                }
+                                                            >
+                                                                {row.booking_status ===
+                                                                'full payment' ? (
+                                                                    <FormattedMessage defaultMessage="Full Payment" />
+                                                                ) : (
+                                                                    <FormattedMessage defaultMessage="Down Payment" />
+                                                                )}
+                                                            </Badge>
                                                         </TableCell>
                                                         <TableCell
                                                             rowSpan={

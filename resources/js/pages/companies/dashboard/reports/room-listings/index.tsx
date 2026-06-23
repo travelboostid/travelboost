@@ -1,4 +1,5 @@
 import CompanyDashboardLayout from '@/components/layouts/company-dashboard';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -349,7 +350,7 @@ export default function RoomListing() {
                     <div className="flex max-w-2xl items-start gap-3 rounded-2xl border border-blue-100 bg-blue-50/70 px-4 py-3 text-sm text-blue-900 dark:border-blue-900/40 dark:bg-blue-950/30 dark:text-blue-200">
                         <InfoIcon className="mt-0.5 h-4 w-4 shrink-0" />
                         <p>
-                            <FormattedMessage defaultMessage="Only tour bookings with full payment status are displayed in this room listing report." />
+                            <FormattedMessage defaultMessage="Tour bookings with down payment or full payment status are displayed. Use the payment status column to identify settlement progress." />
                         </p>
                     </div>
                     <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:justify-end">
@@ -440,8 +441,11 @@ export default function RoomListing() {
                                         <TableHead className="min-w-[72px] border-r border-slate-200 px-2 py-3 text-center text-[11px] font-bold uppercase text-slate-900 dark:border-slate-800 dark:text-slate-200 print:w-[5%]">
                                             <FormattedMessage defaultMessage="Title" />
                                         </TableHead>
-                                        <TableHead className="min-w-[220px] border-r border-slate-200 px-3 py-3 text-[11px] font-bold uppercase text-slate-900 dark:border-slate-800 dark:text-slate-200 print:w-[14%]">
+                                        <TableHead className="min-w-[220px] border-r border-slate-200 px-3 py-3 text-[11px] font-bold uppercase text-slate-900 dark:border-slate-800 dark:text-slate-200 print:w-[12%]">
                                             <FormattedMessage defaultMessage="Passenger Name" />
+                                        </TableHead>
+                                        <TableHead className="min-w-[126px] border-r border-slate-200 px-2 py-3 text-center text-[11px] font-bold uppercase text-slate-900 dark:border-slate-800 dark:text-slate-200 print:w-[7%]">
+                                            <FormattedMessage defaultMessage="Payment Status" />
                                         </TableHead>
                                         <TableHead className="border-r border-slate-200 px-2 py-3 text-center text-[11px] font-bold uppercase text-slate-900 dark:border-slate-800 dark:text-slate-200 print:w-[8%]">
                                             <FormattedMessage defaultMessage="Room Type" />
@@ -571,6 +575,31 @@ export default function RoomListing() {
                                                                                 {fullName ||
                                                                                     '-'}
                                                                             </TableCell>
+                                                                            {isFirstInBooking && (
+                                                                                <TableCell
+                                                                                    rowSpan={
+                                                                                        totalPaxInBooking
+                                                                                    }
+                                                                                    className="border-r border-slate-200 p-2 text-center align-middle dark:border-slate-800"
+                                                                                >
+                                                                                    <Badge
+                                                                                        variant="outline"
+                                                                                        className={
+                                                                                            bookingData.payment_status ===
+                                                                                            'full payment'
+                                                                                                ? 'whitespace-nowrap border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300'
+                                                                                                : 'whitespace-nowrap border-amber-300 bg-amber-50 text-amber-700 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300'
+                                                                                        }
+                                                                                    >
+                                                                                        {bookingData.payment_status ===
+                                                                                        'full payment' ? (
+                                                                                            <FormattedMessage defaultMessage="Full Payment" />
+                                                                                        ) : (
+                                                                                            <FormattedMessage defaultMessage="Down Payment" />
+                                                                                        )}
+                                                                                    </Badge>
+                                                                                </TableCell>
+                                                                            )}
                                                                             {isFirstInRoom && (
                                                                                 <>
                                                                                     <TableCell
