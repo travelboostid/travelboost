@@ -33,8 +33,10 @@ class AgentTourController extends Controller
             ->orderBy('id', 'desc')
             ->get()
             ->each(function (AgentTour $agentTour): void {
-                $agentTour->tour?->schedules?->each(function ($schedule): void {
+                $bookingDeadlineDays = (int) ($agentTour->tour?->company?->companySetting?->booking_deadline ?? 0);
+                $agentTour->tour?->schedules?->each(function ($schedule) use ($bookingDeadlineDays): void {
                     $schedule->setAttribute('price', $this->lowestDiscountedSchedulePrice($schedule->prices));
+                    $schedule->setAttribute('booking_deadline_days', $bookingDeadlineDays);
                 });
             });
 

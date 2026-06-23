@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers\Tenant;
 
+use App\Enums\TourWaitingListStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Company;
 use App\Models\TourAvailability;
 use App\Models\TourCategory;
+use App\Models\TourWaitingListSchedule;
 use App\Models\VendorAgentPartner;
 use Inertia\Inertia;
 
@@ -70,6 +72,7 @@ class TourController extends Controller
                     'return_date' => $avail->schedule->return_date,
                     'quota' => (int) $avail->available,
                     'price' => $this->lowestDiscountedSchedulePrice($avail->schedule->prices),
+                    'prices' => $avail->schedule->prices->values(),
                     'agent_price' => 0,
                     'cutoff_date' => $avail->schedule->cutoff_date,
                     'is_active' => (bool) $avail->schedule->is_active,
@@ -107,6 +110,14 @@ class TourController extends Controller
             ->get();
 
         $phone = $tenant->customer_service_phone ?: $tenant->phone;
+        $customer = request()->user();
+        $activeWaitingListScheduleCount = $customer?->hasRole('user:customer')
+            ? TourWaitingListSchedule::query()
+                ->whereHas('waitingList', fn ($query) => $query
+                    ->where('customer_user_id', $customer->id)
+                    ->whereIn('status', TourWaitingListStatus::activeValues()))
+                ->count()
+            : 0;
 
         return Inertia::render('companies/agent-tours', [
             'data' => $validAgentTours,
@@ -115,6 +126,7 @@ class TourController extends Controller
             'username' => $tenant->username,
             'categories' => $categories,
             'phone' => $phone,
+            'activeWaitingListScheduleCount' => $activeWaitingListScheduleCount,
         ]);
     }
 

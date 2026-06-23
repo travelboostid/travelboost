@@ -122,8 +122,10 @@ class VendorTourCatalogController extends Controller
             ])
             ->map(function ($tour) use ($copiedTourIds, $company, $copiedAgentTours, $username, $globalCommissionRules, $additionalCommissionRules) {
                 $tour->has_copied = $copiedTourIds->contains($tour->id);
-                $tour->schedules?->each(function ($schedule): void {
+                $bookingDeadlineDays = (int) ($tour->company?->companySetting?->booking_deadline ?? 0);
+                $tour->schedules?->each(function ($schedule) use ($bookingDeadlineDays): void {
                     $schedule->setAttribute('price', $this->lowestDiscountedSchedulePrice($schedule->prices));
+                    $schedule->setAttribute('booking_deadline_days', $bookingDeadlineDays);
                 });
 
                 $copiedAgentTour = $copiedAgentTours->get($tour->id);
