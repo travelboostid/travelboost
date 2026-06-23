@@ -189,6 +189,9 @@ Route::prefix('companies')->middleware(['can:access-company-pages', 'use-analyti
         Route::post('booking-correction/{bookingActionRequest}/reject', [BookingIndexController::class, 'rejectActionRequest'])->name('booking-correction.reject');
         Route::post('bookings/{booking}/cancel', [BookingIndexController::class, 'cancel'])->name('bookings.cancel');
         Route::post('bookings/{booking}/refund', [BookingIndexController::class, 'refund'])->name('bookings.refund');
+        Route::get('bookings/{booking}/reschedule-options', [BookingIndexController::class, 'rescheduleOptions'])->name('bookings.reschedule-options');
+        Route::post('bookings/{booking}/reschedule', [BookingIndexController::class, 'reschedule'])->name('bookings.reschedule');
+        Route::post('bookings/{booking}/restore', [BookingIndexController::class, 'restore'])->name('bookings.restore');
         Route::get('bookings/{booking}/invoice', [BookingIndexController::class, 'invoice'])->name('bookings.invoice');
         Route::post('bookings/{booking}/invoice-preview', [BookingIndexController::class, 'invoicePreview'])->name('bookings.invoice-preview');
         Route::get('bookings/{booking}', [BookingIndexController::class, 'show'])->name('bookings.show');

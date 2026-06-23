@@ -17,6 +17,7 @@ class BookingActionRequest extends Model
         'target_action',
         'status',
         'reason',
+        'payload',
         'reviewer_company_id',
         'reviewer_user_id',
         'reviewed_at',
@@ -25,6 +26,7 @@ class BookingActionRequest extends Model
     protected function casts(): array
     {
         return [
+            'payload' => 'array',
             'reviewed_at' => 'datetime',
         ];
     }

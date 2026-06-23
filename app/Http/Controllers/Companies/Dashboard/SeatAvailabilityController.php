@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Companies\Dashboard;
 
+use App\Actions\Booking\SyncAvailabilityAction;
 use App\Http\Controllers\Controller;
 use App\Models\Company;
 use App\Models\Tour;
@@ -32,6 +33,18 @@ class SeatAvailabilityController extends Controller
                 ->where('company_id', $company->id)
                 ->where('status', 'active')
                 ->pluck('id');
+        }
+
+        if ($allowedTourIds->isNotEmpty()) {
+            Tour::query()
+                ->whereIn('id', $allowedTourIds)
+                ->get(['id', 'company_id'])
+                ->each(function (Tour $tour): void {
+                    app(SyncAvailabilityAction::class)->syncAllSchedulesForTour(
+                        (int) $tour->id,
+                        (int) $tour->company_id,
+                    );
+                });
         }
 
         $tours = Tour::query()
