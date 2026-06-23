@@ -1,3 +1,4 @@
+import { OptimizedImage } from '@/components/optimized-image';
 import { Link } from '@inertiajs/react';
 import { Building2, Mail, MapPin, Phone } from 'lucide-react';
 
@@ -8,9 +9,11 @@ export function Footer() {
                 <div className="grid grid-cols-1 gap-12 lg:grid-cols-[1.2fr_0.8fr_0.8fr]">
                     <div>
                         <Link href="/" className="mb-6 inline-flex">
-                            <img
+                            <OptimizedImage
                                 src="/images/logo/hori-wt.png"
                                 alt="TravelBoost"
+                                width={160}
+                                height={48}
                                 className="h-12 w-auto object-contain"
                             />
                         </Link>
@@ -119,14 +122,18 @@ export function Footer() {
                                     Supported by
                                 </p>
                                 <div className="mt-4 flex flex-wrap items-center gap-6">
-                                    <img
+                                    <OptimizedImage
                                         src="/images/logo/partner/astindo.png"
                                         alt="ASTINDO"
+                                        width={120}
+                                        height={36}
                                         className="h-9 w-auto object-contain"
                                     />
-                                    <img
+                                    <OptimizedImage
                                         src="/images/logo/partner/prismalink.png"
                                         alt="Prismalink"
+                                        width={120}
+                                        height={32}
                                         className="h-8 w-auto object-contain"
                                     />
                                 </div>

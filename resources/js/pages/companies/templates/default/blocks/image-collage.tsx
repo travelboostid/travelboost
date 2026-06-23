@@ -8,6 +8,7 @@ import {
     type ContentStyleProps,
 } from '../../components/content-shared';
 import { imageField } from '../../components/fields';
+import { PuckImage } from '../../components/puck-image';
 
 export type CollageImage = {
     image: string;
@@ -106,7 +107,7 @@ export const ImageCollageComponentConfig: ComponentConfig<ImageCollageComponentP
                             )}
                         >
                             {item.image ? (
-                                <img
+                                <PuckImage
                                     src={item.image}
                                     alt={item.alt}
                                     className="size-full object-cover transition duration-500 group-hover:scale-110"

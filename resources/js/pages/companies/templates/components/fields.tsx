@@ -20,6 +20,23 @@ export function imageField(label = 'Image'): CustomField<string> {
     };
 }
 
+export function heroImageField(label = 'Image'): CustomField<string> {
+    return {
+        type: 'custom',
+        label,
+        render: ({ field, name, onChange, value }) => (
+            <FieldLabel label={field.label || label}>
+                <ImagePicker
+                    name={name}
+                    value={value || ''}
+                    onChange={onChange}
+                    variant="large"
+                />
+            </FieldLabel>
+        ),
+    };
+}
+
 export function linkButtonActionsField(
     label = 'Actions',
     max = 5,

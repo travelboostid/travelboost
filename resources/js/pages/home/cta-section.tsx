@@ -1,3 +1,4 @@
+import { OptimizedImage } from '@/components/optimized-image';
 import { Button } from '@/components/ui/button';
 import { show as showRegister } from '@/routes/companies/register';
 import { Link } from '@inertiajs/react';
@@ -275,9 +276,11 @@ export function CTASection() {
                                             key={`${partner.name}-${index}`}
                                             className="flex h-20 min-w-[220px] items-center justify-center rounded-2xl border border-border/60 bg-card px-8 shadow-sm"
                                         >
-                                            <img
+                                            <OptimizedImage
                                                 src={partner.src}
                                                 alt={partner.name}
+                                                width={150}
+                                                height={40}
                                                 className="h-10 w-auto max-w-[150px] object-contain"
                                             />
                                         </div>

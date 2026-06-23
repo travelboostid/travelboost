@@ -9,6 +9,7 @@ import {
     type ContentStyleProps,
 } from '../../components/content-shared';
 import { imageField } from '../../components/fields';
+import { PuckImage } from '../../components/puck-image';
 
 export type VideoSectionComponentProps = ContentStyleProps & {
     badge: string;
@@ -107,7 +108,7 @@ export const VideoSectionComponentConfig: ComponentConfig<VideoSectionComponentP
                             />
                         ) : posterUrl ? (
                             <div className="relative size-full">
-                                <img
+                                <PuckImage
                                     src={posterUrl}
                                     alt={header}
                                     className="size-full object-cover"

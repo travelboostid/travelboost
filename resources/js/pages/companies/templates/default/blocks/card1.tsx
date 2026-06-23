@@ -10,6 +10,7 @@ import {
 import type { ComponentConfig } from '@puckeditor/core';
 import { ButtonComponentFields } from '../../base/blocks/button';
 import type { LinkButtonComponentProps } from '../../base/blocks/link-button';
+import { PuckImage } from '../../components/puck-image';
 
 export type Card1ComponentProps = {
     image: string;
@@ -78,7 +79,7 @@ export const Card1ComponentConfig: ComponentConfig<Card1ComponentProps> = {
         return (
             <Card className="overflow-hidden pt-0">
                 <CardContent className="px-0">
-                    <img
+                    <PuckImage
                         src={image}
                         alt={title}
                         className="aspect-video w-full object-cover"

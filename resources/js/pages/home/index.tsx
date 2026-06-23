@@ -1,19 +1,56 @@
 import StdLayout from '@/components/layouts/std-layout';
-import { BenefitsSection } from './benefits-section';
-import { CommunitySection } from './community-section';
-import { CTASection } from './cta-section';
-import { EngagementSection } from './engagement-section';
+import { lazy, Suspense } from 'react';
 import { HeroSection } from './hero-section';
-import { IntegrationsSection } from './integrations-section';
-import { MarketingSection } from './marketing-section';
-import { StepsSection } from './steps-section';
-import { TestimonialsSection } from './testimonials-section';
-import { VisualsSection } from './visuals-section';
 
-export default function Page() {
+const StepsSection = lazy(() =>
+    import('./steps-section').then((module) => ({
+        default: module.StepsSection,
+    })),
+);
+const BenefitsSection = lazy(() =>
+    import('./benefits-section').then((module) => ({
+        default: module.BenefitsSection,
+    })),
+);
+const VisualsSection = lazy(() =>
+    import('./visuals-section').then((module) => ({
+        default: module.VisualsSection,
+    })),
+);
+const EngagementSection = lazy(() =>
+    import('./engagement-section').then((module) => ({
+        default: module.EngagementSection,
+    })),
+);
+const TestimonialsSection = lazy(() =>
+    import('./testimonials-section').then((module) => ({
+        default: module.TestimonialsSection,
+    })),
+);
+const MarketingSection = lazy(() =>
+    import('./marketing-section').then((module) => ({
+        default: module.MarketingSection,
+    })),
+);
+const IntegrationsSection = lazy(() =>
+    import('./integrations-section').then((module) => ({
+        default: module.IntegrationsSection,
+    })),
+);
+const CommunitySection = lazy(() =>
+    import('./community-section').then((module) => ({
+        default: module.CommunitySection,
+    })),
+);
+const CTASection = lazy(() =>
+    import('./cta-section').then((module) => ({
+        default: module.CTASection,
+    })),
+);
+
+function BelowFoldSections() {
     return (
-        <StdLayout>
-            <HeroSection />
+        <Suspense fallback={null}>
             <StepsSection />
             <BenefitsSection />
             <VisualsSection />
@@ -23,6 +60,15 @@ export default function Page() {
             <IntegrationsSection />
             <CommunitySection />
             <CTASection />
+        </Suspense>
+    );
+}
+
+export default function Page() {
+    return (
+        <StdLayout>
+            <HeroSection />
+            <BelowFoldSections />
         </StdLayout>
     );
 }

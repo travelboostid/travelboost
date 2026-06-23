@@ -1,10 +1,11 @@
 import { Button } from '@/components/ui/button';
 import { Link } from '@inertiajs/react';
-import { FieldLabel, type ComponentConfig } from '@puckeditor/core';
+import { type ComponentConfig } from '@puckeditor/core';
 import { Plane } from 'lucide-react';
 import type { LinkButtonComponentProps } from '../../base/blocks/link-button';
 import { LinkButtonComponenentFields } from '../../base/blocks/link-button';
-import ImagePicker from '../../components/image-picker';
+import { heroImageField } from '../../components/fields';
+import { PuckImage } from '../../components/puck-image';
 import { LUCIDE_ICON_NAMES, LucideIconRenderer } from '../utils';
 
 export type Hero2ComponentProps = {
@@ -18,19 +19,7 @@ export type Hero2ComponentProps = {
 export const Hero2ComponentConfig: ComponentConfig<Hero2ComponentProps> = {
     label: 'Split + Features',
     fields: {
-        imageUrl: {
-            label: 'Image',
-            type: 'custom',
-            render: ({ field, name, onChange, value }) => (
-                <FieldLabel label={field.label || 'Image'}>
-                    <ImagePicker
-                        name={name}
-                        value={value}
-                        onChange={onChange}
-                    />
-                </FieldLabel>
-            ),
-        },
+        imageUrl: heroImageField('Image'),
         header: { label: 'Header', type: 'richtext', contentEditable: true },
         description: {
             label: 'Description',
@@ -154,10 +143,11 @@ export const Hero2ComponentConfig: ComponentConfig<Hero2ComponentProps> = {
                             </div>
                         </div>
                         {imageUrl ? (
-                            <img
+                            <PuckImage
                                 src={imageUrl}
                                 alt="Hero Image"
-                                className="w-full aspect-video rounded-2xl object-cover shadow"
+                                priority
+                                className="aspect-video w-full rounded-2xl object-cover shadow"
                             />
                         ) : (
                             <div className="relative flex h-96 items-center justify-center overflow-hidden rounded-2xl bg-linear-to-br from-primary/10 to-secondary/10 md:h-full">

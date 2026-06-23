@@ -6,6 +6,7 @@ use App\Enums\PaymentStatus;
 use App\Enums\VendorAgentPartnerStatus;
 use App\Models\AgentSubscriptionPackage;
 use App\Models\AgentTier;
+use App\Models\AgentTour;
 use App\Models\Booking;
 use App\Models\BookingActionRequest;
 use App\Models\BookingAddon;
@@ -533,6 +534,14 @@ test('dashboard booking create payload exposes effective commission per active a
         'agent_tier_id' => null,
         'status' => VendorAgentPartnerStatus::ACTIVE,
     ]);
+
+    foreach ([$matrixAgent, $fallbackAgent] as $agent) {
+        AgentTour::create([
+            'company_id' => $agent->id,
+            'tour_id' => $tour->id,
+            'status' => 'active',
+        ]);
+    }
 
     $this->actingAs($this->user)
         ->get("/companies/{$vendor->username}/dashboard/bookings/create/{$tour->id}?date={$schedule->departure_date}")

@@ -16,6 +16,7 @@ import { Link } from '@inertiajs/react';
 import type { WithId, WithPuckProps } from '@puckeditor/core';
 import { MenuIcon, XIcon } from 'lucide-react';
 import { useState } from 'react';
+import { PuckImage } from '../components/puck-image';
 import { DefaultLayoutNavUser } from './default-layout-nav-user';
 
 type DefaultLayoutProps = WithId<
@@ -59,7 +60,7 @@ function DefaultLayoutContent({
                                     className="flex items-center gap-2"
                                 >
                                     {company?.photo_url ? (
-                                        <img
+                                        <PuckImage
                                             src={company.photo_url}
                                             alt={title}
                                             className="h-9 w-9 rounded-full object-cover"

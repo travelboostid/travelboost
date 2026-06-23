@@ -1,7 +1,7 @@
 import { cn } from '@/lib/utils';
 import type { ComponentConfig } from '@puckeditor/core';
 import type { LinkButtonComponentProps } from '../../base/blocks/link-button';
-import { imageField } from '../../components/fields';
+import { heroImageField } from '../../components/fields';
 import {
     HeroActions,
     HeroBackground,
@@ -30,7 +30,7 @@ export const Hero5ComponentConfig: ComponentConfig<Hero5ComponentProps> = {
     fields: {
         ...heroContentFields,
         ...heroStyleFields,
-        backgroundUrl: imageField('Background Image'),
+        backgroundUrl: heroImageField('Background Image'),
         glassEffect: {
             type: 'radio',
             label: 'Glass Card Effect',
