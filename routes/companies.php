@@ -11,6 +11,7 @@ use App\Http\Controllers\Companies\Dashboard\BookingIndexController;
 use App\Http\Controllers\Companies\Dashboard\BookingReportController;
 use App\Http\Controllers\Companies\Dashboard\CategoryController;
 use App\Http\Controllers\Companies\Dashboard\ChatbotController;
+use App\Http\Controllers\Companies\Dashboard\ChatbotPaymentHistoryController;
 use App\Http\Controllers\Companies\Dashboard\CommissionReportController;
 use App\Http\Controllers\Companies\Dashboard\CustomerController;
 use App\Http\Controllers\Companies\Dashboard\DashboardBookingController;
@@ -41,6 +42,7 @@ use App\Http\Controllers\Companies\Dashboard\TourWaitingListController;
 use App\Http\Controllers\Companies\Dashboard\VendorRegistrationController;
 use App\Http\Controllers\Companies\Dashboard\VendorTourCatalogController;
 use App\Http\Controllers\Companies\Dashboard\VisaCategoryController;
+use App\Http\Controllers\Companies\Dashboard\WaitingListController;
 use App\Http\Controllers\Companies\Dashboard\WalletController;
 use App\Http\Controllers\Companies\Dashboard\WalletTransactionsController;
 use App\Http\Controllers\Companies\Dashboard\WithdrawalController;
@@ -94,6 +96,8 @@ Route::prefix('companies')->middleware(['can:access-company-pages', 'use-analyti
         Route::middleware(['agent.subscription.active'])->post('vendor-registrations/register', [VendorRegistrationController::class, 'register'])->name('vendor-registrations.register');
         Route::post('tours/{tour}/notify-agents', [VendorTourCatalogController::class, 'notifyAgents'])->name('tours.notify-agents');
         Route::resource('tours', TourController::class);
+        Route::get('waiting-lists', [WaitingListController::class, 'index'])
+            ->name('waiting-lists.index');
         Route::post('tours/{tour}/waiting-lists', [TourWaitingListController::class, 'store'])
             ->name('tours.waiting-lists.store');
 
@@ -207,9 +211,11 @@ Route::prefix('companies')->middleware(['can:access-company-pages', 'use-analyti
         Route::post('bookings/{booking}/manual-payments/{payment}/decline', [BookingIndexController::class, 'declineManualPayment'])
             ->name('bookings.manual-payments.decline');
         Route::post('chatbot/manual-topup', [ChatbotController::class, 'storeManualTopup'])->name('chatbot.manual-topup');
+        Route::get('chatbot/payment-history', [ChatbotPaymentHistoryController::class, 'index'])->name('chatbot.payment-history');
         Route::singleton('chatbot', ChatbotController::class);
         Route::singleton('page', PageController::class);
         Route::singleton('agent-subscriptions', AgentSubscriptionController::class);
+        Route::post('agent-subscriptions/manual-payment', [AgentSubscriptionController::class, 'storeManualPayment'])->name('agent-subscriptions.manual-payment');
 
         Route::singleton('ai-credits', ChatbotController::class);
 
