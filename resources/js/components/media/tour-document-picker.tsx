@@ -8,7 +8,7 @@ import {
     DialogTrigger,
 } from '@/components/ui/dialog';
 import { UploadCloudIcon } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Item, ItemActions, ItemContent, ItemTitle } from '../ui/item';
 import { MediaSelector } from './media-selector';
 import { RawMediaUploader } from './raw-media-uploader';
@@ -31,7 +31,6 @@ export function TourDocumentPicker({
     >(value || defaultValue);
 
     const [open, setOpen] = useState(false);
-    const [previewOpen, setPreviewOpen] = useState(false);
 
     const handleChange = (value?: MediaResource | string) => {
         setInternalValue(value);
@@ -52,10 +51,6 @@ export function TourDocumentPicker({
         typeof internalValue === 'object' && internalValue !== null
             ? ((internalValue as any)?.data?.url ?? '')
             : '';
-
-    const currentPreviewUrl = useMemo(() => {
-        return window.location.origin + rawDocumentUrl;
-    }, [rawDocumentUrl]);
 
     const normalizedPreviewUrl = useMemo(() => {
         if (!rawDocumentUrl) {
@@ -85,86 +80,6 @@ export function TourDocumentPicker({
         return `${window.location.origin}/${rawDocumentUrl}`;
     }, [rawDocumentUrl]);
 
-    useEffect(() => {
-        if (!rawDocumentUrl) {
-            return;
-        }
-
-        // #region agent log
-        fetch(
-            'http://127.0.0.1:7542/ingest/b9e8bf3e-2819-4c9d-927a-12d09e0ad2cb',
-            {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-Debug-Session-Id': '8206f7',
-                },
-                body: JSON.stringify({
-                    sessionId: '8206f7',
-                    runId: 'initial',
-                    hypothesisId: 'H1,H2,H3',
-                    location: 'tour-document-picker.tsx:raw-url-effect',
-                    message: 'Tour document url state prepared',
-                    data: {
-                        mediaId:
-                            typeof internalValue === 'object' &&
-                            internalValue !== null
-                                ? ((internalValue as any)?.id ?? null)
-                                : null,
-                        rawDocumentUrl,
-                        currentPreviewUrl,
-                        normalizedPreviewUrl,
-                        origin: window.location.origin,
-                        isAbsoluteUrl: /^https?:\/\//i.test(rawDocumentUrl),
-                        isMalformedProtocol:
-                            /^https\/\//i.test(rawDocumentUrl) ||
-                            /^http\/\//i.test(rawDocumentUrl),
-                        startsWithSlash: rawDocumentUrl.startsWith('/'),
-                    },
-                    timestamp: Date.now(),
-                }),
-            },
-        ).catch(() => {});
-        // #endregion
-    }, [
-        currentPreviewUrl,
-        internalValue,
-        normalizedPreviewUrl,
-        rawDocumentUrl,
-    ]);
-
-    useEffect(() => {
-        if (!previewOpen || !rawDocumentUrl) {
-            return;
-        }
-
-        // #region agent log
-        fetch(
-            'http://127.0.0.1:7542/ingest/b9e8bf3e-2819-4c9d-927a-12d09e0ad2cb',
-            {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-Debug-Session-Id': '8206f7',
-                },
-                body: JSON.stringify({
-                    sessionId: '8206f7',
-                    runId: 'initial',
-                    hypothesisId: 'H1,H2,H4',
-                    location: 'tour-document-picker.tsx:preview-open-effect',
-                    message: 'Tour document preview opened',
-                    data: {
-                        rawDocumentUrl,
-                        currentPreviewUrl,
-                        normalizedPreviewUrl,
-                    },
-                    timestamp: Date.now(),
-                }),
-            },
-        ).catch(() => {});
-        // #endregion
-    }, [currentPreviewUrl, normalizedPreviewUrl, previewOpen, rawDocumentUrl]);
-
     return (
         <Item variant="outline" className="space-y-2">
             <ItemContent className="space-y-2">
@@ -175,10 +90,7 @@ export function TourDocumentPicker({
                                 'Document uploaded'}
                         </p>
 
-                        <Dialog
-                            onOpenChange={setPreviewOpen}
-                            open={previewOpen}
-                        >
+                        <Dialog>
                             <DialogTrigger asChild>
                                 <Button
                                     type="button"
@@ -191,11 +103,7 @@ export function TourDocumentPicker({
 
                             <DialogContent className="h-[90vh] max-w-5xl">
                                 <iframe
-                                    src={
-                                        window.location.origin +
-                                        ((internalValue as any)?.data?.url ||
-                                            '')
-                                    }
+                                    src={normalizedPreviewUrl}
                                     className="h-full w-full rounded-md border"
                                     title="PDF Preview"
                                 />
