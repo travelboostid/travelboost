@@ -232,4 +232,14 @@ class Company extends Model implements Customer, Wallet
     {
         return $this->hasOne(CompanyGoogleAccount::class);
     }
+
+    public function facebookAccount()
+    {
+        return $this->hasOne(CompanyFacebookAccount::class);
+    }
+
+    public function metaPixelConnection()
+    {
+        return $this->hasOne(MetaPixelConnection::class);
+    }
 }

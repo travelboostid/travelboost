@@ -38,19 +38,27 @@ class UseAnalyticsMeasurementIdsProps
         $tenant = Context::get('tenant');
 
         if ($tenant != null) {
-            $tenant->loadMissing(['settings', 'googleAccount.analyticsConnection']);
+            $tenant->loadMissing(['settings', 'googleAccount.analyticsConnection', 'metaPixelConnection']);
 
             if ($tenant->googleAccount?->analyticsConnection?->measurement_id) {
                 $measurementIds[] = $tenant?->googleAccount?->analyticsConnection?->measurement_id;
             }
         }
 
+        $metaPixelIds = [];
+
+        if ($tenant?->metaPixelConnection?->pixel_id) {
+            $metaPixelIds[] = $tenant->metaPixelConnection->pixel_id;
+        }
+
         // TODO: add measurement id from travelboost
         Inertia::share([
             'analyticsMeasurementIds' => $measurementIds,
+            'metaPixelIds' => $metaPixelIds,
         ]);
         View::share([
             'analyticsMeasurementIds' => $measurementIds,
+            'metaPixelIds' => $metaPixelIds,
         ]);
 
         return $next($request);

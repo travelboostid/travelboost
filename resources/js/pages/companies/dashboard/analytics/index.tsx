@@ -14,6 +14,7 @@ import {
     AnalyticsRealtimeSkeleton,
 } from './components/analytics-dashboard-skeleton';
 import AnalyticsOverviewContent from './components/analytics-overview-content';
+import { AnalyticsProviderTabs } from './components/analytics-provider-tabs';
 import AnalyticsRealtimeContent from './components/analytics-realtime-content';
 import { GoogleAccountUnlinked } from './components/google-account-unlinked';
 import { GoogleAnalyticsUnlinked } from './components/google-analytics-unlinked';
@@ -140,6 +141,8 @@ export default function AnalyticsPage({
                         </Badge>
                     )}
                 </header>
+
+                <AnalyticsProviderTabs activeProvider="google" />
 
                 {!account && <GoogleAccountUnlinked />}
                 {account && !analytics && <GoogleAnalyticsUnlinked />}

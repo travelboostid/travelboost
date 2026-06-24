@@ -30,6 +30,7 @@ class LinkedAccountsService
     {
         return [
             $this->googleAccountGroup($company),
+            $this->metaAccountGroup($company),
         ];
     }
 
@@ -111,6 +112,112 @@ class LinkedAccountsService
             'type' => 'google',
             'title' => 'Google',
             'description' => 'Sign in, Analytics, and other Google integrations for your company.',
+            'accounts' => $accounts,
+        ];
+    }
+
+    /**
+     * @return array{
+     *     type: string,
+     *     title: string,
+     *     description: string,
+     *     accounts: array<int, array{
+     *         id: int,
+     *         email: string|null,
+     *         name: string|null,
+     *         connected_at: string|null,
+     *         integrations: array<int, array{
+     *             key: string,
+     *             label: string,
+     *             status: string,
+     *             detail: string|null,
+     *             meta: array<string, string|null>,
+     *         }>,
+     *     }>,
+     * }
+     */
+    private function metaAccountGroup(Company $company): array
+    {
+        $facebookAccount = $company->facebookAccount;
+        $pixel = $company->metaPixelConnection;
+
+        $accounts = [];
+
+        if ($facebookAccount !== null) {
+            $integrations = [
+                [
+                    'key' => 'facebook_account',
+                    'label' => 'Facebook sign-in',
+                    'status' => 'connected',
+                    'detail' => $facebookAccount->email,
+                    'meta' => [
+                        'facebook_id' => $facebookAccount->facebook_id,
+                    ],
+                ],
+            ];
+
+            if ($pixel !== null) {
+                $integrations[] = [
+                    'key' => 'meta_pixel',
+                    'label' => 'Meta Pixel',
+                    'status' => 'connected',
+                    'detail' => $pixel->pixel_id,
+                    'meta' => [
+                        'pixel_name' => $pixel->pixel_name,
+                        'connection_source' => $pixel->connection_source->value,
+                        'website_url' => $pixel->website_url,
+                    ],
+                ];
+            } else {
+                $integrations[] = [
+                    'key' => 'meta_pixel',
+                    'label' => 'Meta Pixel',
+                    'status' => 'not_connected',
+                    'detail' => null,
+                    'meta' => [],
+                ];
+            }
+
+            $accounts[] = [
+                'id' => $facebookAccount->id,
+                'email' => $facebookAccount->email,
+                'name' => $facebookAccount->name,
+                'connected_at' => $facebookAccount->created_at?->toIso8601String(),
+                'integrations' => $integrations,
+            ];
+        } elseif ($pixel !== null) {
+            $accounts[] = [
+                'id' => $pixel->id,
+                'email' => null,
+                'name' => 'Manual Meta Pixel',
+                'connected_at' => $pixel->created_at?->toIso8601String(),
+                'integrations' => [
+                    [
+                        'key' => 'facebook_account',
+                        'label' => 'Facebook sign-in',
+                        'status' => 'not_connected',
+                        'detail' => null,
+                        'meta' => [],
+                    ],
+                    [
+                        'key' => 'meta_pixel',
+                        'label' => 'Meta Pixel',
+                        'status' => 'connected',
+                        'detail' => $pixel->pixel_id,
+                        'meta' => [
+                            'pixel_name' => $pixel->pixel_name,
+                            'connection_source' => $pixel->connection_source->value,
+                            'website_url' => $pixel->website_url,
+                        ],
+                    ],
+                ],
+            ];
+        }
+
+        return [
+            'type' => 'meta',
+            'title' => 'Meta',
+            'description' => 'Facebook sign-in, Meta Pixel tracking, and pixel insights for your company.',
             'accounts' => $accounts,
         ];
     }
