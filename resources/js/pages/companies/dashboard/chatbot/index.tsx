@@ -5,7 +5,6 @@ import { FormattedMessage } from 'react-intl';
 import AiCreditsSummary from './components/ai-credits-summary';
 import ChatbotSettings from './components/chatbot-settings';
 import DailyUsageStats from './components/daily-usage-stats';
-import PendingAiCreditTopup from './components/pending-ai-credit-topup';
 
 export type ChatbotPageProps = {
     settings: {
@@ -22,6 +21,12 @@ export type ChatbotPageProps = {
     usageCostToday: number | string;
     usageCostIn30Days: number | string;
     pendingTopup: Record<string, unknown> | null;
+    transactions?: Array<{
+        id: number;
+        amount: number;
+        status: string;
+        created_at: string;
+    }>;
 };
 
 export default function Page() {
@@ -49,8 +54,6 @@ export default function Page() {
                         </div>
                     </div>
                 </header>
-
-                <PendingAiCreditTopup />
 
                 <ChatbotSettings />
 

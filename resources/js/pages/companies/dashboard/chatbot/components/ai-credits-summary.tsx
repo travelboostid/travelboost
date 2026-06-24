@@ -1,3 +1,4 @@
+import { index as chatbotPaymentHistory } from '@/actions/App/Http/Controllers/Companies/Dashboard/ChatbotPaymentHistoryController';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -10,7 +11,6 @@ import {
 import usePageProps from '@/hooks/use-page-props';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
 import { formatIDR } from '@/lib/utils';
-import { index as paymentsIndex } from '@/routes/companies/dashboard/payments';
 import { Link } from '@inertiajs/react';
 import {
     CoinsIcon,
@@ -72,9 +72,11 @@ export default function AiCreditsSummary() {
                     asChild
                 >
                     <Link
-                        href={`${paymentsIndex({ company: company.username })}?type=ai-credit-topup-payment`}
+                        href={chatbotPaymentHistory.url({
+                            company: company.username,
+                        })}
                     >
-                        <FormattedMessage defaultMessage="Payment history" />
+                        <FormattedMessage defaultMessage="Top-up history" />
                         <ExternalLinkIcon className="size-4" />
                     </Link>
                 </Button>

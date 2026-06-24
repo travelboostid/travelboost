@@ -30,6 +30,7 @@ import { cloneElement, isValidElement, useState } from 'react';
 import { FormattedMessage } from 'react-intl';
 import { toast } from 'sonner';
 import type { ChatbotPageProps } from '..';
+import PendingTopupConfirmDialog from './pending-topup-confirm-dialog';
 
 const PRESET_AMOUNTS = [100_000, 200_000, 500_000, 1_000_000];
 const MIN_AMOUNT = 100_000;
@@ -53,6 +54,7 @@ function openAiCreditTopupPayment(
 
 export function AiCreditsTopupDialog({ children }: AiCreditsTopupDialogProps) {
     const { pendingTopup } = usePageProps<ChatbotPageProps>();
+    const [pendingConfirmOpen, setPendingConfirmOpen] = useState(false);
     const [amountDialogOpen, setAmountDialogOpen] = useState(false);
     const [methodDialogOpen, setMethodDialogOpen] = useState(false);
     const [manualDialogOpen, setManualDialogOpen] = useState(false);
@@ -76,16 +78,7 @@ export function AiCreditsTopupDialog({ children }: AiCreditsTopupDialogProps) {
 
     const handleTopupTrigger = () => {
         if (pendingTopup) {
-            openAiCreditTopupPayment({
-                id: pendingTopup.id as number | string | undefined,
-                status: pendingTopup.status as string | undefined,
-                provider: pendingTopup.provider as string | undefined,
-                amount: pendingTopup.amount as number | undefined,
-                payload: pendingTopup.payload as
-                    | Record<string, unknown>
-                    | undefined,
-            });
-
+            setPendingConfirmOpen(true);
             return;
         }
 
@@ -94,6 +87,12 @@ export function AiCreditsTopupDialog({ children }: AiCreditsTopupDialogProps) {
 
     const handleContinueToMethods = () => {
         if (!isValidAmount) {
+            return;
+        }
+
+        if (pendingTopup) {
+            setAmountDialogOpen(false);
+            setPendingConfirmOpen(true);
             return;
         }
 
@@ -192,6 +191,15 @@ export function AiCreditsTopupDialog({ children }: AiCreditsTopupDialogProps) {
         <>
             {trigger}
 
+            {pendingTopup ? (
+                <PendingTopupConfirmDialog
+                    open={pendingConfirmOpen}
+                    onOpenChange={setPendingConfirmOpen}
+                    pendingTopup={pendingTopup}
+                    onStartNew={() => setAmountDialogOpen(true)}
+                />
+            ) : null}
+
             <Dialog
                 open={amountDialogOpen}
                 onOpenChange={handleAmountDialogOpenChange}
@@ -288,8 +296,13 @@ export function AiCreditsTopupDialog({ children }: AiCreditsTopupDialogProps) {
                                 className="w-full gap-2 sm:w-1/2"
                                 disabled={!isValidAmount}
                                 onClick={() => {
-                                    setAmountDialogOpen(false);
-                                    setManualDialogOpen(true);
+                                    if (pendingTopup) {
+                                        setAmountDialogOpen(false);
+                                        setPendingConfirmOpen(true);
+                                    } else {
+                                        setAmountDialogOpen(false);
+                                        setManualDialogOpen(true);
+                                    }
                                 }}
                             >
                                 <FormattedMessage defaultMessage="Manual Bank Transfer" />
