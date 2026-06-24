@@ -5,6 +5,7 @@ import { Link } from '@inertiajs/react';
 import type { ReactNode } from 'react';
 import type { LinkButtonComponentProps } from '../base/blocks/link-button';
 import { linkButtonActionsField } from './fields';
+import { PuckImage } from './puck-image';
 import {
     sectionAlignClasses,
     sectionContainerClass,
@@ -328,9 +329,10 @@ export function HeroImage({
     }
 
     return (
-        <img
+        <PuckImage
             src={src}
             alt={alt || 'Hero'}
+            priority
             className={cn(
                 'w-full object-cover shadow-2xl',
                 roundedClass,
@@ -354,9 +356,10 @@ export function HeroBackground({
     return (
         <div className={cn('relative overflow-hidden', className)}>
             {imageUrl && (
-                <img
+                <PuckImage
                     src={imageUrl}
                     alt=""
+                    priority
                     className="absolute inset-0 size-full object-cover"
                 />
             )}

@@ -58,56 +58,60 @@ class SyncAvailabilityAction
             return;
         }
 
-        $this->executeForSchedule($schedule, $departureDate, (int) $booking->vendor_id);
+        $this->execute((int) $booking->tour_id, $departureDate, (int) $booking->vendor_id);
+    }
+
+    public function syncAllSchedulesForTour(int $tourId, int $companyId): void
+    {
+        TourSchedule::query()
+            ->where('tour_id', $tourId)
+            ->where('company_id', $companyId)
+            ->whereHas('availability', function ($query) use ($tourId, $companyId): void {
+                $query
+                    ->where('company_id', $companyId)
+                    ->where('tour_id', $tourId);
+            })
+            ->orderBy('id')
+            ->each(function (TourSchedule $schedule) use ($companyId): void {
+                $this->syncSchedule($schedule, $companyId);
+            });
     }
 
     public function execute(int $tourId, string $departureDate, int $companyId): void
     {
-        DB::transaction(function () use ($tourId, $departureDate, $companyId): void {
-            $schedule = TourSchedule::where('tour_id', $tourId)
-                ->whereDate('departure_date', $departureDate)
-                ->where('company_id', $companyId)
-                ->whereHas('availability', function ($query) use ($tourId, $companyId): void {
-                    $query
-                        ->where('company_id', $companyId)
-                        ->where('tour_id', $tourId);
-                })
-                ->orderBy('id')
-                ->first();
+        $schedules = TourSchedule::query()
+            ->where('tour_id', $tourId)
+            ->whereDate('departure_date', $departureDate)
+            ->where('company_id', $companyId)
+            ->whereHas('availability', function ($query) use ($tourId, $companyId): void {
+                $query
+                    ->where('company_id', $companyId)
+                    ->where('tour_id', $tourId);
+            })
+            ->orderBy('id')
+            ->get();
 
-            if (! $schedule) {
-                logger()->warning('SyncAvailabilityAction: missing schedule row for direct availability sync', [
-                    'tour_id' => $tourId,
-                    'departure_date' => $departureDate,
-                    'company_id' => $companyId,
-                ]);
-
-                return;
-            }
-
-            $availability = TourAvailability::where([
-                'company_id' => $companyId,
+        if ($schedules->isEmpty()) {
+            logger()->warning('SyncAvailabilityAction: missing schedule row for direct availability sync', [
                 'tour_id' => $tourId,
-                'schedule_id' => $schedule->id,
-            ])->lockForUpdate()->first();
+                'departure_date' => $departureDate,
+                'company_id' => $companyId,
+            ]);
 
-            if (! $availability) {
-                logger()->warning('SyncAvailabilityAction: missing availability row for direct availability sync', [
-                    'tour_id' => $tourId,
-                    'departure_date' => $departureDate,
-                    'company_id' => $companyId,
-                    'schedule_id' => $schedule->id,
-                ]);
+            return;
+        }
 
-                return;
-            }
-
-            $this->syncAvailabilitySnapshot($availability, $tourId, $departureDate, $companyId);
-        });
+        foreach ($schedules as $schedule) {
+            $this->syncSchedule($schedule, $companyId);
+        }
     }
 
-    private function executeForSchedule(TourSchedule $schedule, string $departureDate, int $companyId): void
+    public function syncSchedule(TourSchedule $schedule, int $companyId): void
     {
+        $departureDate = $schedule->departure_date instanceof \DateTimeInterface
+            ? $schedule->departure_date->format('Y-m-d')
+            : (string) $schedule->departure_date;
+
         DB::transaction(function () use ($schedule, $departureDate, $companyId): void {
             $availability = TourAvailability::where([
                 'company_id' => $companyId,
@@ -157,7 +161,7 @@ class SyncAvailabilityAction
             ->whereDate('departure_date', $departureDate)
             ->groupBy('status')
             ->get()
-            ->keyBy('status');
+            ->keyBy(fn ($row) => $row->status instanceof \BackedEnum ? $row->status->value : (string) $row->status);
 
         $snapshotValues = array_fill_keys(array_unique(array_values(self::STATUS_COLUMN_MAP)), 0);
         $snapshotValues['RS'] = (int) $availability->RS;
@@ -168,9 +172,11 @@ class SyncAvailabilityAction
         }
 
         foreach ($totals->keys() as $statusValue) {
-            if (! isset(self::STATUS_COLUMN_MAP[$statusValue]) && ! in_array($statusValue, self::IGNORED_STATUSES, true)) {
+            $statusKey = $statusValue instanceof \BackedEnum ? $statusValue->value : (string) $statusValue;
+
+            if (! isset(self::STATUS_COLUMN_MAP[$statusKey]) && ! in_array($statusKey, self::IGNORED_STATUSES, true)) {
                 logger()->warning('SyncAvailabilityAction: unrecognized booking status encountered', [
-                    'status' => $statusValue,
+                    'status' => $statusKey,
                     'tour_id' => $tourId,
                     'departure_date' => $departureDate,
                     'company_id' => $companyId,

@@ -9,17 +9,31 @@ use App\Models\AgentTour;
 use App\Models\Company;
 use App\Models\Tour;
 use App\Models\TourCategory;
-use App\Models\TourCommissionAdditionalRule;
-use App\Models\TourCommissionRule;
 use App\Models\VendorAgentPartner;
 use App\Notifications\TourAgentPromotionNotification;
+use App\Support\AgentVendorTourCatalogDetailBuilder;
+use App\Support\ResolvesTourScheduleDisplayPrice;
+use App\Support\TourCatalogPreload;
+use App\Support\VendorTourCatalog;
+use Illuminate\Http\JsonResponse;
 use Inertia\Inertia;
 
 class VendorTourCatalogController extends Controller
 {
+    use ResolvesTourScheduleDisplayPrice;
+
     public function index(Company $company, string $username)
     {
-        $vendor = Company::where('username', $username)->firstOrFail();
+        $vendor = Company::query()
+            ->select(['id', 'username', 'name', 'type'])
+            ->where('username', $username)
+            ->firstOrFail();
+
+        $context = VendorTourCatalog::context($company, $username);
+        $catalogRelations = VendorTourCatalog::catalogRelations(
+            $context,
+            fn (): array => $this->catalogScheduleRelations(),
+        );
 
         $agentTourIds = $vendor->agentTours()->pluck('tour_id');
 
@@ -28,24 +42,14 @@ class VendorTourCatalogController extends Controller
                 ->orWhereIn('id', $agentTourIds);
         });
 
-        $categories = TourCategory::where('company_id', $vendor->id)
+        $categories = TourCategory::query()
+            ->select(['id', 'name', 'company_id', 'position_no'])
+            ->where('company_id', $vendor->id)
             ->orderBy('position_no')
             ->get();
 
-        $vendor = Company::where('username', $username)->firstOrFail();
-
         $tours = $toursQuery
-            ->with([
-                'company:id,username,name',
-                'company.companySetting',
-                'category',
-                'image',
-                'document',
-                'productCommissionCategory',
-                'commissionRules.scheduleAdjustments',
-                'schedules.availability',
-                'schedules.prices.priceCategory',
-            ])
+            ->with($catalogRelations)
             ->when(request('category'), function ($query, $categoryId) use ($vendor) {
                 $query->where(function ($q) use ($categoryId, $vendor) {
                     $q->where('category_id', $categoryId)
@@ -61,6 +65,7 @@ class VendorTourCatalogController extends Controller
                 $query->where('name', 'ilike', "%{$search}%");
             })
             ->get();
+
         $agentTours = AgentTour::where('company_id', $vendor->id)
             ->when(request('category'), function ($q, $categoryId) {
                 $q->where('category_id', $categoryId);
@@ -68,87 +73,39 @@ class VendorTourCatalogController extends Controller
             ->whereHas('tour', function ($q) {
                 $q->where('status', 'active');
             })
-            ->with(['tour' => function ($q) {
+            ->with(['tour' => function ($q) use ($catalogRelations) {
                 $q->where('status', 'active')
-                    ->with([
-                        'company:id,username,name',
-                        'company.companySetting',
-                        'category',
-                        'image',
-                        'document',
-                        'productCommissionCategory',
-                        'commissionRules.scheduleAdjustments',
-                        'schedules.availability',
-                        'schedules.prices.priceCategory',
-                    ]);
+                    ->with($catalogRelations);
             }])
             ->get()
             ->pluck('tour')
             ->filter();
 
-        $copiedAgentTours = $company->agentTours()
-            ->with('agentDocument')
-            ->orderByRaw('CASE WHEN agent_document_id IS NULL THEN 1 ELSE 0 END')
-            ->latest('updated_at')
-            ->get()
-            ->unique('tour_id')
-            ->keyBy('tour_id');
+        $copiedAgentTours = $this->resolveCopiedAgentTours($company, $context);
         $copiedTourIds = $copiedAgentTours->keys();
-        $globalCommissionRules = TourCommissionRule::query()
-            ->where('company_id', $vendor->id)
-            ->whereNull('tour_id')
-            ->where('is_active', true)
-            ->get();
-        $additionalCommissionRules = TourCommissionAdditionalRule::query()
-            ->where('company_id', $vendor->id)
-            ->where('is_active', true)
-            ->get();
 
         $tours = $tours
             ->merge($agentTours)
             ->unique('id')
             ->sortByDesc('created_at')
             ->values()
-            ->loadMissing([
-                'company:id,username,name',
-                'company.companySetting',
-                'category',
-                'image',
-                'document',
-                'productCommissionCategory',
-                'commissionRules.scheduleAdjustments',
-                'schedules.availability',
-                'schedules.prices.priceCategory',
-            ])
-            ->map(function ($tour) use ($copiedTourIds, $company, $copiedAgentTours, $username, $globalCommissionRules, $additionalCommissionRules) {
+            ->loadMissing($catalogRelations)
+            ->map(function ($tour) use (
+                $copiedTourIds,
+                $company,
+                $copiedAgentTours,
+                $username,
+            ) {
                 $tour->has_copied = $copiedTourIds->contains($tour->id);
                 $bookingDeadlineDays = (int) ($tour->company?->companySetting?->booking_deadline ?? 0);
-                $tour->schedules?->each(function ($schedule) use ($bookingDeadlineDays): void {
-                    $schedule->setAttribute('price', $this->lowestDiscountedSchedulePrice($schedule->prices));
-                    $schedule->setAttribute('booking_deadline_days', $bookingDeadlineDays);
-                });
+                $this->prepareCatalogSchedules($tour, $bookingDeadlineDays);
 
                 $copiedAgentTour = $copiedAgentTours->get($tour->id);
                 $tour->agent_status = $copiedAgentTour?->status;
-                $scheduleIds = $tour->schedules?->pluck('id')->all() ?? [];
-                $tour->setRelation(
-                    'commissionRules',
-                    $globalCommissionRules
-                        ->where('product_commission_category_id', $tour->product_commission_category_id)
-                        ->values()
-                );
-                $tour->setAttribute(
-                    'additional_commission_rules',
-                    $additionalCommissionRules
-                        ->filter(function ($rule) use ($tour, $scheduleIds): bool {
-                            if ($rule->scope_type === 'category_departure') {
-                                return (int) $rule->product_commission_category_id === (int) $tour->product_commission_category_id;
-                            }
 
-                            return in_array((int) $rule->tour_schedule_id, $scheduleIds, true);
-                        })
-                        ->values()
-                );
+                $tour->unsetRelation('productCommissionCategory');
+                $tour->setRelation('commissionRules', collect());
+                $tour->setAttribute('additional_commission_rules', collect());
 
                 if (
                     $company->type === CompanyType::AGENT
@@ -171,10 +128,9 @@ class VendorTourCatalogController extends Controller
                 return $tour;
             });
 
-        $partnership = VendorAgentPartner::where('vendor_id', $vendor->id)
-            ->where('agent_id', $company->id)
-            ->with('agentTier')
-            ->first();
+        $partnership = $this->resolvePartnership($company, $vendor, $context);
+
+        $lcpImageUrl = TourCatalogPreload::resolveFirstTourImageUrl($tours);
 
         return Inertia::render('companies/dashboard/vendor-tours/index', [
             'data' => $tours,
@@ -183,7 +139,84 @@ class VendorTourCatalogController extends Controller
             'username' => $username,
             'partnership' => $partnership,
             'vendor' => $vendor,
+            'lcpImageUrl' => $lcpImageUrl,
         ]);
+    }
+
+    public function showTourDetails(Company $company, string $vendor, Tour $tour): JsonResponse
+    {
+        abort_unless($company->type === CompanyType::AGENT, 403);
+
+        $vendorCompany = Company::query()
+            ->select(['id', 'username', 'name', 'type'])
+            ->where('username', $vendor)
+            ->firstOrFail();
+
+        abort_if($company->username === $vendorCompany->username, 404);
+
+        $this->ensureTourBelongsToVendorCatalog($vendorCompany, $tour);
+
+        $payload = app(AgentVendorTourCatalogDetailBuilder::class)->build($vendorCompany, $tour);
+
+        return response()->json($payload);
+    }
+
+    private function ensureTourBelongsToVendorCatalog(Company $vendor, Tour $tour): void
+    {
+        $agentTourIds = $vendor->agentTours()->pluck('tour_id');
+
+        abort_unless(
+            (int) $tour->company_id === (int) $vendor->id || $agentTourIds->contains($tour->id),
+            404,
+        );
+    }
+
+    /**
+     * @param  array{
+     *     is_own_catalog: bool,
+     *     is_agent_viewing_vendor: bool,
+     *     needs_agent_metadata: bool,
+     * }  $context
+     */
+    private function resolveCopiedAgentTours(Company $company, array $context)
+    {
+        if (! $context['needs_agent_metadata']) {
+            return collect();
+        }
+
+        $query = $company->agentTours()
+            ->select(['id', 'company_id', 'tour_id', 'status', 'agent_document_id', 'updated_at'])
+            ->orderByRaw('CASE WHEN agent_document_id IS NULL THEN 1 ELSE 0 END')
+            ->latest('updated_at');
+
+        if ($context['is_own_catalog']) {
+            $query->with('agentDocument');
+        }
+
+        return $query
+            ->get()
+            ->unique('tour_id')
+            ->keyBy('tour_id');
+    }
+
+    /**
+     * @param  array{
+     *     is_own_catalog: bool,
+     *     is_agent_viewing_vendor: bool,
+     *     needs_agent_metadata: bool,
+     * }  $context
+     */
+    private function resolvePartnership(Company $company, Company $vendor, array $context): ?VendorAgentPartner
+    {
+        $query = VendorAgentPartner::query()
+            ->where('vendor_id', $vendor->id)
+            ->where('agent_id', $company->id);
+
+        if ($context['is_agent_viewing_vendor']) {
+            $query->with('agentTier:id,name');
+        }
+
+        return $query->first();
     }
 
     public function copy(Company $company, string $vendor, Tour $tour)
@@ -273,27 +306,5 @@ class VendorTourCatalogController extends Controller
         }
 
         return redirect($url);
-    }
-
-    private function lowestDiscountedSchedulePrice($prices): float
-    {
-        return (float) $prices
-            ->map(function ($price): float {
-                $basePrice = (float) $price->price;
-                $promotionRate = (float) ($price->promotion_rate ?? 0);
-                $promotion = (float) ($price->promotion ?? 0);
-
-                if ($promotionRate > 0) {
-                    return max(0.0, (float) round($basePrice - (($basePrice * $promotionRate) / 100)));
-                }
-
-                if ($promotion > 0) {
-                    return max(0.0, (float) round($basePrice - $promotion));
-                }
-
-                return $basePrice;
-            })
-            ->filter(fn (float $price): bool => $price > 0)
-            ->min();
     }
 }

@@ -1,3 +1,4 @@
+import { OptimizedImage } from '@/components/optimized-image';
 import { Bell, MessageSquare, Smartphone } from 'lucide-react';
 
 export function EngagementSection() {
@@ -38,10 +39,12 @@ export function EngagementSection() {
                     {/* IMAGE */}
                     <div className="relative order-2 lg:order-1">
                         <div className="aspect-3/4 max-w-sm mx-auto rounded-3xl overflow-hidden shadow-2xl">
-                            <img
+                            <OptimizedImage
                                 src="/images/mobile-app.jpg"
                                 alt="TravelBoost Mobile App"
-                                className="w-full h-full object-cover"
+                                width={1024}
+                                height={1024}
+                                className="h-full w-full object-cover"
                             />
                         </div>
                     </div>

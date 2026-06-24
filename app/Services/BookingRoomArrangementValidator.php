@@ -28,14 +28,9 @@ class BookingRoomArrangementValidator
      */
     public function validatePassengerMix(array $passengers): void
     {
-        $baseCount = 0;
         $dependentBedCount = 0;
 
         foreach ($passengers as $passenger) {
-            if ($this->isEligibleBasePassenger($passenger)) {
-                $baseCount++;
-            }
-
             if ($this->isDependentBedPassenger($passenger)) {
                 $dependentBedCount++;
             }
@@ -45,9 +40,36 @@ class BookingRoomArrangementValidator
             return;
         }
 
-        if ($baseCount === 0 || $dependentBedCount > $baseCount) {
+        $eligibleExtraBedSlots = $this->countEligibleExtraBedSlots($passengers);
+
+        if ($eligibleExtraBedSlots === 0 || $dependentBedCount > $eligibleExtraBedSlots) {
             $this->throwInvalidArrangement();
         }
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $passengers
+     */
+    private function countEligibleExtraBedSlots(array $passengers): int
+    {
+        $doubleCount = 0;
+        $twinCount = 0;
+
+        foreach ($passengers as $passenger) {
+            $priceCategory = $this->normalizeCategory((string) data_get($passenger, 'price_category'));
+
+            if (in_array($priceCategory, ['adult double', 'double'], true)) {
+                $doubleCount++;
+
+                continue;
+            }
+
+            if (in_array($priceCategory, ['adult twin', 'twin'], true)) {
+                $twinCount++;
+            }
+        }
+
+        return (int) ceil($doubleCount / 2) + (int) ceil($twinCount / 2);
     }
 
     /**

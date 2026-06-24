@@ -1,3 +1,4 @@
+import { OptimizedImage } from '@/components/optimized-image';
 import { TrendingUp, Users, Video } from 'lucide-react';
 
 export function CommunitySection() {
@@ -39,10 +40,12 @@ export function CommunitySection() {
                     {/* IMAGE */}
                     <div className="relative">
                         <div className="aspect-4/3 rounded-2xl overflow-hidden shadow-xl">
-                            <img
+                            <OptimizedImage
                                 src="/images/travel-community.jpg"
                                 alt="Travel Professionals Community"
-                                className="w-full h-full object-cover"
+                                width={1024}
+                                height={1024}
+                                className="h-full w-full object-cover"
                             />
                         </div>
                     </div>

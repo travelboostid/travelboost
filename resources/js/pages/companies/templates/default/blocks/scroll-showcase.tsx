@@ -11,6 +11,7 @@ import {
     type ContentStyleProps,
 } from '../../components/content-shared';
 import { imageField } from '../../components/fields';
+import { PuckImage } from '../../components/puck-image';
 
 export type ScrollCard = {
     image: string;
@@ -127,7 +128,7 @@ export const ScrollShowcaseComponentConfig: ComponentConfig<ScrollShowcaseCompon
                             >
                                 <div className="relative overflow-hidden rounded-2xl border border-border/60 bg-card shadow-lg transition hover:-translate-y-1 hover:shadow-xl">
                                     {card.image ? (
-                                        <img
+                                        <PuckImage
                                             src={card.image}
                                             alt={card.title}
                                             className="aspect-[3/4] w-full object-cover transition duration-500 group-hover:scale-105"

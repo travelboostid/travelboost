@@ -1,6 +1,7 @@
 import { cn } from '@/lib/utils';
 import type { ComponentConfig } from '@puckeditor/core';
 import { imageField } from '../../components/fields';
+import { PuckImage } from '../../components/puck-image';
 import {
     sectionContainerClass,
     SectionHeader,
@@ -103,7 +104,7 @@ export const LogoCloudComponentConfig: ComponentConfig<LogoCloudComponentProps> 
                 i: number,
             ) => {
                 const img = logo.image ? (
-                    <img
+                    <PuckImage
                         src={logo.image}
                         alt={logo.alt}
                         className={logoImageClass}

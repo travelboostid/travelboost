@@ -1884,14 +1884,7 @@ export default function Page() {
                 setContactGuestId(null);
             }
         },
-        [
-            adults,
-            children,
-            contact.name,
-            contactGuestId,
-            infants,
-            maxSeatTakingGuests,
-        ],
+        [adults, children, contact.name, contactGuestId, maxSeatTakingGuests],
     );
 
     // ─── Validation ─────────────────────────────────────────────────────

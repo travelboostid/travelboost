@@ -1,5 +1,5 @@
 import { useAnonymousUserContext } from '@/components/anonymous-user-context-provider';
-import FloatingChatWidget from '@/components/chat/floating-chat-widget';
+import DeferredFloatingChatWidget from '@/components/chat/deferred-floating-chat-widget';
 import type { ChatActor } from '@/components/chat/state';
 import {
     ChatContextProvider,
@@ -79,7 +79,7 @@ export default function Inner({ children, onNavigateAway }: TenantLayoutProps) {
                     </div>
                     {showFooter && <Footer />}
                 </div>
-                <FloatingChatWidget
+                <DeferredFloatingChatWidget
                     defaultLiveChatRecipient={defaultLiveChatRecipient}
                 />
             </FloatingChatWidgetContextProvider>

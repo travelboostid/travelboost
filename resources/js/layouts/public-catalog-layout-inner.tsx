@@ -4,7 +4,7 @@ import { ChatContextProvider } from '@/components/chat/state';
 import { FloatingChatWidgetContextProvider } from '@/components/chat/state';
 
 import { useAnonymousUserContext } from '@/components/anonymous-user-context-provider';
-import FloatingChatWidget from '@/components/chat/floating-chat-widget';
+import DeferredFloatingChatWidget from '@/components/chat/deferred-floating-chat-widget';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
 import { useMemo } from 'react';
 import type { PublicCatalogLayoutProps } from './public-catalog-layout';
@@ -38,7 +38,7 @@ export default function PublicCatalogLayoutInner({
                     <main className="p-4">{children}</main>
                 </div>
 
-                <FloatingChatWidget />
+                <DeferredFloatingChatWidget />
             </FloatingChatWidgetContextProvider>
         </ChatContextProvider>
     );

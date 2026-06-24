@@ -113,7 +113,7 @@ class DashboardBookingController extends Controller
         $bookingNumber = null;
         $dashboardUser = request()->user();
         $agent = $this->dashboardAgent($company, $tour);
-        $agentOptions = $this->agentOptionsForDashboardBooking($company);
+        $agentOptions = $this->agentOptionsForDashboardBooking($company, $tour);
         $existingBooking = null;
 
         if ($dashboardUser && $schedule && $isScheduleBookable && $requestedBookingNumber !== '') {
@@ -284,9 +284,17 @@ class DashboardBookingController extends Controller
 
             $existingBooking = Booking::query()
                 ->where('booking_number', $bookingNumber)
-                ->where('user_id', $owner->id)
                 ->lockForUpdate()
                 ->first();
+
+            if ($existingBooking) {
+                $this->assertDashboardBookingMatchesFlow(
+                    $existingBooking,
+                    $tour,
+                    $company,
+                    (string) $data['departure_date']
+                );
+            }
 
             $schedule = $this->resolveBookableSchedule($tour, (string) $data['departure_date'], $tour->company_id);
             if (! $schedule) {
@@ -333,9 +341,9 @@ class DashboardBookingController extends Controller
             $booking = Booking::updateOrCreate(
                 [
                     'booking_number' => $bookingNumber,
-                    'user_id' => $owner->id,
                 ],
                 [
+                    'user_id' => $owner->id,
                     'tour_id' => $tour->id,
                     'departure_date' => $data['departure_date'],
                     'pax_adult' => $data['pax_adult'],
@@ -394,9 +402,6 @@ class DashboardBookingController extends Controller
         $owner = $this->resolveBookingOwner($request, $validated);
         $this->assertPaymentTypeAllowedForTour($tour, (string) $validated['payment_type']);
 
-        $validated['booking_number'] = $this->resolveDashboardBookingNumber(data_get($validated, 'booking_number'), $company, $bookingNumberService);
-        $this->transferDashboardPlaceholderOwnership((string) $validated['booking_number'], $request->user(), $owner);
-
         $validated['vendor_id'] = $tour->company_id;
         $validated['agent_id'] = $agent?->id;
         $validated['tour_id'] = $tour->id;
@@ -404,7 +409,43 @@ class DashboardBookingController extends Controller
         $validated['input_by_company_id'] = $company->id;
         $validated['input_by_role'] = $this->currentCompanyRoleName($request->user(), $company);
 
-        $bookingService->createBooking($validated, $owner);
+        DB::transaction(function () use (
+            $validated,
+            $company,
+            $tour,
+            $bookingNumberService,
+            $request,
+            $owner,
+            $bookingService
+        ): void {
+            $validated['booking_number'] = $this->resolveDashboardBookingNumber(
+                data_get($validated, 'booking_number'),
+                $company,
+                $bookingNumberService
+            );
+
+            $this->transferDashboardPlaceholderOwnership(
+                (string) $validated['booking_number'],
+                $request->user(),
+                $owner
+            );
+
+            $existingBooking = Booking::query()
+                ->where('booking_number', (string) $validated['booking_number'])
+                ->lockForUpdate()
+                ->first();
+
+            if ($existingBooking) {
+                $this->assertDashboardBookingMatchesFlow(
+                    $existingBooking,
+                    $tour,
+                    $company,
+                    (string) $validated['departure_date']
+                );
+            }
+
+            $bookingService->createBooking($validated, $owner);
+        });
 
         return back()->with('success', 'Booking successfully created.');
     }
@@ -1182,7 +1223,22 @@ class DashboardBookingController extends Controller
             ]);
         }
 
+        if (! $this->agentHasActiveTourInCatalog($normalizedAgentId, $tour)) {
+            throw ValidationException::withMessages([
+                'agent_id' => 'Please select an agent who has saved this tour to their catalog.',
+            ]);
+        }
+
         return $partnership->agent;
+    }
+
+    private function agentHasActiveTourInCatalog(int $agentId, Tour $tour): bool
+    {
+        return AgentTour::query()
+            ->where('company_id', $agentId)
+            ->where('tour_id', $tour->id)
+            ->where('status', 'active')
+            ->exists();
     }
 
     private function resolveBookingOwner(Request $request, array $data): User
@@ -1209,6 +1265,26 @@ class DashboardBookingController extends Controller
         }
 
         return $bookingNumberService->generate((string) $company->id);
+    }
+
+    private function assertDashboardBookingMatchesFlow(
+        Booking $booking,
+        Tour $tour,
+        Company $company,
+        string $departureDate
+    ): void {
+        $sameTour = (int) $booking->tour_id === (int) $tour->id;
+        $sameVendor = (int) $booking->vendor_id === (int) $tour->company_id;
+        $sameDepartureDate = $this->normalizeDateString($booking->departure_date)
+            === $this->normalizeDateString($departureDate);
+
+        if ($sameTour && $sameVendor && $sameDepartureDate) {
+            return;
+        }
+
+        throw ValidationException::withMessages([
+            'booking_number' => 'This booking reference is not valid for the selected tour and departure date.',
+        ]);
     }
 
     /**
@@ -1405,15 +1481,21 @@ class DashboardBookingController extends Controller
     /**
      * @return Collection<int, array{id: int, name: string, username: string, email: string|null}>
      */
-    private function agentOptionsForDashboardBooking(Company $company): Collection
+    private function agentOptionsForDashboardBooking(Company $company, Tour $tour): Collection
     {
         if (($company->type->value ?? $company->type) !== 'vendor') {
             return collect();
         }
 
+        $catalogedAgentIds = AgentTour::query()
+            ->where('tour_id', $tour->id)
+            ->where('status', 'active')
+            ->pluck('company_id');
+
         return $company->agentPartners()
             ->with('agent:id,name,username,email')
             ->where('status', VendorAgentPartnerStatus::ACTIVE->value)
+            ->whereIn('agent_id', $catalogedAgentIds)
             ->whereHas('agent.agentSubscription', fn (Builder $query): Builder => $this->eligibleAgentSubscriptionConstraint($query))
             ->get()
             ->map(fn (VendorAgentPartner $partner): ?array => $partner->agent ? [

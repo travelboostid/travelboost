@@ -1,3 +1,4 @@
+import { OptimizedImage } from '@/components/optimized-image';
 import { Head } from '@inertiajs/react';
 import {
     ArrowRight,
@@ -843,14 +844,20 @@ export default function Landing() {
                 <div className="fixed top-4 left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-7xl z-50 rounded-full border border-slate-200/80 dark:border-white/10 bg-white/95 dark:bg-slate-950/90 shadow-xl dark:shadow-2xl backdrop-blur-xl px-4 py-2.5 flex items-center justify-between transition-all duration-300">
                     {/* Logo & Brand */}
                     <a href="#home" className="flex-shrink-0 pl-2">
-                        <img
+                        <OptimizedImage
                             src="/images/logo/hori.png"
                             alt="TravelBoost"
+                            width={144}
+                            height={36}
+                            priority
                             className="block h-9 w-auto dark:hidden"
                         />
-                        <img
+                        <OptimizedImage
                             src="/images/logo/hori-wt.png"
                             alt="TravelBoost"
+                            width={144}
+                            height={36}
+                            priority
                             className="hidden h-9 w-auto dark:block"
                         />
                     </a>
@@ -1701,11 +1708,12 @@ export default function Landing() {
                                     key={i}
                                     className="flex h-14 w-36 shrink-0 items-center justify-center rounded-2xl border border-slate-200/80 bg-white p-3 shadow-sm dark:border-slate-700/60 dark:bg-white/95"
                                 >
-                                    <img
+                                    <OptimizedImage
                                         src={p.src}
                                         alt={p.alt}
+                                        width={120}
+                                        height={40}
                                         className="h-full w-auto object-contain"
-                                        loading="lazy"
                                     />
                                 </div>
                             ))}
@@ -1720,14 +1728,18 @@ export default function Landing() {
                             {/* Logo Column */}
                             <div className="space-y-4 md:col-span-4">
                                 <a href="#home" className="inline-block">
-                                    <img
+                                    <OptimizedImage
                                         src="/images/logo/hori.png"
                                         alt="TravelBoost"
+                                        width={144}
+                                        height={36}
                                         className="block h-9 w-auto dark:hidden"
                                     />
-                                    <img
+                                    <OptimizedImage
                                         src="/images/logo/hori-wt.png"
                                         alt="TravelBoost"
+                                        width={144}
+                                        height={36}
                                         className="hidden h-9 w-auto dark:block"
                                     />
                                 </a>

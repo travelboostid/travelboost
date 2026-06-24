@@ -3,12 +3,15 @@
 use App\Actions\Booking\ExpireBookingReservationsAction;
 use App\Actions\Booking\SyncAvailabilityAction;
 use App\Enums\BookingStatus;
+use App\Enums\CompanyTeamStatus;
 use App\Jobs\SyncTourAvailabilityJob;
 use App\Models\Booking;
 use App\Models\Company;
+use App\Models\CompanyTeam;
 use App\Models\Tour;
 use App\Models\TourAvailability;
 use App\Models\TourSchedule;
+use App\Models\User;
 use Database\Seeders\Common\RolePermissionSeeder;
 use Illuminate\Support\Facades\Queue;
 
@@ -435,4 +438,94 @@ test('deleting a booking dispatches the sync job', function () {
     $booking->delete();
 
     Queue::assertPushed(SyncTourAvailabilityJob::class);
+});
+
+test('tour edit page refreshes stale availability snapshots before rendering', function () {
+    $this->withoutVite();
+    $this->company->update(['type' => 'vendor']);
+
+    $user = User::factory()->create();
+    $user->addRole("company:{$this->company->id}:superadmin");
+    CompanyTeam::create([
+        'company_id' => $this->company->id,
+        'user_id' => $user->id,
+        'status' => CompanyTeamStatus::ACTIVE,
+        'is_owner' => true,
+        'accepted_at' => now(),
+    ]);
+
+    Booking::withoutEvents(function () {
+        Booking::factory()->create([
+            'tour_id' => $this->tour->id,
+            'departure_date' => $this->departureDate,
+            'vendor_id' => $this->company->id,
+            'status' => BookingStatus::FULL_PAYMENT,
+            'pax_adult' => 1,
+            'pax_child' => 0,
+            'pax_infant' => 0,
+        ]);
+    });
+
+    $this->availability->update([
+        'DP' => 1,
+        'FP' => 0,
+        'available' => 14,
+    ]);
+
+    $response = $this->actingAs($user)
+        ->get("/companies/{$this->company->username}/dashboard/tours/{$this->tour->id}/edit");
+
+    $response->assertOk();
+
+    $this->availability->refresh();
+
+    expect((int) $this->availability->DP)->toBe(0)
+        ->and((int) $this->availability->FP)->toBe(1)
+        ->and((float) $this->availability->available)->toBe(29.0);
+});
+
+test('sync updates every schedule availability row for the same departure date', function () {
+    $secondSchedule = TourSchedule::create([
+        'tour_id' => $this->tour->id,
+        'tour_code' => $this->tour->code,
+        'company_id' => $this->company->id,
+        'departure_date' => $this->departureDate,
+        'return_date' => now()->addWeeks(2)->toDateString(),
+        'is_active' => true,
+    ]);
+
+    $secondAvailability = TourAvailability::create([
+        'company_id' => $this->company->id,
+        'tour_id' => $this->tour->id,
+        'schedule_id' => $secondSchedule->id,
+        'max_pax' => 30,
+        'DP' => 5,
+        'FP' => 0,
+        'available' => 25,
+    ]);
+
+    Booking::withoutEvents(function () {
+        Booking::factory()->create([
+            'tour_id' => $this->tour->id,
+            'departure_date' => $this->departureDate,
+            'vendor_id' => $this->company->id,
+            'status' => BookingStatus::FULL_PAYMENT,
+            'pax_adult' => 1,
+            'pax_child' => 0,
+            'pax_infant' => 0,
+        ]);
+    });
+
+    app(SyncAvailabilityAction::class)->syncAllSchedulesForTour(
+        (int) $this->tour->id,
+        (int) $this->company->id,
+    );
+
+    $this->availability->refresh();
+    $secondAvailability->refresh();
+
+    expect((int) $this->availability->DP)->toBe(0)
+        ->and((int) $this->availability->FP)->toBe(1)
+        ->and((int) $secondAvailability->DP)->toBe(0)
+        ->and((int) $secondAvailability->FP)->toBe(1);
 });

@@ -12,6 +12,7 @@ import {
     AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
+import { activateChatStack } from '@/lib/activate-chat-stack';
 import { extractDocumentUrl } from '@/lib/utils';
 import { router } from '@inertiajs/react';
 import axios from 'axios';
@@ -68,6 +69,7 @@ export default function TourCard({
     isOwnCatalog = false,
     fromLogin = true,
     autoOpenBookingModal = false,
+    imagePriority = false,
 }: {
     tour: TourCardResource;
     type?: string;
@@ -75,6 +77,7 @@ export default function TourCard({
     isOwnCatalog?: boolean;
     fromLogin?: boolean;
     autoOpenBookingModal?: boolean;
+    imagePriority?: boolean;
 }) {
     const { company, auth } = usePageSharedDataProps();
     const floatingChat = useFloatingChatWidgetContext();
@@ -197,6 +200,7 @@ export default function TourCard({
     const handleChat = async (targetId: number) => {
         try {
             setStartingChat(true);
+            activateChatStack();
             floatingChat?.setAttachment({
                 type: 'tour',
                 data: tour.id.toString(),
@@ -306,12 +310,14 @@ export default function TourCard({
                         setIsBookingOpen(true);
                     }}
                     startingChat={startingChat}
+                    imagePriority={imagePriority}
                 />
             ) : isVendorDashboard ? (
                 <VendorTourCard
                     tour={tour}
                     isVendorNameVisible={isVendorNameVisible}
                     isVendorInactive={isVendorInactive}
+                    imagePriority={imagePriority}
                     onViewBrochure={() => handleViewBrochure(false)}
                     onBook={(nextTour: TourCardResource) => {
                         setSelectedBookingTour(nextTour);
@@ -323,6 +329,7 @@ export default function TourCard({
                     tour={tour}
                     isVendorNameVisible={isVendorNameVisible}
                     isVendorInactive={isVendorInactive}
+                    imagePriority={imagePriority}
                     onViewBrochure={handleViewAgentCatalogBrochure}
                     onChat={() => handleChat(tour.company_id)}
                     onShareFB={handleShareFacebook}
@@ -338,6 +345,7 @@ export default function TourCard({
                     partnership={partnership}
                     isVendorNameVisible={isVendorNameVisible}
                     isVendorInactive={isVendorInactive}
+                    imagePriority={imagePriority}
                     canCopy={canCopy}
                     hasCopied={hasCopied}
                     onCopy={handleCopy}

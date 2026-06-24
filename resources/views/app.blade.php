@@ -76,11 +76,54 @@
     />
     <link rel="manifest" href="/images/logo/logo-square/site.webmanifest" />
 
-    <link rel="preconnect" href="https://fonts.bunny.net" />
     <link
-        href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600"
-        rel="stylesheet"
+        rel="preconnect"
+        href="https://fonts.bunny.net"
+        crossorigin="anonymous"
     />
+    @php
+        $mediaCdnOrigin = \App\Support\MediaCdn::preconnectOrigin();
+    @endphp
+    @if ($mediaCdnOrigin)
+        <link
+            rel="preconnect"
+            href="{{ $mediaCdnOrigin }}"
+            crossorigin="anonymous"
+        />
+    @endif
+    <link
+        rel="preload"
+        href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600|playfair-display:600,700&display=swap"
+        as="style"
+        onload="
+            this.onload = null;
+            this.rel = 'stylesheet';
+        "
+    />
+    <noscript>
+        <link
+            href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600|playfair-display:600,700&display=swap"
+            rel="stylesheet"
+        />
+    </noscript>
+
+    @php
+        $pageProps = $page['props'] ?? [];
+        $performancePreloads = \App\Support\PerformanceHints::forInertiaPage(
+            $page['component'] ?? null,
+            $pageProps['tenantLandingPageData'] ?? null,
+            $pageProps['lcpImageUrl'] ?? null,
+        );
+    @endphp
+    @foreach ($performancePreloads as $hint)
+        <link
+            rel="preload"
+            href="{{ $hint['href'] }}"
+            as="{{ $hint['as'] }}"
+            @if (! empty($hint['type'])) type="{{ $hint['type'] }}" @endif
+            @if ($loop->first) fetchpriority="high" @endif
+        />
+    @endforeach
 
     @viteReactRefresh
     @vite (['resources/js/app.tsx', "resources/js/pages/{$page['component']}.tsx"])

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Companies\Dashboard;
 
 use App\Actions\Booking\ExpireBookingReservationsAction;
+use App\Actions\Booking\SyncAvailabilityAction;
 use App\Events\TourUpdated;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreTourRequest;
@@ -105,6 +106,7 @@ class TourController extends Controller
     public function edit(Company $company, Tour $tour): Response
     {
         app(ExpireBookingReservationsAction::class)->execute($company, $tour->id);
+        $this->syncTourAvailabilitySnapshots($company, $tour);
 
         $tour->load([
             'user',
@@ -254,5 +256,10 @@ class TourController extends Controller
         }
 
         $this->sendTourStatusNotification($tour);
+    }
+
+    private function syncTourAvailabilitySnapshots(Company $company, Tour $tour): void
+    {
+        app(SyncAvailabilityAction::class)->syncAllSchedulesForTour((int) $tour->id, (int) $company->id);
     }
 }

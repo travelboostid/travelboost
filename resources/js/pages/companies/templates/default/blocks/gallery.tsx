@@ -2,6 +2,7 @@ import { cn } from '@/lib/utils';
 import type { ComponentConfig } from '@puckeditor/core';
 import { ImageIcon } from 'lucide-react';
 import { imageField } from '../../components/fields';
+import { PuckImage } from '../../components/puck-image';
 import {
     SectionHeader,
     columnGridClass,
@@ -212,7 +213,7 @@ export const GalleryComponentConfig: ComponentConfig<GalleryComponentProps> = {
                         >
                             {image.url ? (
                                 <>
-                                    <img
+                                    <PuckImage
                                         src={image.url}
                                         alt={image.caption}
                                         className={cn(

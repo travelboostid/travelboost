@@ -1,3 +1,4 @@
+import { OptimizedImage } from '@/components/optimized-image';
 import { Button } from '@/components/ui/button';
 import { show as showLogin } from '@/routes/companies/login';
 import { show as showRegister } from '@/routes/companies/register';
@@ -11,10 +12,13 @@ export function HeroSection() {
         <section className="relative min-h-screen flex items-center pt-0">
             {/* BACKGROUND IMAGE */}
             <div className="absolute inset-0 z-0">
-                <img
+                <OptimizedImage
                     src="/images/hero-travel.jpg"
                     alt="Beautiful tropical destination"
-                    className="w-full h-full object-cover"
+                    width={1024}
+                    height={1024}
+                    priority
+                    className="h-full w-full object-cover"
                 />
                 <div className="absolute inset-0 bg-foreground/60" />
             </div>

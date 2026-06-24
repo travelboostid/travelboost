@@ -9,6 +9,7 @@ import {
     type ContentStyleProps,
 } from '../../components/content-shared';
 import { imageField } from '../../components/fields';
+import { PuckImage } from '../../components/puck-image';
 
 export type ShowcaseTab = {
     label: string;
@@ -74,7 +75,7 @@ function ShowcaseTabsView({
                     </p>
                 </div>
                 {current?.image ? (
-                    <img
+                    <PuckImage
                         src={current.image}
                         alt={current.title}
                         className="aspect-4/3 w-full rounded-2xl object-cover shadow-lg transition duration-500"

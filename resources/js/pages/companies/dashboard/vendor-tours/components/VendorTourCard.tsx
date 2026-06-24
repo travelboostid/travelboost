@@ -26,6 +26,7 @@ export default function VendorTourCard({
     tour,
     isVendorNameVisible,
     isVendorInactive,
+    imagePriority = false,
     onViewBrochure,
     onBook,
 }: any) {
@@ -122,6 +123,7 @@ export default function VendorTourCard({
             tour={tour}
             isVendorNameVisible={isVendorNameVisible}
             isVendorInactive={isVendorInactive}
+            imagePriority={imagePriority}
             statusSection={
                 <div className="mx-4 mt-4 border-t border-slate-100 pt-3 dark:border-slate-800/60">
                     <div className="flex items-center justify-between">

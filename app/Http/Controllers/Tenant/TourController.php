@@ -9,10 +9,14 @@ use App\Models\TourAvailability;
 use App\Models\TourCategory;
 use App\Models\TourWaitingListSchedule;
 use App\Models\VendorAgentPartner;
+use App\Support\ResolvesTourScheduleDisplayPrice;
+use App\Support\TourCatalogPreload;
 use Inertia\Inertia;
 
 class TourController extends Controller
 {
+    use ResolvesTourScheduleDisplayPrice;
+
     public function index()
     {
         $tenant = request()->attributes->get('tenant');
@@ -22,7 +26,12 @@ class TourController extends Controller
         $tenant->load([
             'agentTours' => function ($query) {
                 $query->where('status', 'active')
-                    ->with(['agentDocument', 'tour.company.companySetting']);
+                    ->with([
+                        'agentDocument',
+                        'tour.company.companySetting',
+                        'tour.image',
+                        'tour.document',
+                    ]);
             },
             'settings',
         ]);
@@ -39,12 +48,23 @@ class TourController extends Controller
             ->get()
             ->keyBy('vendor_id');
 
-        $availabilities = TourAvailability::whereIn('tour_id', $tourIds)
-            ->with('schedule.prices.priceCategory')
-            ->get()
-            ->filter(function ($avail) use ($tourMap) {
-                return $avail->company_id === $tourMap->get($avail->tour_id);
+        $minCutoffDate = now()->toDateString();
+
+        $availabilities = TourAvailability::query()
+            ->whereIn('tour_id', $tourIds)
+            ->whereIn('company_id', $vendorIds)
+            ->whereHas('schedule', function ($query) use ($minCutoffDate) {
+                $query->where('departure_date', '>=', $minCutoffDate)
+                    ->where('is_active', true);
             })
+            ->with([
+                'schedule' => function ($query) use ($minCutoffDate) {
+                    $query->where('departure_date', '>=', $minCutoffDate)
+                        ->where('is_active', true)
+                        ->with('prices.priceCategory');
+                },
+            ])
+            ->get()
             ->groupBy('tour_id');
 
         $user = request()->user();
@@ -71,8 +91,10 @@ class TourController extends Controller
                     'departure_date' => $avail->schedule->departure_date,
                     'return_date' => $avail->schedule->return_date,
                     'quota' => (int) $avail->available,
-                    'price' => $this->lowestDiscountedSchedulePrice($avail->schedule->prices),
-                    'prices' => $avail->schedule->prices->values(),
+                    'price' => $this->scheduleDisplayPrice(
+                        $avail->schedule->prices,
+                        $agentTour->tour->showprice ?? null,
+                    ),
                     'agent_price' => 0,
                     'cutoff_date' => $avail->schedule->cutoff_date,
                     'is_active' => (bool) $avail->schedule->is_active,
@@ -127,28 +149,7 @@ class TourController extends Controller
             'categories' => $categories,
             'phone' => $phone,
             'activeWaitingListScheduleCount' => $activeWaitingListScheduleCount,
+            'lcpImageUrl' => TourCatalogPreload::resolveFirstTourImageUrl($validAgentTours),
         ]);
-    }
-
-    private function lowestDiscountedSchedulePrice($prices): float
-    {
-        return (float) ($prices
-            ->map(function ($price): float {
-                $basePrice = (float) $price->price;
-                $promotionRate = (float) ($price->promotion_rate ?? 0);
-                $promotion = (float) ($price->promotion ?? 0);
-
-                if ($promotionRate > 0) {
-                    return max(0.0, (float) round($basePrice - (($basePrice * $promotionRate) / 100)));
-                }
-
-                if ($promotion > 0) {
-                    return max(0.0, (float) round($basePrice - $promotion));
-                }
-
-                return $basePrice;
-            })
-            ->filter(fn (float $price): bool => $price > 0)
-            ->min() ?? 0);
     }
 }

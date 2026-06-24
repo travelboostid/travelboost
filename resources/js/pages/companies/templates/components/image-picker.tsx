@@ -1,39 +1,50 @@
 import { MediaPicker } from '@/components/media-picker';
 import { Button } from '@/components/ui/button';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
-import { cn, extractImageSrc } from '@/lib/utils';
+import {
+    puckImagePreviewSrc,
+    serializePuckImageValue,
+    type ImageVariant,
+} from '@/lib/puck-image-value';
+import { cn } from '@/lib/utils';
 import { ImageIcon, UploadIcon } from 'lucide-react';
+import { PuckImage } from './puck-image';
 
 type ImagePickerProps = {
     name: string;
     value: string;
     onChange: (value: string) => void;
+    variant?: ImageVariant;
 };
 
 export default function ImagePicker({
     name,
     value,
     onChange,
+    variant = 'small',
 }: ImagePickerProps) {
     const { company } = usePageSharedDataProps();
+    const previewSrc = puckImagePreviewSrc(value);
 
     return (
         <MediaPicker
             params={{ owner_type: 'company', owner_id: company.id }}
             uploadParams={{ owner_type: 'company', owner_id: company.id }}
             type="image"
-            value={value}
+            value={previewSrc || value}
             onChange={(v) =>
                 onChange(
-                    typeof v === 'string' ? v : extractImageSrc(v as any).src,
+                    typeof v === 'string'
+                        ? v
+                        : serializePuckImageValue(v as any, variant),
                 )
             }
         >
             {(media, change) => {
                 const src =
                     typeof media === 'string'
-                        ? media
-                        : extractImageSrc(media as any).src;
+                        ? puckImagePreviewSrc(media) || media
+                        : puckImagePreviewSrc(value);
                 const hasImage = Boolean(src);
 
                 return (
@@ -50,7 +61,7 @@ export default function ImagePicker({
                         >
                             {hasImage ? (
                                 <>
-                                    <img
+                                    <PuckImage
                                         className="aspect-video w-full object-cover"
                                         src={src}
                                         alt="Selected"

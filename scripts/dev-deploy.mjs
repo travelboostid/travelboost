@@ -157,16 +157,20 @@ async function deploy() {
     if (!opts.skipFrontend) {
         await exec('pnpm install --frozen-lockfile');
         await exec('pnpm build');
-
+    
         const remoteBuild = `${DEPLOY_TARGET_PATH}/${buildPath}`;
-
+    
         try {
             await exec(
-                `rsync -avz --delete ${buildPath}/ ${target}:${remoteBuild}/`,
+                `rsync -rlvz --delete --no-perms --chmod=D755,F644 ${buildPath}/ ${target}:${remoteBuild}/`,
             );
         } catch {
             await exec(`scp -r ${buildPath}/* ${target}:${remoteBuild}/`);
         }
+    
+        await ssh(
+            `find ${remoteBuild} -type d -exec chmod 755 {} + && find ${remoteBuild} -type f -exec chmod 644 {} +`,
+        );
     }
 
     console.log('\n✅ Deploy successful');
