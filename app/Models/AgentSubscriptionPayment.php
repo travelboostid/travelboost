@@ -58,6 +58,21 @@ class AgentSubscriptionPayment extends Model
                 ->where('owner_id', $company->id)
                 ->update(['domain_enabled' => true]);
 
+            $appConfig = AppConfig::where('key', 'admin')->first();
+            $adminConfig = $appConfig ? $appConfig->value : [];
+            $freeAiAfterSub = isset($adminConfig['free_ai_after_subscription']) ? (float) $adminConfig['free_ai_after_subscription'] : 0;
+
+            if ($freeAiAfterSub > 0) {
+                $aiCredit = $company->aiCredit()->first();
+                if ($aiCredit) {
+                    $aiCredit->increment('balance', $freeAiAfterSub);
+                } else {
+                    $company->aiCredit()->create([
+                        'balance' => $freeAiAfterSub,
+                    ]);
+                }
+            }
+
             if ($company->referred_by && Schema::hasTable('parameter_travelboosts')) {
                 $baseAmount = $payment->amount - ($payment->amount * 0.11);
 

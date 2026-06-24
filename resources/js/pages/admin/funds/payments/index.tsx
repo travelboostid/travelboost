@@ -183,6 +183,10 @@ export default function PaymentsPage({ data }: PaymentsPageProps) {
                         return <Badge variant="outline">Wallet Top-up</Badge>;
                     if (val === 'ai-credit-topup-payment')
                         return <Badge variant="outline">AI Top-up</Badge>;
+                    if (val === 'agent-subscription-payment')
+                        return (
+                            <Badge variant="outline">Agent Subscription</Badge>
+                        );
                     return <div>{val}</div>;
                 },
                 enableColumnFilter: false,
@@ -231,7 +235,9 @@ export default function PaymentsPage({ data }: PaymentsPageProps) {
                     const isManualPendingTopup =
                         (payment.payable_type === 'wallet-topup-payment' ||
                             payment.payable_type ===
-                                'ai-credit-topup-payment') &&
+                                'ai-credit-topup-payment' ||
+                            payment.payable_type ===
+                                'agent-subscription-payment') &&
                         payment.provider === 'manual' &&
                         payment.status === 'pending';
 
