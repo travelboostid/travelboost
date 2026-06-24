@@ -32,7 +32,7 @@ it('detects agent viewing vendor catalog context', function () {
         ]);
 });
 
-it('omits commission category relation for vendor own catalog', function () {
+it('does not eager load commission category on vendor catalog index', function () {
     $vendor = new Company([
         'username' => 'grandchina',
         'type' => CompanyType::VENDOR,
@@ -44,16 +44,37 @@ it('omits commission category relation for vendor own catalog', function () {
     expect($relations)->not->toContain('productCommissionCategory:id,category_name');
 });
 
-it('includes commission category relation for agent vendor catalog', function () {
+it('lazy loads tour details for agent vendor catalog', function () {
     $agent = new Company([
         'username' => 'agent-a',
         'type' => CompanyType::AGENT,
     ]);
 
     $context = VendorTourCatalog::context($agent, 'grandchina');
-    $relations = VendorTourCatalog::catalogRelations($context, fn (): array => []);
 
-    expect($relations)->toContain('productCommissionCategory:id,category_name');
+    expect(VendorTourCatalog::shouldLazyLoadTourDetails($context))->toBeTrue();
+});
+
+it('does not lazy load tour details for vendor own catalog', function () {
+    $vendor = new Company([
+        'username' => 'grandchina',
+        'type' => CompanyType::VENDOR,
+    ]);
+
+    $context = VendorTourCatalog::context($vendor, 'grandchina');
+
+    expect(VendorTourCatalog::shouldLazyLoadTourDetails($context))->toBeFalse();
+});
+
+it('does not attach commission data on vendor catalog index', function () {
+    $agent = new Company([
+        'username' => 'agent-a',
+        'type' => CompanyType::AGENT,
+    ]);
+
+    $context = VendorTourCatalog::context($agent, 'grandchina');
+
+    expect(VendorTourCatalog::shouldAttachCommissionData($context))->toBeFalse();
 });
 
 it('exposes tuned webp quality settings for tour image variants', function () {

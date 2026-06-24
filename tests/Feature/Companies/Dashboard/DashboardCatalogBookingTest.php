@@ -4,6 +4,7 @@ use App\Actions\Booking\SyncAvailabilityAction;
 use App\Enums\BookingStatus;
 use App\Enums\CompanyTeamStatus;
 use App\Enums\VendorAgentPartnerStatus;
+use App\Models\AgentTier;
 use App\Models\AgentTour;
 use App\Models\Booking;
 use App\Models\Company;
@@ -13,6 +14,7 @@ use App\Models\ProductCommissionCategory;
 use App\Models\Role;
 use App\Models\Tour;
 use App\Models\TourAvailability;
+use App\Models\TourCommissionRule;
 use App\Models\TourPrice;
 use App\Models\TourSchedule;
 use App\Models\User;
@@ -253,16 +255,12 @@ test('agent vendor catalog exposes schedule prices from minimum vendor tour pric
     $user = User::factory()->create();
     attachDashboardUserToCompany($user, $agent);
 
-    VendorAgentPartner::create([
-        'vendor_id' => $vendor->id,
-        'agent_id' => $agent->id,
-        'status' => 'active',
-    ]);
-
-    AgentTour::create([
-        'company_id' => $agent->id,
-        'tour_id' => $tour->id,
-        'status' => 'active',
+    $tier = AgentTier::create([
+        'company_id' => $vendor->id,
+        'name' => 'Gold',
+        'slug' => 'gold',
+        'sort_order' => 1,
+        'is_active' => true,
     ]);
 
     $commissionCategory = ProductCommissionCategory::query()->create([
@@ -277,13 +275,46 @@ test('agent vendor catalog exposes schedule prices from minimum vendor tour pric
         'product_commission_category_id' => $commissionCategory->id,
     ]);
 
+    TourCommissionRule::create([
+        'company_id' => $vendor->id,
+        'tour_id' => null,
+        'agent_tier_id' => $tier->id,
+        'product_commission_category_id' => $commissionCategory->id,
+        'commission_type' => 'percent',
+        'commission_value' => 10,
+        'is_active' => true,
+    ]);
+
+    VendorAgentPartner::create([
+        'vendor_id' => $vendor->id,
+        'agent_id' => $agent->id,
+        'agent_tier_id' => $tier->id,
+        'status' => 'active',
+    ]);
+
+    AgentTour::create([
+        'company_id' => $agent->id,
+        'tour_id' => $tour->id,
+        'status' => 'active',
+    ]);
+
     $response = $this->actingAs($user)
         ->get("/companies/{$agent->username}/dashboard/vendors/{$vendor->username}/tours");
 
     $response->assertOk();
     $response->assertInertia(fn ($page) => $page
         ->component('companies/dashboard/vendor-tours/index')
-        ->where('data.0.schedules.0.price', 4_500_000));
+        ->where('data.0.schedules.0.price', 4_500_000)
+        ->where('data.0.schedules.0.prices', fn (mixed $prices): bool => $prices === null || (is_array($prices) && count($prices) === 0))
+        ->where('partnership.agent_tier_id', $tier->id));
+
+    $detailsResponse = $this->actingAs($user)
+        ->getJson("/companies/{$agent->username}/dashboard/vendors/{$vendor->username}/tours/{$tour->id}/details");
+
+    $detailsResponse->assertOk();
+    $detailsResponse->assertJsonPath('schedules.0.prices.0.price', '5000000.00');
+    $detailsResponse->assertJsonCount(1, 'commission_rules');
+    $detailsResponse->assertJsonPath('commission_rules.0.commission_value', '10.00');
 });
 
 test('dashboard booking create page uses customer wizard with dashboard endpoints', function () {

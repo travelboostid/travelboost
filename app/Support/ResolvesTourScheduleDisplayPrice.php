@@ -78,20 +78,23 @@ trait ResolvesTourScheduleDisplayPrice
         ];
     }
 
-    protected function prepareCatalogSchedules($tour, int $bookingDeadlineDays): void
+    protected function prepareCatalogSchedules($tour, int $bookingDeadlineDays, bool $retainSchedulePrices = false): void
     {
         $cutoffDate = now()->addDays($bookingDeadlineDays)->toDateString();
 
         $schedules = $tour->schedules
             ?->filter(fn ($schedule) => $schedule->departure_date >= $cutoffDate)
             ->values()
-            ->each(function ($schedule) use ($bookingDeadlineDays, $tour): void {
+            ->each(function ($schedule) use ($bookingDeadlineDays, $tour, $retainSchedulePrices): void {
                 $schedule->setAttribute(
                     'price',
                     $this->scheduleDisplayPrice($schedule->prices, $tour->showprice ?? null),
                 );
                 $schedule->setAttribute('booking_deadline_days', $bookingDeadlineDays);
-                $schedule->unsetRelation('prices');
+
+                if (! $retainSchedulePrices) {
+                    $schedule->unsetRelation('prices');
+                }
             });
 
         $tour->setRelation('schedules', $schedules);

@@ -73,6 +73,7 @@ Route::prefix('companies')->middleware(['can:access-company-pages', 'use-analyti
         Route::get('reports/bookings/export/excel', [BookingReportController::class, 'exportExcel'])->name('reports.bookings.export.excel');
         Route::group(['prefix' => 'vendors/{vendor}', 'as' => 'vendor.'], function () {
             Route::get('/tours', [VendorTourCatalogController::class, 'index'])->name('tours.index');
+            Route::get('/tours/{tour}/details', [VendorTourCatalogController::class, 'showTourDetails'])->name('tours.details');
             Route::middleware(['agent.subscription.active'])->post('/tours/{tour}/copy', [VendorTourCatalogController::class, 'copy'])->name('tour.copy');
         });
         Route::group(['prefix' => 'vendors/{vendor}', 'as' => 'vendor.'], function () {

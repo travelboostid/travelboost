@@ -44,11 +44,19 @@ class VendorTourCatalog
             'document',
         ];
 
-        if ($context['is_agent_viewing_vendor']) {
-            $relations[] = 'productCommissionCategory:id,category_name';
-        }
-
         return array_merge($relations, $scheduleRelations());
+    }
+
+    /**
+     * @param  array{
+     *     is_own_catalog: bool,
+     *     is_agent_viewing_vendor: bool,
+     *     needs_agent_metadata: bool,
+     * }  $context
+     */
+    public static function shouldLazyLoadTourDetails(array $context): bool
+    {
+        return $context['is_agent_viewing_vendor'];
     }
 
     /**
@@ -60,6 +68,6 @@ class VendorTourCatalog
      */
     public static function shouldAttachCommissionData(array $context): bool
     {
-        return $context['is_agent_viewing_vendor'];
+        return false;
     }
 }

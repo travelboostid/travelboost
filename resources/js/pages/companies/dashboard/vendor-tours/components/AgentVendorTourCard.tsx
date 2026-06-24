@@ -22,7 +22,9 @@ import {
     TooltipContent,
     TooltipTrigger,
 } from '@/components/ui/tooltip';
+import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
 import { IconPdf } from '@tabler/icons-react';
+import axios from 'axios';
 import {
     CalendarDaysIcon,
     CircleDollarSignIcon,
@@ -33,7 +35,7 @@ import {
     SaveIcon,
     UsersRoundIcon,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { FormattedMessage } from 'react-intl';
 import BaseTourCard from './BaseTourCard';
 
@@ -440,7 +442,75 @@ export default function AgentVendorTourCard({
     onChat,
     startingChat,
 }: any) {
+    const { company } = usePageSharedDataProps();
     const [isInfoOpen, setIsInfoOpen] = useState(false);
+    const [detailPayload, setDetailPayload] = useState<any>(null);
+    const [detailLoading, setDetailLoading] = useState(false);
+    const [detailError, setDetailError] = useState(false);
+
+    const vendorUsername =
+        tour.company?.username ?? tour.company?.data?.username ?? null;
+
+    const loadTourDetails = useCallback(async () => {
+        if (
+            !company?.username ||
+            !vendorUsername ||
+            !tour?.id ||
+            detailPayload
+        ) {
+            return;
+        }
+
+        setDetailLoading(true);
+        setDetailError(false);
+
+        try {
+            const response = await axios.get(
+                `/companies/${company.username}/dashboard/vendors/${vendorUsername}/tours/${tour.id}/details`,
+            );
+            setDetailPayload(response.data);
+        } catch {
+            setDetailError(true);
+        } finally {
+            setDetailLoading(false);
+        }
+    }, [company?.username, detailPayload, tour?.id, vendorUsername]);
+
+    const handleOpenInfo = () => {
+        setIsInfoOpen(true);
+        void loadTourDetails();
+    };
+
+    const displayTour = useMemo(() => {
+        if (!detailPayload) {
+            return tour;
+        }
+
+        return {
+            ...tour,
+            product_commission_category_id:
+                detailPayload.product_commission_category_id ??
+                tour.product_commission_category_id,
+            schedules: detailPayload.schedules ?? tour.schedules,
+            commission_rules:
+                detailPayload.commission_rules ??
+                detailPayload.commissionRules ??
+                tour.commission_rules,
+            commissionRules:
+                detailPayload.commission_rules ??
+                detailPayload.commissionRules ??
+                tour.commissionRules,
+            additional_commission_rules:
+                detailPayload.additional_commission_rules ??
+                detailPayload.additionalCommissionRules ??
+                tour.additional_commission_rules,
+            additionalCommissionRules:
+                detailPayload.additional_commission_rules ??
+                detailPayload.additionalCommissionRules ??
+                tour.additionalCommissionRules,
+        };
+    }, [detailPayload, tour]);
+
     const isVendorInactive = String(tour.status).toLowerCase() !== 'active';
     const bookingDeadlineDays = Number(
         tour.company?.company_setting?.booking_deadline ??
@@ -448,8 +518,8 @@ export default function AgentVendorTourCard({
             0,
     );
     const cutoffDate = toDateString(addDays(new Date(), bookingDeadlineDays));
-    const schedules = Array.isArray(tour.schedules)
-        ? tour.schedules.filter(
+    const schedules = Array.isArray(displayTour.schedules)
+        ? displayTour.schedules.filter(
               (schedule: any) =>
                   schedule.departure_date &&
                   schedule.departure_date >= cutoffDate,
@@ -545,7 +615,7 @@ export default function AgentVendorTourCard({
                                     variant="secondary"
                                     size="sm"
                                     className="flex-1 rounded-xl bg-slate-100 dark:bg-slate-800 h-9 border-none text-slate-700 dark:text-slate-300"
-                                    onClick={() => setIsInfoOpen(true)}
+                                    onClick={handleOpenInfo}
                                 >
                                     <InfoIcon size={18} />
                                 </Button>
@@ -739,6 +809,17 @@ export default function AgentVendorTourCard({
 
                                 {schedules.length > 0 ? (
                                     <div className="space-y-3">
+                                        {detailLoading && (
+                                            <div className="flex items-center justify-center gap-2 rounded-2xl border border-dashed border-slate-200 bg-white p-6 text-sm text-slate-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400">
+                                                <Spinner />
+                                                <FormattedMessage defaultMessage="Loading pricing and commission details..." />
+                                            </div>
+                                        )}
+                                        {detailError && !detailLoading && (
+                                            <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-300">
+                                                <FormattedMessage defaultMessage="Unable to load pricing details. Please try again." />
+                                            </div>
+                                        )}
                                         {schedules.map(
                                             (
                                                 schedule: any,
@@ -840,7 +921,7 @@ export default function AgentVendorTourCard({
                                                                             getCommissionDetails(
                                                                                 price,
                                                                                 schedule,
-                                                                                tour,
+                                                                                displayTour,
                                                                                 partnership,
                                                                                 currency,
                                                                             );
@@ -940,7 +1021,11 @@ export default function AgentVendorTourCard({
                                                                         </p>
                                                                     </div>
                                                                     <div className="text-xs text-slate-500 dark:text-slate-400">
-                                                                        <FormattedMessage defaultMessage="Open tour edit for full category pricing." />
+                                                                        {detailLoading ? (
+                                                                            <FormattedMessage defaultMessage="Loading commission..." />
+                                                                        ) : (
+                                                                            <FormattedMessage defaultMessage="Open tour edit for full category pricing." />
+                                                                        )}
                                                                     </div>
                                                                 </div>
                                                             ) : (
