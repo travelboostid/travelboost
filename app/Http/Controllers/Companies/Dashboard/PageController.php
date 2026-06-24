@@ -12,6 +12,13 @@ class PageController extends Controller
     {
         $company->load('settings');
 
+        if (! $company->settings) {
+            $company->setRelation(
+                'settings',
+                $company->settings()->create(config('travelboost.company_default_settings'))
+            );
+        }
+
         return Inertia::render('companies/edit-landing-page', [
             'company' => $company,
         ]);

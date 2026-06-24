@@ -16,7 +16,7 @@ type Props = {
 
 export default function PageDesigner({ company }: Props) {
     const [data, setData] = useState(() => {
-        if (!company.settings.landing_page_data) {
+        if (!company.settings?.landing_page_data) {
             return null;
         }
         const rawData = JSON.parse(company.settings.landing_page_data);
