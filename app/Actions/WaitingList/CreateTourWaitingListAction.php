@@ -276,6 +276,12 @@ class CreateTourWaitingListAction
                 ]);
             }
 
+            if ($minimumPartialSeats !== null && $minimumPartialSeats <= (int) $availability->available) {
+                throw ValidationException::withMessages([
+                    "schedules.{$index}.minimum_partial_seats" => 'Minimum partial seats must be greater than the current availability. If the currently available seats are enough, please use Book Tour instead.',
+                ]);
+            }
+
             return [
                 'schedule' => $schedule,
                 'selection' => $selection,

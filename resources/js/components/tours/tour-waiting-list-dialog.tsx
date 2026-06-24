@@ -231,6 +231,7 @@ export default function TourWaitingListDialog({
     };
 
     const minimumPartialSeatWarning = (selection: WaitingListScheduleForm) => {
+        const schedule = selectedSchedule(selection.schedule_id);
         const requiredSeats = selection.pax_adult + selection.pax_child;
 
         if (selection.accepts_partial_fulfillment !== true) {
@@ -249,6 +250,10 @@ export default function TourWaitingListDialog({
             return 'Minimum proceeding passengers cannot exceed the total adult and child passengers.';
         }
 
+        if (schedule && selection.minimum_partial_seats <= schedule.available) {
+            return `Minimum proceeding passengers must be greater than the current availability (${schedule.available}). If ${schedule.available} or fewer seats are enough, use Book Tour instead.`;
+        }
+
         return null;
     };
 
@@ -264,7 +269,9 @@ export default function TourWaitingListDialog({
             selection.accepts_partial_fulfillment === true &&
             (selection.minimum_partial_seats === null ||
                 selection.minimum_partial_seats < 1 ||
-                selection.minimum_partial_seats > requiredSeats);
+                selection.minimum_partial_seats > requiredSeats ||
+                (!!schedule &&
+                    selection.minimum_partial_seats <= schedule.available));
 
         return (
             !schedule ||
