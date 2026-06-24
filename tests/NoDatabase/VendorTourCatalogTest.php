@@ -41,7 +41,7 @@ it('omits commission category relation for vendor own catalog', function () {
     $context = VendorTourCatalog::context($vendor, 'grandchina');
     $relations = VendorTourCatalog::catalogRelations($context, fn (): array => []);
 
-    expect($relations)->not->toContain('productCommissionCategory:id,name');
+    expect($relations)->not->toContain('productCommissionCategory:id,category_name');
 });
 
 it('includes commission category relation for agent vendor catalog', function () {
@@ -53,7 +53,7 @@ it('includes commission category relation for agent vendor catalog', function ()
     $context = VendorTourCatalog::context($agent, 'grandchina');
     $relations = VendorTourCatalog::catalogRelations($context, fn (): array => []);
 
-    expect($relations)->toContain('productCommissionCategory:id,name');
+    expect($relations)->toContain('productCommissionCategory:id,category_name');
 });
 
 it('exposes tuned webp quality settings for tour image variants', function () {

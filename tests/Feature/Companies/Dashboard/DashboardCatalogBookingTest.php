@@ -9,6 +9,7 @@ use App\Models\Booking;
 use App\Models\Company;
 use App\Models\CompanyTeam;
 use App\Models\PriceCategory;
+use App\Models\ProductCommissionCategory;
 use App\Models\Role;
 use App\Models\Tour;
 use App\Models\TourAvailability;
@@ -262,6 +263,18 @@ test('agent vendor catalog exposes schedule prices from minimum vendor tour pric
         'company_id' => $agent->id,
         'tour_id' => $tour->id,
         'status' => 'active',
+    ]);
+
+    $commissionCategory = ProductCommissionCategory::query()->create([
+        'category_name' => 'Produk Promo',
+        'description' => 'Produk Promo',
+        'slug' => 'produk-promo',
+        'sort_order' => 2,
+        'is_active' => true,
+    ]);
+
+    $tour->update([
+        'product_commission_category_id' => $commissionCategory->id,
     ]);
 
     $response = $this->actingAs($user)

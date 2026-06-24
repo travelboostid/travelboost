@@ -161,6 +161,8 @@ class VendorTourCatalogController extends Controller
 
         $partnership = $this->resolvePartnership($company, $vendor, $context);
 
+        $lcpImageUrl = TourCatalogPreload::resolveFirstTourImageUrl($tours);
+
         return Inertia::render('companies/dashboard/vendor-tours/index', [
             'data' => $tours,
             'filters' => request()->only(['category', 'search']),
@@ -168,7 +170,7 @@ class VendorTourCatalogController extends Controller
             'username' => $username,
             'partnership' => $partnership,
             'vendor' => $vendor,
-            'lcpImageUrl' => TourCatalogPreload::resolveFirstTourImageUrl($tours),
+            'lcpImageUrl' => $lcpImageUrl,
         ]);
     }
 

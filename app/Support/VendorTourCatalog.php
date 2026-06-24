@@ -45,7 +45,7 @@ class VendorTourCatalog
         ];
 
         if ($context['is_agent_viewing_vendor']) {
-            $relations[] = 'productCommissionCategory:id,name';
+            $relations[] = 'productCommissionCategory:id,category_name';
         }
 
         return array_merge($relations, $scheduleRelations());
