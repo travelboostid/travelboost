@@ -1,5 +1,9 @@
 import { ApiError } from '@/api/api-instance';
 import { useCreateAgentSubscriptionPayment } from '@/api/payment/payment';
+import {
+    ManualPaymentDialog,
+    type ManualPaymentData,
+} from '@/components/booking/ManualPaymentDialog';
 import { PaymentMethodDialog } from '@/components/payment/payment-method-dialog';
 import { Button } from '@/components/ui/button';
 import {
@@ -10,6 +14,11 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
+import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from '@/components/ui/popover';
 import { Spinner } from '@/components/ui/spinner';
 import usePageProps from '@/hooks/use-page-props';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
@@ -20,8 +29,13 @@ import {
 } from '@/lib/refresh-agent-subscription-page';
 import { cn, formatIDR } from '@/lib/utils';
 import { index as paymentsIndex } from '@/routes/companies/dashboard/payments';
-import { Link } from '@inertiajs/react';
-import { ArrowRightIcon, ExternalLinkIcon, PackageIcon } from 'lucide-react';
+import { Link, router } from '@inertiajs/react';
+import {
+    BanknoteIcon,
+    CreditCardIcon,
+    ExternalLinkIcon,
+    PackageIcon,
+} from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { FormattedMessage } from 'react-intl';
 import { toast } from 'sonner';
@@ -51,7 +65,10 @@ export default function SubscribePackages() {
     );
 
     const [packageId, setPackageId] = useState<string>('');
+    const [paymentTypeDialogOpen, setPaymentTypeDialogOpen] = useState(false);
     const [methodDialogOpen, setMethodDialogOpen] = useState(false);
+    const [manualDialogOpen, setManualDialogOpen] = useState(false);
+    const [isSubmittingManual, setIsSubmittingManual] = useState(false);
 
     const selectedPackage = availablePackages.find(
         (pkg) => pkg.id.toString() === packageId,
@@ -110,6 +127,45 @@ export default function SubscribePackages() {
 
                     toast.error(message);
                 },
+            },
+        );
+    };
+
+    const handleManualSubmit = (data: ManualPaymentData) => {
+        if (!data.proofFile || !packageId) return;
+
+        setIsSubmittingManual(true);
+        const formData = new FormData();
+        formData.append('sender_bank_name', data.senderBankName);
+        formData.append('sender_account_number', data.senderAccountNumber);
+        formData.append('transfer_amount', String(data.transferAmount));
+        formData.append('payment_date', data.paymentDate);
+        formData.append('proof', data.proofFile);
+        formData.append('package_id', packageId);
+
+        router.post(
+            `/companies/${company.username}/dashboard/agent-subscriptions/manual-payment`,
+            formData,
+            {
+                forceFormData: true,
+                preserveScroll: true,
+                onSuccess: () => {
+                    setManualDialogOpen(false);
+                    refreshAgentSubscriptionPendingPayment();
+                    toast.success(
+                        'Manual subscription payment request submitted.',
+                    );
+                },
+                onError: (errors) => {
+                    toast.error(
+                        String(
+                            errors.package_id ||
+                                errors.transfer_amount ||
+                                'Failed to submit manual payment.',
+                        ),
+                    );
+                },
+                onFinish: () => setIsSubmittingManual(false),
             },
         );
     };
@@ -202,18 +258,68 @@ export default function SubscribePackages() {
                 </CardContent>
 
                 <CardFooter className="mt-auto flex flex-col gap-2 border-t bg-muted/20 pt-4 sm:flex-row">
-                    <Button
-                        size="lg"
-                        className="h-11 w-full gap-2 sm:flex-1"
-                        disabled={createPayment.isPending || !packageId}
-                        onClick={() => setMethodDialogOpen(true)}
+                    <Popover
+                        open={paymentTypeDialogOpen}
+                        onOpenChange={setPaymentTypeDialogOpen}
                     >
-                        {createPayment.isPending ? (
-                            <Spinner className="mr-1" />
-                        ) : null}
-                        <FormattedMessage defaultMessage="Choose payment method" />
-                        <ArrowRightIcon className="size-4" />
-                    </Button>
+                        <PopoverTrigger asChild>
+                            <Button
+                                size="lg"
+                                className="h-11 w-full gap-2 sm:flex-1"
+                                disabled={createPayment.isPending || !packageId}
+                            >
+                                {createPayment.isPending ? (
+                                    <Spinner className="mr-1" />
+                                ) : null}
+                                <FormattedMessage defaultMessage="Pay Now!" />
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-80 p-0" align="start">
+                            <div className="px-4 py-3 border-b border-border/50">
+                                <p className="text-[11px] font-bold tracking-wider text-muted-foreground uppercase">
+                                    <FormattedMessage defaultMessage="Select Payment Method" />
+                                </p>
+                            </div>
+                            <div className="flex flex-col py-2">
+                                <button
+                                    type="button"
+                                    className="flex items-start gap-3 px-4 py-3 text-left hover:bg-muted/50 transition-colors"
+                                    onClick={() => {
+                                        setPaymentTypeDialogOpen(false);
+                                        setManualDialogOpen(true);
+                                    }}
+                                >
+                                    <BanknoteIcon className="size-5 mt-0.5 shrink-0 text-emerald-600" />
+                                    <div className="space-y-1">
+                                        <p className="text-sm font-medium leading-none text-foreground">
+                                            <FormattedMessage defaultMessage="Manual Payment" />
+                                        </p>
+                                        <p className="text-sm text-muted-foreground">
+                                            <FormattedMessage defaultMessage="Bank Transfer" />
+                                        </p>
+                                    </div>
+                                </button>
+                                <button
+                                    type="button"
+                                    className="flex items-start gap-3 px-4 py-3 text-left hover:bg-muted/50 transition-colors"
+                                    onClick={() => {
+                                        setPaymentTypeDialogOpen(false);
+                                        setMethodDialogOpen(true);
+                                    }}
+                                >
+                                    <CreditCardIcon className="size-5 mt-0.5 shrink-0 text-blue-600" />
+                                    <div className="space-y-1">
+                                        <p className="text-sm font-medium leading-none text-foreground">
+                                            <FormattedMessage defaultMessage="Online Payment" />
+                                        </p>
+                                        <p className="text-sm text-muted-foreground leading-snug">
+                                            <FormattedMessage defaultMessage="Visa, Mastercard, Amex, QRIS, Virtual Account" />
+                                        </p>
+                                    </div>
+                                </button>
+                            </div>
+                        </PopoverContent>
+                    </Popover>
                     <Button
                         variant="outline"
                         size="lg"
@@ -248,6 +354,20 @@ export default function SubscribePackages() {
                 }
                 loading={createPayment.isPending}
                 onConfirm={handlePay}
+            />
+            <ManualPaymentDialog
+                open={manualDialogOpen}
+                onClose={() => setManualDialogOpen(false)}
+                onSubmit={handleManualSubmit}
+                isSubmitting={isSubmittingManual}
+                amount={
+                    selectedPackage?.price ? Number(selectedPackage.price) : 0
+                }
+                vendorBank={{
+                    bankName: 'BCA',
+                    accountName: 'PT Erasoft Teknologi Indonesia',
+                    accountNumber: '123456789',
+                }}
             />
         </>
     );

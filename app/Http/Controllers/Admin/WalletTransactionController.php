@@ -79,6 +79,8 @@ class WalletTransactionController extends Controller
             } elseif ($payment->payable_type === 'ai-credit-topup-payment') {
                 $credit = $owner->aiCredit()->firstOrCreate(['company_id' => $owner->id], ['balance' => 0]);
                 $credit->increment('balance', $payment->amount);
+            } elseif ($payment->payable_type === 'agent-subscription-payment') {
+                $payment->payable?->onPaid($payment);
             }
 
             $owner->notify(new ManualTopupValidated($payment));

@@ -22,6 +22,7 @@ use App\Notifications\AgentSubscriptionActivatedNotification;
 use App\Services\BookingContactPaymentEmailService;
 use App\Services\BookingPaymentWorkflowService;
 use App\Services\OnlinePaymentSettlementService;
+use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -479,12 +480,12 @@ class MidtransWebhookController extends Controller
     private function renewSubscription(AgentSubscription $existingSubscription, AgentSubscriptionPackage $package): AgentSubscription
     {
         $newEndDate = $existingSubscription->status === AgentSubscriptionStatus::ACTIVE
-          ? $existingSubscription->ended_at->addMonths($package->duration_months)
+          ? Carbon::parse($existingSubscription->ended_at)->addMonths($package->duration_months)
           : now()->addMonths($package->duration_months);
 
         $existingSubscription->update([
             'package_id' => $package->id,
-            'started_at' => now(),
+            'started_at' => $existingSubscription->status === AgentSubscriptionStatus::ACTIVE ? $existingSubscription->started_at : now(),
             'ended_at' => $newEndDate,
         ]);
 

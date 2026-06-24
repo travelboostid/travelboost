@@ -18,6 +18,11 @@ class ChatbotController extends Controller
 {
     public function show(Request $request, Company $company)
     {
+        abort_unless(
+            $request->user()->isAbleTo('company-settings.query', "company:{$company->id}"),
+            403
+        );
+
         $settings = $company->settings()->first();
         $credit = $company->aiCredit()->first();
 
@@ -27,6 +32,19 @@ class ChatbotController extends Controller
             ->whereIn('status', [PaymentStatus::PENDING, PaymentStatus::UNPAID])
             ->latest()
             ->first();
+
+        $transactions = Payment::query()
+            ->whereMorphedTo('owner', $company)
+            ->whereMorphedTo('payable', AiCreditTopupPayment::class)
+            ->latest()
+            ->take(50)
+            ->get()
+            ->map(fn (Payment $p) => [
+                'id' => $p->id,
+                'amount' => (int) $p->amount,
+                'status' => $p->status->value,
+                'created_at' => $p->created_at,
+            ]);
 
         return Inertia::render('companies/dashboard/chatbot/index', [
             'settings' => $settings,
@@ -41,11 +59,17 @@ class ChatbotController extends Controller
             'pendingTopup' => $pendingTopup
                 ? (new PaymentResource($pendingTopup))->resolve($request)
                 : null,
+            'transactions' => $transactions,
         ]);
     }
 
     public function update(UpdateChatbotRequest $request, Company $company)
     {
+        abort_unless(
+            $request->user()->isAbleTo('company-settings.mutation', "company:{$company->id}"),
+            403
+        );
+
         $validated = $request->validated();
         $company->settings()->update($validated);
 
@@ -54,12 +78,16 @@ class ChatbotController extends Controller
 
     public function storeManualTopup(Request $request, Company $company)
     {
+        abort_unless(
+            $request->user()->isAbleTo('company-settings.mutation', "company:{$company->id}"),
+            403
+        );
         $validated = $request->validate([
             'sender_bank_name' => ['required', 'string', 'max:255'],
             'sender_account_number' => ['required', 'string', 'max:255', 'regex:/^\d+$/'],
             'transfer_amount' => ['required', 'numeric', 'min:1'],
             'payment_date' => ['required', 'date', 'before_or_equal:today'],
-            'proof' => ['required', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:5120'],
+            'proof' => ['required', 'file', 'mimes:jpg,jpeg,png,webp,pdf', 'max:5120'],
         ]);
 
         $existingPendingTopup = Payment::query()
@@ -83,7 +111,7 @@ class ChatbotController extends Controller
             ]);
 
             $topupPayment->payment()->create([
-                'owner_type' => get_class($company),
+                'owner_type' => $company->getMorphClass(),
                 'owner_id' => $company->id,
                 'provider' => 'manual',
                 'payment_method' => 'bank_transfer',

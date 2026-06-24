@@ -10,7 +10,6 @@ import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import { WalletIcon } from 'lucide-react';
 import { FormattedMessage } from 'react-intl';
-import PendingTopup from './components/pending-topup';
 import RecentTransactions from './components/recent-transactions';
 import WalletSummary from './components/wallet-summary';
 
@@ -34,10 +33,12 @@ export type WalletPageProps = {
         growth_pct: number;
     };
     transactions: Array<{
-        id: number;
+        id: number | string;
+        payment_id?: number;
         type: string;
         amount: number;
         confirmed: boolean;
+        status?: string;
         meta?: { description?: string };
         created_at: string;
     }>;
@@ -83,8 +84,6 @@ export default function WalletPage() {
                         </div>
                     </div>
                 </header>
-
-                <PendingTopup />
 
                 <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)] xl:items-start">
                     <WalletSummary />

@@ -9,8 +9,9 @@ import {
 import usePageProps from '@/hooks/use-page-props';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
 import { cn, formatIDR } from '@/lib/utils';
+import { cancel as paymentsCancel } from '@/routes/companies/dashboard/payments';
 import { index as walletTransactionsIndex } from '@/routes/companies/dashboard/wallet-transaction';
-import { Link } from '@inertiajs/react';
+import { Link, router } from '@inertiajs/react';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import {
@@ -18,8 +19,11 @@ import {
     ArrowRightIcon,
     ArrowUpRight,
     ReceiptTextIcon,
+    XIcon,
 } from 'lucide-react';
+import { useState } from 'react';
 import { FormattedMessage } from 'react-intl';
+import { toast } from 'sonner';
 import type { WalletPageProps } from '..';
 import EmptyRecentTransactions from './empty-recent-transactions';
 
@@ -41,6 +45,32 @@ function TransactionItem({ transaction }: { transaction: Transaction }) {
     const Icon = isIncome ? ArrowUpRight : ArrowDownLeft;
     const description = transaction.meta?.description || 'Wallet transaction';
 
+    const [isCancelling, setIsCancelling] = useState(false);
+
+    const handleCancel = (e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        if (!transaction.payment_id) return;
+        if (!confirm('Are you sure you want to cancel this top-up request?'))
+            return;
+
+        setIsCancelling(true);
+        router.post(
+            paymentsCancel({
+                company: company.username,
+                payment: transaction.payment_id,
+            }),
+            {},
+            {
+                preserveScroll: true,
+                onSuccess: () => toast.success('Top-up request cancelled.'),
+                onError: () => toast.error('Failed to cancel top-up request.'),
+                onFinish: () => setIsCancelling(false),
+            },
+        );
+    };
+
     return (
         <Link
             href={walletTransactionsHref(company.username, wallet.slug)}
@@ -58,8 +88,23 @@ function TransactionItem({ transaction }: { transaction: Transaction }) {
                     <Icon className="size-4" />
                 </div>
                 <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-foreground">
+                    <p className="flex items-center gap-2 truncate text-sm font-medium text-foreground">
                         {description}
+                        {transaction.status === 'pending' && (
+                            <span className="inline-flex items-center rounded-md bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700 ring-1 ring-amber-600/20 ring-inset">
+                                Pending
+                            </span>
+                        )}
+                        {transaction.status === 'failed' && (
+                            <span className="inline-flex items-center rounded-md bg-red-50 px-2 py-0.5 text-xs font-medium text-red-700 ring-1 ring-red-600/10 ring-inset">
+                                Failed
+                            </span>
+                        )}
+                        {transaction.status === 'cancelled' && (
+                            <span className="inline-flex items-center rounded-md bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-600 ring-1 ring-zinc-500/20 ring-inset">
+                                Cancelled
+                            </span>
+                        )}
                     </p>
                     <p className="mt-0.5 text-xs text-muted-foreground">
                         {dayjs(transaction.created_at).format(
@@ -82,7 +127,21 @@ function TransactionItem({ transaction }: { transaction: Transaction }) {
                     {isIncome ? '+' : '-'}
                     {formatIDR(Math.abs(transaction.amount))}
                 </p>
-                <ArrowRightIcon className="size-4 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
+                {transaction.status === 'pending' ? (
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        className="ml-2 h-8 px-2 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                        onClick={handleCancel}
+                        disabled={isCancelling}
+                        title="Cancel request"
+                    >
+                        <XIcon className="mr-1.5 size-3.5" />
+                        <span className="text-xs">Cancel</span>
+                    </Button>
+                ) : (
+                    <ArrowRightIcon className="size-4 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
+                )}
             </div>
         </Link>
     );

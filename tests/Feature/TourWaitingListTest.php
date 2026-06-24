@@ -188,6 +188,12 @@ test('partial fulfillment requires a minimum seat threshold within adult and chi
 
     $this->actingAs($user)->post($url, $overflowMinimumPayload)
         ->assertSessionHasErrors('schedules.0.minimum_partial_seats');
+
+    $insufficientAgainstAvailabilityPayload = waitingListRequestPayload([$schedule->id], adult: 5, child: 1);
+    $insufficientAgainstAvailabilityPayload['schedules'][0]['minimum_partial_seats'] = 2;
+
+    $this->actingAs($user)->post($url, $insufficientAgainstAvailabilityPayload)
+        ->assertSessionHasErrors('schedules.0.minimum_partial_seats');
 });
 
 test('waiting list rejects three schedules and schedules past the booking deadline', function () {

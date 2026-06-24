@@ -132,9 +132,11 @@ export default function PendingSubscriptionPayment() {
 
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-stretch">
                     <CancelPayment payment={pendingPayment} />
-                    <ContinueSubscriptionPayment payment={pendingPayment}>
-                        <FormattedMessage defaultMessage="Continue payment" />
-                    </ContinueSubscriptionPayment>
+                    {provider !== 'manual' ? (
+                        <ContinueSubscriptionPayment payment={pendingPayment}>
+                            <FormattedMessage defaultMessage="Continue payment" />
+                        </ContinueSubscriptionPayment>
+                    ) : null}
                 </div>
             </CardContent>
         </Card>
