@@ -76,7 +76,7 @@ class WalletTransactionsController extends Controller
             ->whereMorphedTo('owner', $company)
             ->whereMorphedTo('payable', WalletTopupPayment::class)
             ->where('provider', 'manual')
-            ->whereIn('status', ['pending', 'failed'])
+            ->whereIn('status', ['pending', 'failed', 'cancelled'])
             ->whereBetween('created_at', [$from, $to])
             ->when($type === 'expense', fn (Builder $query) => $query->where('id', '<', 0))
             ->latest()

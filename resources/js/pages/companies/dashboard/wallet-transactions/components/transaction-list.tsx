@@ -1,8 +1,14 @@
+import { Button } from '@/components/ui/button';
+import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
 import { cn, formatIDR } from '@/lib/utils';
+import { cancel as paymentsCancel } from '@/routes/companies/dashboard/payments';
+import { router } from '@inertiajs/react';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
-import { ArrowDownLeft, ArrowUpRight } from 'lucide-react';
+import { ArrowDownLeft, ArrowUpRight, XIcon } from 'lucide-react';
+import { useState } from 'react';
 import { useIntl } from 'react-intl';
+import { toast } from 'sonner';
 import EmptyWalletTransactions from '../empty-wallet-transactions';
 
 dayjs.extend(relativeTime);
@@ -26,6 +32,31 @@ function TransactionItem({ transaction }: { transaction: WalletTransaction }) {
         intl.formatMessage({
             defaultMessage: 'Wallet transaction',
         });
+
+    const { company } = usePageSharedDataProps();
+    const [isCancelling, setIsCancelling] = useState(false);
+
+    const handleCancel = (e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        // Use the id directly if it's prefixed, or just payment_id if passed
+        const paymentId = transaction.id.toString().replace('p_', '');
+        if (!confirm('Are you sure you want to cancel this top-up request?'))
+            return;
+
+        setIsCancelling(true);
+        router.post(
+            paymentsCancel({ company: company.username, payment: paymentId }),
+            {},
+            {
+                preserveScroll: true,
+                onSuccess: () => toast.success('Top-up request cancelled.'),
+                onError: () => toast.error('Failed to cancel top-up request.'),
+                onFinish: () => setIsCancelling(false),
+            },
+        );
+    };
 
     return (
         <div className="flex flex-col gap-3 rounded-xl border bg-background/60 p-3 transition-colors hover:bg-muted/40 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
@@ -51,8 +82,13 @@ function TransactionItem({ transaction }: { transaction: WalletTransaction }) {
                             </span>
                         )}
                         {transaction.status === 'failed' && (
-                            <span className="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-semibold text-red-800">
-                                Rejected
+                            <span className="inline-flex items-center rounded-md bg-red-50 px-2 py-0.5 text-[10px] font-medium text-red-700 ring-1 ring-red-600/10 ring-inset sm:text-xs">
+                                Failed
+                            </span>
+                        )}
+                        {transaction.status === 'cancelled' && (
+                            <span className="inline-flex items-center rounded-md bg-zinc-100 px-2 py-0.5 text-[10px] font-medium text-zinc-600 ring-1 ring-zinc-500/20 ring-inset sm:text-xs">
+                                Cancelled
                             </span>
                         )}
                         {transaction.status === 'success' &&
@@ -75,15 +111,30 @@ function TransactionItem({ transaction }: { transaction: WalletTransaction }) {
                     </p>
                 </div>
             </div>
-            <p
-                className={cn(
-                    'shrink-0 text-right text-sm font-semibold tabular-nums sm:text-base',
-                    isIncome ? 'text-primary' : 'text-destructive',
+            <div className="flex shrink-0 items-center justify-end gap-2 sm:justify-start">
+                <p
+                    className={cn(
+                        'shrink-0 text-right text-sm font-semibold tabular-nums sm:text-base',
+                        isIncome ? 'text-primary' : 'text-destructive',
+                    )}
+                >
+                    {isIncome ? '+' : '-'}
+                    {formatIDR(transaction.amount)}
+                </p>
+                {transaction.status === 'pending' && (
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        className="ml-2 h-8 px-2 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                        onClick={handleCancel}
+                        disabled={isCancelling}
+                        title="Cancel request"
+                    >
+                        <XIcon className="mr-1.5 size-3.5" />
+                        <span className="text-xs">Cancel</span>
+                    </Button>
                 )}
-            >
-                {isIncome ? '+' : '-'}
-                {formatIDR(transaction.amount)}
-            </p>
+            </div>
         </div>
     );
 }

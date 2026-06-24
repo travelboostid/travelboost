@@ -68,11 +68,39 @@ class WalletController extends Controller
             ->map(fn (Transaction $t) => [
                 'id' => $t->id,
                 'type' => $t->amount > 0 ? 'income' : 'expense',
-                'amount' => $t->amount,
+                'amount' => abs($t->amount),
                 'confirmed' => $t->confirmed,
+                'status' => 'success',
                 'meta' => $t->meta,
                 'created_at' => $t->created_at,
             ]);
+
+        $pendingTopups = Payment::query()
+            ->whereMorphedTo('owner', $company)
+            ->whereMorphedTo('payable', WalletTopupPayment::class)
+            ->where('provider', 'manual')
+            ->whereIn('status', ['pending', 'failed', 'cancelled'])
+            ->latest()
+            ->take(10)
+            ->get()
+            ->map(fn (Payment $p) => [
+                'id' => 'p_'.$p->id,
+                'payment_id' => $p->id,
+                'type' => 'income',
+                'amount' => (int) $p->amount,
+                'meta' => [
+                    'description' => 'Manual Top-up',
+                ],
+                'status' => $p->status->value,
+                'confirmed' => false,
+                'created_at' => $p->created_at,
+            ]);
+
+        $allTransactions = collect($transactions)->concat($pendingTopups)
+            ->sortByDesc('created_at')
+            ->values()
+            ->take(10)
+            ->all();
 
         $pendingTopup = Payment::query()
             ->whereMorphedTo('owner', $company)
@@ -104,7 +132,7 @@ class WalletController extends Controller
                 'last_month' => $lastNet,
                 'growth_pct' => $this->growthPercentage($thisNet, $lastNet),
             ],
-            'transactions' => $transactions,
+            'transactions' => $allTransactions,
             'wallet' => [
                 'id' => $wallet->id,
                 'name' => $wallet->name,
@@ -182,7 +210,7 @@ class WalletController extends Controller
             'sender_account_number' => ['required', 'string', 'max:255', 'regex:/^\d+$/'],
             'transfer_amount' => ['required', 'numeric', 'min:1'],
             'payment_date' => ['required', 'date', 'before_or_equal:today'],
-            'proof' => ['required', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:5120'],
+            'proof' => ['required', 'file', 'mimes:jpg,jpeg,png,webp,pdf', 'max:5120'],
         ]);
 
         $existingPendingTopup = Payment::query()
@@ -207,7 +235,7 @@ class WalletController extends Controller
             ]);
 
             $topupPayment->payment()->create([
-                'owner_type' => get_class($company),
+                'owner_type' => $company->getMorphClass(),
                 'owner_id' => $company->id,
                 'provider' => 'manual',
                 'payment_method' => 'bank_transfer',
