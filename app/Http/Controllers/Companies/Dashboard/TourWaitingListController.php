@@ -7,8 +7,8 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreTourWaitingListRequest;
 use App\Models\Company;
 use App\Models\Tour;
+use App\Support\CompanyPermissionMap;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Support\Facades\Gate;
 
 class TourWaitingListController extends Controller
 {
@@ -18,7 +18,17 @@ class TourWaitingListController extends Controller
         Tour $tour,
         CreateTourWaitingListAction $createTourWaitingList,
     ): RedirectResponse {
-        Gate::authorize('view', $company);
+        abort_unless(
+            $request->user()
+                && CompanyPermissionMap::userHasScopedPermission($request->user(), $company, 'booking.query'),
+            403,
+        );
+
+        abort_unless(
+            (int) $tour->company_id === (int) $company->id
+                || $tour->agentTours()->where('company_id', $company->id)->exists(),
+            404,
+        );
 
         $createTourWaitingList->execute(
             creator: $request->user(),
