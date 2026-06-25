@@ -63,7 +63,10 @@ class WalletTransactionController extends Controller
         }
 
         DB::transaction(function () use ($payment) {
-            $payment->update(['status' => 'paid']);
+            $payment->update([
+                'status' => 'paid',
+                'paid_at' => now(),
+            ]);
 
             $owner = $payment->owner;
 
@@ -83,10 +86,12 @@ class WalletTransactionController extends Controller
                 $payment->payable?->onPaid($payment);
             }
 
-            $owner->notify(new ManualTopupValidated($payment));
+            DB::afterCommit(function () use ($owner, $payment): void {
+                $owner->notify(new ManualTopupValidated($payment));
+            });
         });
 
-        return back()->with('success', 'Top-up approved successfully.');
+        return back()->with('success', 'Manual payment approved successfully.');
     }
 
     public function reject(Payment $payment)
@@ -95,10 +100,13 @@ class WalletTransactionController extends Controller
             return back()->withErrors(['message' => 'Payment is not pending.']);
         }
 
-        $payment->update(['status' => 'failed']);
+        $payment->update([
+            'status' => 'failed',
+            'paid_at' => null,
+        ]);
 
         $payment->owner->notify(new ManualTopupValidated($payment));
 
-        return back()->with('success', 'Top-up rejected successfully.');
+        return back()->with('success', 'Manual payment rejected successfully.');
     }
 }

@@ -26,7 +26,7 @@ type WalletTransactionsPageProps = {
 
 export default function WalletTransactionsPage({
     data,
-    pendingTopups = [],
+    pendingTopups: _pendingTopups = [],
 }: WalletTransactionsPageProps) {
     const columns = useMemo<ColumnDef<any>[]>(
         () => [
@@ -175,7 +175,7 @@ export default function WalletTransactionsPage({
         getRowId: (_row) => _row.id.toString(),
     });
 
-    const handleApprove = (paymentId: number) => {
+    const _handleApprove = (paymentId: number) => {
         router.post(
             `/admin/funds/wallet-transactions/${paymentId}/approve`,
             {},
@@ -186,7 +186,7 @@ export default function WalletTransactionsPage({
         );
     };
 
-    const handleReject = (paymentId: number) => {
+    const _handleReject = (paymentId: number) => {
         router.post(
             `/admin/funds/wallet-transactions/${paymentId}/reject`,
             {},

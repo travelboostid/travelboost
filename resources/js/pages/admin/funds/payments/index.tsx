@@ -179,14 +179,56 @@ export default function PaymentsPage({ data }: PaymentsPageProps) {
                 ),
                 cell: ({ cell }) => {
                     const val = cell.getValue<any>();
-                    if (val === 'wallet-topup-payment')
-                        return <Badge variant="outline">Wallet Top-up</Badge>;
-                    if (val === 'ai-credit-topup-payment')
-                        return <Badge variant="outline">AI Top-up</Badge>;
-                    if (val === 'agent-subscription-payment')
+                    const payment = cell.row.original;
+                    const description =
+                        payment.payload?.description ??
+                        (payment.payable_type ===
+                            'agent-subscription-payment' &&
+                        payment.provider === 'manual'
+                            ? 'Manual Subscription Extension'
+                            : null);
+
+                    if (val === 'wallet-topup-payment') {
                         return (
-                            <Badge variant="outline">Agent Subscription</Badge>
+                            <div className="space-y-1">
+                                <Badge variant="outline">Wallet Top-up</Badge>
+                                {description ? (
+                                    <p className="text-xs text-muted-foreground">
+                                        {description}
+                                    </p>
+                                ) : null}
+                            </div>
                         );
+                    }
+
+                    if (val === 'ai-credit-topup-payment') {
+                        return (
+                            <div className="space-y-1">
+                                <Badge variant="outline">AI Top-up</Badge>
+                                {description ? (
+                                    <p className="text-xs text-muted-foreground">
+                                        {description}
+                                    </p>
+                                ) : null}
+                            </div>
+                        );
+                    }
+
+                    if (val === 'agent-subscription-payment') {
+                        return (
+                            <div className="space-y-1">
+                                <Badge variant="outline">
+                                    Agent Subscription
+                                </Badge>
+                                {description ? (
+                                    <p className="text-xs text-muted-foreground">
+                                        {description}
+                                    </p>
+                                ) : null}
+                            </div>
+                        );
+                    }
+
                     return <div>{val}</div>;
                 },
                 enableColumnFilter: false,

@@ -23,15 +23,16 @@ class ManualTopupValidated extends Notification implements ShouldQueue
 
     public function toMail(object $notifiable): MailMessage
     {
-        $status = ucfirst($this->payment->status->value);
-        $amountStr = 'Rp '.number_format($this->payment->amount, 0, ',', '.');
+        $status = $this->statusLabel();
+        $amount = 'Rp '.number_format($this->payment->amount, 0, ',', '.');
+        [$subject, $message, $failureMessage] = $this->content();
 
         $message = (new MailMessage)
-            ->subject("Manual Top-up {$status}")
-            ->line("Your manual wallet top-up of {$amountStr} has been {$status}.");
+            ->subject(str_replace(':status', $status, $subject))
+            ->line(str_replace([':status', ':amount'], [$status, $amount], $message));
 
         if ($this->payment->status->value === 'failed') {
-            $message->line('Reason: The transfer proof was invalid or the funds were not received.');
+            $message->line($failureMessage);
         }
 
         return $message->line('Thank you for using Travelboost!');
@@ -39,14 +40,48 @@ class ManualTopupValidated extends Notification implements ShouldQueue
 
     public function toArray(object $notifiable): array
     {
-        $status = ucfirst($this->payment->status->value);
-        $amountStr = 'Rp '.number_format($this->payment->amount, 0, ',', '.');
+        $status = $this->statusLabel();
+        $amount = 'Rp '.number_format($this->payment->amount, 0, ',', '.');
+        [$subject, $message] = $this->content();
 
         return [
-            'title' => "Manual Top-up {$status}",
-            'message' => "Your manual wallet top-up of {$amountStr} has been {$status}.",
+            'title' => str_replace(':status', $status, $subject),
+            'message' => str_replace([':status', ':amount'], [$status, $amount], $message),
             'payment_id' => $this->payment->id,
             'status' => $this->payment->status->value,
         ];
+    }
+
+    /**
+     * @return array{0: string, 1: string, 2: string}
+     */
+    private function content(): array
+    {
+        return match ($this->payment->payable_type) {
+            'agent-subscription-payment' => [
+                'Manual Subscription Payment :status',
+                'Your manual subscription payment of :amount has been :status.',
+                'Reason: The transfer proof was invalid or the funds were not received. Your subscription has not been activated.',
+            ],
+            'ai-credit-topup-payment' => [
+                'Manual AI Credit Top-up :status',
+                'Your manual AI credit top-up of :amount has been :status.',
+                'Reason: The transfer proof was invalid or the funds were not received.',
+            ],
+            default => [
+                'Manual Top-up :status',
+                'Your manual wallet top-up of :amount has been :status.',
+                'Reason: The transfer proof was invalid or the funds were not received.',
+            ],
+        };
+    }
+
+    private function statusLabel(): string
+    {
+        return match ($this->payment->status->value) {
+            'paid' => 'Approved',
+            'failed' => 'Rejected',
+            default => ucfirst($this->payment->status->value),
+        };
     }
 }

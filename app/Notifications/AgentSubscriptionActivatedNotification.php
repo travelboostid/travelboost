@@ -6,10 +6,11 @@ use App\Models\AgentSubscription;
 use App\Models\AgentSubscriptionPackage;
 use App\Models\Company;
 use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
-class AgentSubscriptionActivatedNotification extends Notification
+class AgentSubscriptionActivatedNotification extends Notification implements ShouldQueue
 {
     use Queueable;
 
