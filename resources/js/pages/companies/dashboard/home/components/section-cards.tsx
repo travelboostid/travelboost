@@ -38,7 +38,9 @@ type MetricConfig = {
     label: React.ReactNode;
     value: string | number;
     isCurrency?: boolean;
+    inlineValueSuffix?: React.ReactNode;
     sub: React.ReactNode;
+    note?: React.ReactNode;
     icon: React.ReactNode;
     color: string;
     className?: string;
@@ -68,6 +70,22 @@ export function SectionCards({ stats, company }: any) {
         ) : (
             <FormattedMessage defaultMessage="Current Month" />
         );
+    const revenuePax = useMemo(() => {
+        return revenuePeriod === 'yearly'
+            ? Number(stats.sales?.yearly?.pax || 0)
+            : Number(stats.sales?.monthly?.pax || 0);
+    }, [revenuePeriod, stats.sales]);
+    const salesPerPaxNote = (
+        <FormattedMessage defaultMessage="Sales per pax only. Excludes add-ons, tax, and visa." />
+    );
+    const salesPaxOnlyValue = (
+        <FormattedMessage
+            defaultMessage="{count} pax"
+            values={{
+                count: revenuePax,
+            }}
+        />
+    );
 
     const periodToggle = (
         period: 'monthly' | 'yearly',
@@ -107,7 +125,13 @@ export function SectionCards({ stats, company }: any) {
                   label: <FormattedMessage defaultMessage="Revenue" />,
                   value: revenueValue,
                   isCurrency: true,
+                  inlineValueSuffix: (
+                      <span className="truncate text-sm font-semibold text-slate-500 dark:text-slate-400">
+                          / {revenuePax} pax
+                      </span>
+                  ),
                   sub: revenueSubLabel,
+                  note: salesPerPaxNote,
                   icon: <Wallet className="text-primary" size={16} />,
                   color: 'bg-primary/10 dark:bg-primary/20',
                   className: 'md:col-span-2',
@@ -126,7 +150,7 @@ export function SectionCards({ stats, company }: any) {
               },
               {
                   key: 'network',
-                  label: <FormattedMessage defaultMessage="Network" />,
+                  label: <FormattedMessage defaultMessage="Customers" />,
                   value: stats.counters?.customers || 0,
                   sub: <FormattedMessage defaultMessage="Active Customers" />,
                   icon: <Users className="text-orange-500" size={16} />,
@@ -135,21 +159,6 @@ export function SectionCards({ stats, company }: any) {
               },
           ]
         : [
-              {
-                  key: 'revenue',
-                  label: <FormattedMessage defaultMessage="Revenue" />,
-                  value: formatIDR(
-                      revenuePeriod === 'yearly'
-                          ? stats.sales?.yearly?.idr || 0
-                          : stats.sales?.monthly?.idr || 0,
-                  ),
-                  isCurrency: true,
-                  sub: revenueSubLabel,
-                  icon: <Wallet className="text-primary" size={16} />,
-                  color: 'bg-primary/10 dark:bg-primary/20',
-                  className: 'md:col-span-2',
-                  control: periodToggle(revenuePeriod, setRevenuePeriod),
-              },
               {
                   key: 'commission',
                   label: <FormattedMessage defaultMessage="Commission" />,
@@ -171,8 +180,17 @@ export function SectionCards({ stats, company }: any) {
                   control: periodToggle(commissionPeriod, setCommissionPeriod),
               },
               {
+                  key: 'sales',
+                  label: <FormattedMessage defaultMessage="Sales" />,
+                  value: salesPaxOnlyValue,
+                  sub: revenueSubLabel,
+                  icon: <Wallet className="text-primary" size={16} />,
+                  color: 'bg-primary/10 dark:bg-primary/20',
+                  className: 'md:col-span-1',
+              },
+              {
                   key: 'network',
-                  label: <FormattedMessage defaultMessage="Network" />,
+                  label: <FormattedMessage defaultMessage="Customers" />,
                   value: stats.counters?.customers || 0,
                   sub: <FormattedMessage defaultMessage="Active Customers" />,
                   icon: <Users className="text-orange-500" size={16} />,
@@ -183,7 +201,7 @@ export function SectionCards({ stats, company }: any) {
 
     return (
         <div
-            className={`grid grid-cols-1 gap-4 ${isVendor ? 'md:grid-cols-4' : 'md:grid-cols-5'}`}
+            className={`grid grid-cols-1 gap-4 ${isVendor ? 'md:grid-cols-4' : 'md:grid-cols-4'}`}
         >
             {metrics.map((m) => (
                 <div
@@ -199,7 +217,10 @@ export function SectionCards({ stats, company }: any) {
                             {m.label}
                         </p>
                         {m.isCurrency ? (
-                            <CurrencyAmount value={String(m.value)} />
+                            <div className="flex min-w-0 flex-wrap items-end gap-x-2 gap-y-1">
+                                <CurrencyAmount value={String(m.value)} />
+                                {m.inlineValueSuffix}
+                            </div>
                         ) : (
                             <h3 className="break-all text-base font-bold leading-tight text-slate-900 tabular-nums dark:text-slate-100 sm:text-lg">
                                 {m.value}
@@ -208,6 +229,11 @@ export function SectionCards({ stats, company }: any) {
                         <p className="mt-1.5 truncate text-xs font-medium text-slate-500 dark:text-slate-400">
                             {m.sub}
                         </p>
+                        {m.note && (
+                            <p className="mt-1 text-[11px] leading-relaxed text-slate-400 dark:text-slate-500">
+                                {m.note}
+                            </p>
+                        )}
                     </div>
                 </div>
             ))}

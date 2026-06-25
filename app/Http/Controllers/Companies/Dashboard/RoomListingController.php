@@ -10,6 +10,7 @@ use App\Models\Tour;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Inertia\Inertia;
 use Inertia\Response;
 use Maatwebsite\Excel\Concerns\FromView;
@@ -74,12 +75,16 @@ class RoomListingController extends Controller
         $roomData = $hasCompleteFilters
             ? $this->flattenRoomData($agentGroups)
             : [];
+        $roomRecap = $hasCompleteFilters
+            ? $this->buildRoomRecap($agentGroups)
+            : [];
 
         return Inertia::render('companies/dashboard/reports/room-listings/index', [
             'tours' => $tours,
             'availableDates' => $availableDates,
             'roomData' => $roomData,
             'agentGroups' => $agentGroups,
+            'roomRecap' => $roomRecap,
             'filters' => [
                 'tour_id' => $tourId,
                 'departure_date' => $departureDate,
@@ -135,21 +140,18 @@ class RoomListingController extends Controller
                 {
                     $drawings = [];
                     $company = $this->data['company'];
+                    $logoPath = app(RoomListingController::class)->resolveCompanyLogoPath($company->photo_url);
 
-                    if ($company->photo_url) {
-                        $path = public_path($company->photo_url);
-
-                        if (file_exists($path)) {
-                            $drawing = new Drawing;
-                            $drawing->setName('Logo');
-                            $drawing->setDescription('Vendor Logo');
-                            $drawing->setPath($path);
-                            $drawing->setHeight(52);
-                            $drawing->setCoordinates('A1');
-                            $drawing->setOffsetX(8);
-                            $drawing->setOffsetY(8);
-                            $drawings[] = $drawing;
-                        }
+                    if ($logoPath !== null) {
+                        $drawing = new Drawing;
+                        $drawing->setName('Logo');
+                        $drawing->setDescription('Vendor Logo');
+                        $drawing->setPath($logoPath);
+                        $drawing->setHeight(52);
+                        $drawing->setCoordinates('A1');
+                        $drawing->setOffsetX(8);
+                        $drawing->setOffsetY(8);
+                        $drawings[] = $drawing;
                     }
 
                     return $drawings;
@@ -175,7 +177,8 @@ class RoomListingController extends Controller
                         'O' => 13,
                         'P' => 14,
                         'Q' => 12,
-                        'R' => 6,
+                        'R' => 18,
+                        'S' => 6,
                     ];
                 }
 
@@ -191,32 +194,32 @@ class RoomListingController extends Controller
                         ->getAlignment()
                         ->setVertical(Alignment::VERTICAL_CENTER);
 
-                    $sheet->getStyle('A1:R4')->getAlignment()
+                    $sheet->getStyle('A1:S4')->getAlignment()
                         ->setHorizontal(Alignment::HORIZONTAL_LEFT)
                         ->setVertical(Alignment::VERTICAL_CENTER);
 
-                    $sheet->getStyle('A6:R6')->getAlignment()
+                    $sheet->getStyle('A6:S6')->getAlignment()
                         ->setHorizontal(Alignment::HORIZONTAL_CENTER)
                         ->setVertical(Alignment::VERTICAL_CENTER);
 
-                    $sheet->getStyle('A6:R6')->getFill()
+                    $sheet->getStyle('A6:S6')->getFill()
                         ->setFillType(Fill::FILL_SOLID)
                         ->getStartColor()
                         ->setRGB('EAF2FF');
 
-                    $sheet->getStyle('A6:R6')->getBorders()->getAllBorders()
+                    $sheet->getStyle('A6:S6')->getBorders()->getAllBorders()
                         ->setBorderStyle(Border::BORDER_THIN)
                         ->getColor()
                         ->setRGB('B8C7D9');
 
-                    $sheet->getStyle('A1:R3')->getFill()
+                    $sheet->getStyle('A1:S3')->getFill()
                         ->setFillType(Fill::FILL_SOLID)
                         ->getStartColor()
                         ->setRGB('FFFFFF');
 
                     $highestRow = max(7, $sheet->getHighestRow());
 
-                    $sheet->getStyle('A7:R'.$highestRow)->getBorders()->getAllBorders()
+                    $sheet->getStyle('A7:S'.$highestRow)->getBorders()->getAllBorders()
                         ->setBorderStyle(Border::BORDER_THIN)
                         ->getColor()
                         ->setRGB('D8E1EC');
@@ -272,7 +275,7 @@ class RoomListingController extends Controller
                                 ->getColor()
                                 ->setRGB('334155');
 
-                            $worksheet->getStyle('A1:R4')->getBorders()->getBottom()
+                            $worksheet->getStyle('A1:S4')->getBorders()->getBottom()
                                 ->setBorderStyle(Border::BORDER_MEDIUM)
                                 ->getColor()
                                 ->setRGB('0F172A');
@@ -320,6 +323,7 @@ class RoomListingController extends Controller
             'departure_date' => $departureDate,
             'groupedData' => $agentGroups,
             'roomRecap' => $this->buildRoomRecap($agentGroups),
+            'companyLogoPath' => $this->resolveCompanyLogoPath($company->photo_url),
         ];
     }
 
@@ -388,7 +392,7 @@ class RoomListingController extends Controller
         foreach ($agentGroups as $agentGroup) {
             foreach ($agentGroup['bookings'] as $bookingData) {
                 foreach ($bookingData['rooms'] as $roomIndex => $roomGroup) {
-                    $passengers = collect($roomGroup['passengers'])->values();
+                    $passengers = collect($roomGroup['passengers'] ?? [])->values();
 
                     foreach ($passengers as $passenger) {
                         $roomData[] = [
@@ -411,9 +415,12 @@ class RoomListingController extends Controller
                                 ? $passenger->passport_expiry_date->format('Y-m-d')
                                 : null,
                             'room_type' => $roomGroup['room_type'],
-                            'room_capacity' => max(1, $passengers->count()),
+                            'room_type_note' => $roomGroup['room_type_note'] ?? null,
+                            'room_type_note_labels' => $roomGroup['room_type_note_labels'] ?? [],
+                            'room_capacity' => max(1, (int) ($roomGroup['room_capacity'] ?? $passengers->count())),
                             'room_number' => $roomGroup['room_number'],
                             'room_group_key' => $roomGroup['room_key'] ?? "room-{$roomIndex}",
+                            'sharing_note' => $roomGroup['sharing_note'] ?? null,
                             'price_category' => $passenger->price_category,
                             'visa_number' => $passenger->visa_number,
                             'visa_type_description' => $passenger->visa_type_description,
@@ -431,6 +438,10 @@ class RoomListingController extends Controller
     {
         $passengers = collect($passengers)->values();
         $roomGroups = $this->buildRoomGroupsFromArrangements($passengers, $rooms);
+
+        if ($roomGroups === []) {
+            $roomGroups = $this->buildRoomGroupsFromPassengerRoomNumbers($passengers);
+        }
 
         if ($roomGroups === []) {
             return $this->buildFallbackRoomGroups($passengers);
@@ -457,11 +468,16 @@ class RoomListingController extends Controller
     {
         $roomGroups = [];
         $passengersById = $passengers->keyBy(fn ($passenger) => (string) $passenger->id);
+        $assignedPassengerIds = [];
 
         collect($rooms)
             ->values()
-            ->each(function ($room, int $roomIndex) use (&$roomGroups, $passengersById): void {
-                $guestIds = collect($room->bed_layout ?? [])
+            ->each(function ($room, int $roomIndex) use (&$roomGroups, $passengersById, &$assignedPassengerIds): void {
+                $bedLayout = collect($room->bed_layout ?? [])
+                    ->sortBy(fn ($bed, int $index) => (int) data_get($bed, 'position.x', $index))
+                    ->values();
+
+                $guestIds = $bedLayout
                     ->map(fn ($bed) => data_get($bed, 'guestId'))
                     ->filter(fn ($guestId) => filled($guestId))
                     ->map(fn ($guestId) => (string) $guestId)
@@ -481,22 +497,83 @@ class RoomListingController extends Controller
                     return;
                 }
 
+                $roomNumber = $this->roomNumberFromLabel($room->room_label, $roomIndex + 1);
+
+                $sharingPassengers = $passengersById
+                    ->filter(function ($passenger) use ($roomNumber, $guestIds, $assignedPassengerIds): bool {
+                        return $this->isSharingCategory($passenger->price_category)
+                            && ! in_array((int) $passenger->id, $assignedPassengerIds, true)
+                            && (string) ($passenger->room_number ?? '') === $roomNumber
+                            && ! $guestIds->contains((string) $passenger->id);
+                    })
+                    ->sortBy(fn ($passenger) => $passenger->first_name.' '.$passenger->last_name)
+                    ->values();
+
+                $orderedPassengers = $roomPassengers
+                    ->concat($sharingPassengers)
+                    ->values();
+
+                foreach ($orderedPassengers as $passenger) {
+                    $assignedPassengerIds[] = (int) $passenger->id;
+                }
+
                 $roomGroups[] = [
                     'room_type' => $this->normalizeRoomType($room->room_type ?: $roomPassengers->first()?->room_type),
-                    'room_number' => $this->roomNumberFromLabel($room->room_label, $roomIndex + 1),
+                    'room_number' => $roomNumber,
                     'room_key' => "arrangement-{$roomIndex}",
-                    'passengers' => $roomPassengers,
+                    'room_capacity' => max(1, $roomPassengers->count()),
+                    'sharing_note' => $sharingPassengers->isNotEmpty() ? 'sharing' : null,
+                    'room_type_note' => $this->roomTypeNote($orderedPassengers),
+                    'room_type_note_labels' => $this->roomTypeNoteLabels($orderedPassengers),
+                    'passengers' => $orderedPassengers,
                 ];
             });
 
         return $roomGroups;
     }
 
+    private function buildRoomGroupsFromPassengerRoomNumbers($passengers): array
+    {
+        return $passengers
+            ->filter(fn ($passenger) => filled($passenger->room_number))
+            ->groupBy(fn ($passenger) => (string) $passenger->room_number)
+            ->map(function (Collection $roomPassengers, string $roomNumber): array {
+                $bedPassengers = $roomPassengers
+                    ->reject(fn ($passenger) => $this->isSharingCategory($passenger->price_category))
+                    ->values();
+
+                $sharingPassengers = $roomPassengers
+                    ->filter(fn ($passenger) => $this->isSharingCategory($passenger->price_category))
+                    ->values();
+
+                $orderedPassengers = $bedPassengers->concat($sharingPassengers)->values();
+                $seedPassenger = $bedPassengers->first() ?: $roomPassengers->first();
+
+                return [
+                    'room_type' => $this->normalizeRoomType($seedPassenger?->room_type),
+                    'room_number' => $roomNumber,
+                    'room_key' => "passenger-room-{$roomNumber}",
+                    'room_capacity' => max(1, $bedPassengers->count()),
+                    'sharing_note' => $sharingPassengers->isNotEmpty() ? 'sharing' : null,
+                    'room_type_note' => $this->roomTypeNote($orderedPassengers),
+                    'room_type_note_labels' => $this->roomTypeNoteLabels($orderedPassengers),
+                    'passengers' => $orderedPassengers,
+                ];
+            })
+            ->sortBy(fn (array $roomGroup) => (int) preg_replace('/\D+/', '', (string) $roomGroup['room_number']))
+            ->values()
+            ->all();
+    }
+
     private function buildFallbackRoomGroups($passengers): array
     {
         $roomGroups = [];
 
-        $passengers
+        $bedPassengers = $passengers
+            ->reject(fn ($passenger) => $this->isSharingCategory($passenger->price_category))
+            ->values();
+
+        $bedPassengers
             ->sortBy(function ($passenger) {
                 return [$this->normalizeRoomType($passenger->room_type), $passenger->first_name];
             })
@@ -511,6 +588,10 @@ class RoomListingController extends Controller
                         $roomGroups[] = [
                             'room_type' => $roomType,
                             'room_key' => "fallback-{$roomType}-{$chunkIndex}",
+                            'room_capacity' => max(1, $chunk->count()),
+                            'sharing_note' => null,
+                            'room_type_note' => $this->roomTypeNote($chunk),
+                            'room_type_note_labels' => $this->roomTypeNoteLabels($chunk),
                             'passengers' => $chunk,
                         ];
                     });
@@ -540,8 +621,12 @@ class RoomListingController extends Controller
 
         return match (strtolower($normalized)) {
             'single' => 'Single Room',
+            'single_extra_bed' => 'Single Room',
             'twin' => 'Twin Room',
+            'twin_extra_bed' => 'Twin Room',
             'double' => 'Double Room',
+            'double_extra_bed' => 'Double Room',
+            'extra_bed' => 'Double Room',
             'triple' => 'Triple Room',
             'quad' => 'Quad Room',
             default => $normalized !== '' ? $normalized : 'TBA',
@@ -564,28 +649,136 @@ class RoomListingController extends Controller
         };
     }
 
+    private function isSharingCategory(?string $priceCategory): bool
+    {
+        $normalized = strtolower(trim((string) $priceCategory));
+
+        return in_array($normalized, [
+            'child no bed',
+            'infant',
+        ], true);
+    }
+
+    private function isSupplementCategory(?string $priceCategory): bool
+    {
+        $normalized = strtolower(trim((string) $priceCategory));
+
+        if ($normalized === '') {
+            return false;
+        }
+
+        return str_contains($normalized, 'no bed')
+            || str_contains($normalized, 'with bed')
+            || str_contains($normalized, 'extra bed')
+            || str_contains($normalized, 'infant');
+    }
+
+    private function normalizeSupplementLabel(?string $priceCategory): ?string
+    {
+        $normalized = trim((string) $priceCategory);
+
+        if ($normalized === '') {
+            return null;
+        }
+
+        return collect(preg_split('/\s+/', strtolower($normalized)) ?: [])
+            ->filter()
+            ->map(fn (string $segment) => ucfirst($segment))
+            ->implode(' ');
+    }
+
+    private function roomTypeNote($passengers): ?string
+    {
+        $labels = $this->roomTypeNoteLabels($passengers);
+
+        if ($labels === []) {
+            return null;
+        }
+
+        return '+ '.implode(', ', $labels);
+    }
+
+    private function roomTypeNoteLabels($passengers): array
+    {
+        return collect($passengers)
+            ->map(function ($passenger): ?string {
+                $priceCategory = $passenger->price_category ?? null;
+
+                if (! $this->isSupplementCategory($priceCategory)) {
+                    return null;
+                }
+
+                return $this->normalizeSupplementLabel($priceCategory);
+            })
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+    }
+
     private function buildRoomRecap(array $agentGroups): array
     {
-        $recap = [];
+        $roomRecap = [];
+        $supplementRecap = [];
 
         foreach ($agentGroups as $agentGroup) {
             foreach ($agentGroup['bookings'] as $bookingData) {
                 foreach ($bookingData['rooms'] as $roomGroup) {
                     $roomType = $roomGroup['room_type'];
-                    $recap[$roomType] = ($recap[$roomType] ?? 0) + 1;
+                    $roomRecap[$roomType] = ($roomRecap[$roomType] ?? 0) + 1;
+
+                    foreach (($roomGroup['passengers'] ?? []) as $passenger) {
+                        $priceCategory = $passenger->price_category ?? null;
+
+                        if (! $this->isSupplementCategory($priceCategory)) {
+                            continue;
+                        }
+
+                        $label = $this->normalizeSupplementLabel($priceCategory);
+
+                        if ($label === null) {
+                            continue;
+                        }
+
+                        $supplementRecap[$label] = ($supplementRecap[$label] ?? 0) + 1;
+                    }
                 }
             }
         }
 
-        ksort($recap);
+        ksort($roomRecap);
+        ksort($supplementRecap);
 
-        return collect($recap)
+        return collect($roomRecap)
             ->map(fn (int $count, string $roomType): array => [
-                'room_type' => $roomType,
+                'roomType' => $roomType,
                 'count' => $count,
+                'unit' => $count === 1 ? 'room' : 'rooms',
             ])
+            ->concat(
+                collect($supplementRecap)->map(fn (int $count, string $label): array => [
+                    'roomType' => $label,
+                    'count' => $count,
+                    'unit' => 'pax',
+                ])
+            )
             ->values()
             ->all();
+    }
+
+    public function resolveCompanyLogoPath(?string $photoUrl): ?string
+    {
+        $path = trim((string) $photoUrl);
+
+        if ($path === '') {
+            return null;
+        }
+
+        $parsedPath = parse_url($path, PHP_URL_PATH);
+        $relativePath = ltrim((string) ($parsedPath ?: $path), '/');
+        $resolvedPath = public_path(str_replace('/', DIRECTORY_SEPARATOR, $relativePath));
+
+        return file_exists($resolvedPath) ? $resolvedPath : null;
     }
 
     private function ensureVendorAccess(Company $company): void

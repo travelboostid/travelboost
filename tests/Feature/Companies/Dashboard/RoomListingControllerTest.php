@@ -5,6 +5,7 @@ use App\Enums\CompanyTeamStatus;
 use App\Enums\PaymentStatus;
 use App\Models\Booking;
 use App\Models\BookingPassenger;
+use App\Models\BookingRoom;
 use App\Models\Company;
 use App\Models\CompanyTeam;
 use App\Models\Tour;
@@ -120,6 +121,7 @@ test('room listing loads rows after both tour and departure date are selected', 
         ->has('agentGroups', 1)
         ->where('agentGroups.0.agent_name', 'Direct')
         ->where('agentGroups.0.bookings.0.total_pax', 1)
+        ->where('roomData.0.agent_name', 'Direct')
         ->where('roomData.0.title', 'Mr')
         ->where('roomData.0.first_name', 'John')
         ->where('roomData.0.room_type', 'Twin Room')
@@ -150,6 +152,128 @@ test('room listing includes down payment and full payment bookings with their pa
         ->has('agentGroups.0.bookings', 2)
         ->where('agentGroups.0.bookings.0.payment_status', BookingStatus::FULL_PAYMENT->value)
         ->where('agentGroups.0.bookings.1.payment_status', BookingStatus::DOWN_PAYMENT->value));
+});
+
+test('room listing follows saved room arrangement order and keeps no bed passengers in the assigned shared room', function () {
+    $this->booking->passengers()->delete();
+
+    $singlePassenger = BookingPassenger::factory()->create([
+        'booking_id' => $this->booking->id,
+        'title' => 'Mrs',
+        'first_name' => 'Lina',
+        'last_name' => 'Jo',
+        'room_type' => 'Single',
+        'room_number' => '1',
+        'price_category' => 'Adult Single',
+    ]);
+
+    $sharedNoBedPassenger = BookingPassenger::factory()->create([
+        'booking_id' => $this->booking->id,
+        'title' => 'Miss',
+        'first_name' => 'Dhea',
+        'last_name' => 'Jo',
+        'room_type' => 'Child No Bed',
+        'room_number' => '1',
+        'price_category' => 'Child No Bed',
+    ]);
+
+    $doublePassengerOne = BookingPassenger::factory()->create([
+        'booking_id' => $this->booking->id,
+        'title' => 'Mrs',
+        'first_name' => 'Lilie',
+        'last_name' => 'Jo',
+        'room_type' => 'Double',
+        'room_number' => '2',
+        'price_category' => 'Adult Double',
+    ]);
+
+    $doublePassengerTwo = BookingPassenger::factory()->create([
+        'booking_id' => $this->booking->id,
+        'title' => 'Mr',
+        'first_name' => 'Johan',
+        'last_name' => 'Jo',
+        'room_type' => 'Double',
+        'room_number' => '2',
+        'price_category' => 'Adult Double',
+    ]);
+
+    $extraBedPassenger = BookingPassenger::factory()->create([
+        'booking_id' => $this->booking->id,
+        'title' => 'Miss',
+        'first_name' => 'Bibi',
+        'last_name' => 'Jo',
+        'room_type' => 'Extra Bed',
+        'room_number' => '2',
+        'price_category' => 'Adult Extra Bed',
+    ]);
+
+    BookingRoom::create([
+        'booking_id' => $this->booking->id,
+        'room_type' => 'single',
+        'room_label' => 'Room 1',
+        'bed_layout' => [
+            ['guestId' => (string) $singlePassenger->id, 'position' => ['x' => 0, 'y' => 0]],
+        ],
+    ]);
+
+    BookingRoom::create([
+        'booking_id' => $this->booking->id,
+        'room_type' => 'double',
+        'room_label' => 'Room 2',
+        'bed_layout' => [
+            ['guestId' => (string) $doublePassengerOne->id, 'position' => ['x' => 0, 'y' => 0]],
+            ['guestId' => (string) $doublePassengerTwo->id, 'position' => ['x' => 1, 'y' => 0]],
+            ['guestId' => (string) $extraBedPassenger->id, 'position' => ['x' => 2, 'y' => 0]],
+        ],
+    ]);
+
+    $response = $this->actingAs($this->user)
+        ->get("/companies/{$this->vendor->username}/dashboard/reports/room-listings?tour_id={$this->tour->id}&departure_date=2026-08-15");
+
+    $response->assertOk();
+    $response->assertInertia(fn (Assert $page) => $page
+        ->has('roomData', 5)
+        ->where('roomData.0.first_name', 'Lina')
+        ->where('roomData.0.room_type', 'Single Room')
+        ->where('roomData.0.room_type_note', '+ Child No Bed')
+        ->where('roomData.0.room_number', '1')
+        ->where('roomData.1.first_name', 'Dhea')
+        ->where('roomData.1.room_type', 'Single Room')
+        ->where('roomData.1.room_type_note', '+ Child No Bed')
+        ->where('roomData.1.room_number', '1')
+        ->where('roomData.2.first_name', 'Lilie')
+        ->where('roomData.2.room_type', 'Double Room')
+        ->where('roomData.2.room_type_note', '+ Adult Extra Bed')
+        ->where('roomData.2.room_number', '2')
+        ->where('roomData.3.first_name', 'Johan')
+        ->where('roomData.3.room_type', 'Double Room')
+        ->where('roomData.3.room_type_note', '+ Adult Extra Bed')
+        ->where('roomData.3.room_number', '2')
+        ->where('roomData.4.first_name', 'Bibi')
+        ->where('roomData.4.room_type', 'Double Room')
+        ->where('roomData.4.room_type_note', '+ Adult Extra Bed')
+        ->where('roomData.4.room_number', '2')
+        ->where('agentGroups.0.bookings.0.rooms.0.room_capacity', 1)
+        ->where('agentGroups.0.bookings.0.rooms.0.room_type_note', '+ Child No Bed')
+        ->where('agentGroups.0.bookings.0.rooms.0.passengers.0.first_name', 'Lina')
+        ->where('agentGroups.0.bookings.0.rooms.0.passengers.1.first_name', 'Dhea')
+        ->where('agentGroups.0.bookings.0.rooms.1.room_type_note', '+ Adult Extra Bed')
+        ->where('agentGroups.0.bookings.0.rooms.1.passengers.0.first_name', 'Lilie')
+        ->where('agentGroups.0.bookings.0.rooms.1.passengers.1.first_name', 'Johan')
+        ->where('agentGroups.0.bookings.0.rooms.1.passengers.2.first_name', 'Bibi')
+        ->where('roomRecap.0.roomType', 'Double Room')
+        ->where('roomRecap.0.count', 1)
+        ->where('roomRecap.0.unit', 'room')
+        ->where('roomRecap.1.roomType', 'Single Room')
+        ->where('roomRecap.1.count', 1)
+        ->where('roomRecap.1.unit', 'room')
+        ->where('roomRecap.2.roomType', 'Adult Extra Bed')
+        ->where('roomRecap.2.count', 1)
+        ->where('roomRecap.2.unit', 'pax')
+        ->where('roomRecap.3.roomType', 'Child No Bed')
+        ->where('roomRecap.3.count', 1)
+        ->where('roomRecap.3.unit', 'pax')
+    );
 });
 
 test('booking report includes down payment and full payment bookings with their payment status', function () {
