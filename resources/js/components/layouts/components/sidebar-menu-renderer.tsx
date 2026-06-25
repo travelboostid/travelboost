@@ -72,6 +72,11 @@ export function SidebarMenuRenderer({
         () => (activeMenuIds || []).reduce((a, c) => ({ ...a, [c]: true }), {}),
         [activeMenuIds],
     );
+    const visibleMenu = useMemo(() => {
+        return menu.filter(
+            (item) => item.items === undefined || item.items.length > 0,
+        );
+    }, [menu]);
     const isItemActive = (item: MenuItem): boolean =>
         Boolean(
             activeState[item.id] ||
@@ -346,7 +351,7 @@ export function SidebarMenuRenderer({
 
     return (
         <SidebarMenu>
-            {menu.map((item, index) => {
+            {visibleMenu.map((item, index) => {
                 if (item.items?.length) {
                     if (isCollapsed) {
                         return (

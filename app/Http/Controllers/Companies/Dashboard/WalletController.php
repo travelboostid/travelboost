@@ -9,6 +9,7 @@ use App\Models\Company;
 use App\Models\Payment;
 use App\Models\Wallet;
 use App\Models\WalletTopupPayment;
+use App\Support\CompanyPermissionMap;
 use Bavix\Wallet\Models\Transaction;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -22,7 +23,7 @@ class WalletController extends Controller
     public function index(Request $request, Company $company)
     {
         abort_unless(
-            $request->user()->isAbleTo('wallet.query', "company:{$company->id}"),
+            CompanyPermissionMap::userHasScopedPermission($request->user(), $company, 'funds.query'),
             403
         );
 

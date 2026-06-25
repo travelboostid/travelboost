@@ -4,15 +4,34 @@ namespace App\Policies;
 
 use App\Models\TourCategory;
 use App\Models\User;
+use App\Support\CompanyPermissionMap;
 
 class TourCategoryPolicy
 {
+    /**
+     * Determine whether the user has a scoped company permission on any company.
+     */
+    private function hasAnyScopedPermission(User $user, string $permission): bool
+    {
+        if ($user->roles()->where('name', 'like', 'company:%:superadmin')->exists()) {
+            return true;
+        }
+
+        return $user->roles()
+            ->where('name', 'like', 'company:%')
+            ->whereHas('permissions', function ($query) use ($permission) {
+                $query->whereIn('name', CompanyPermissionMap::candidates($permission));
+            })
+            ->exists();
+    }
+
     /**
      * Determine whether the user can view any models.
      */
     public function viewAny(User $user): bool
     {
-        return $user->hasRole('user:admin') || $user->isAbleTo('tour-category.query');
+        return $user->hasRole('user:admin')
+            || $this->hasAnyScopedPermission($user, 'tour-management.query');
     }
 
     /**
@@ -24,11 +43,11 @@ class TourCategoryPolicy
             return true;
         }
 
-        if (! $user->isAbleTo('tour-category.query')) {
+        if (! CompanyPermissionMap::userHasScopedPermission($user, $tourCategory->company_id, 'tour-management.query')) {
             return false;
         }
 
-        return $this->belongsToCategoryCompanyTeam($user, $tourCategory) || $user->hasRole('user:admin');
+        return $this->belongsToCategoryCompanyTeam($user, $tourCategory);
     }
 
     /**
@@ -36,7 +55,8 @@ class TourCategoryPolicy
      */
     public function create(User $user): bool
     {
-        return $user->hasRole('user:admin') || $user->isAbleTo('tour-category.mutation');
+        return $user->hasRole('user:admin')
+            || $this->hasAnyScopedPermission($user, 'tour-management.mutation');
     }
 
     /**
@@ -48,11 +68,11 @@ class TourCategoryPolicy
             return true;
         }
 
-        if (! $user->isAbleTo('tour-category.mutation')) {
+        if (! CompanyPermissionMap::userHasScopedPermission($user, $tourCategory->company_id, 'tour-management.mutation')) {
             return false;
         }
 
-        return $this->belongsToCategoryCompanyTeam($user, $tourCategory) || $user->hasRole('user:admin');
+        return $this->belongsToCategoryCompanyTeam($user, $tourCategory);
     }
 
     /**

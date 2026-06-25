@@ -12,18 +12,22 @@ use App\Models\TourCategory;
 use App\Models\VendorAgentPartner;
 use App\Notifications\TourAgentPromotionNotification;
 use App\Support\AgentVendorTourCatalogDetailBuilder;
+use App\Support\CompanyPermissionMap;
 use App\Support\ResolvesTourScheduleDisplayPrice;
 use App\Support\TourCatalogPreload;
 use App\Support\VendorTourCatalog;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Inertia\Inertia;
 
 class VendorTourCatalogController extends Controller
 {
     use ResolvesTourScheduleDisplayPrice;
 
-    public function index(Company $company, string $username)
+    public function index(Company $company, string $username, Request $request)
     {
+        $this->authorizeCatalogIndex($company, $username, $request);
+
         $vendor = Company::query()
             ->select(['id', 'username', 'name', 'type'])
             ->where('username', $username)
@@ -146,6 +150,10 @@ class VendorTourCatalogController extends Controller
     public function showTourDetails(Company $company, string $vendor, Tour $tour): JsonResponse
     {
         abort_unless($company->type === CompanyType::AGENT, 403);
+        abort_unless(
+            auth()->user() && CompanyPermissionMap::userHasScopedPermission(auth()->user(), $company, 'vendor-config.query'),
+            403,
+        );
 
         $vendorCompany = Company::query()
             ->select(['id', 'username', 'name', 'type'])
@@ -221,7 +229,14 @@ class VendorTourCatalogController extends Controller
 
     public function copy(Company $company, string $vendor, Tour $tour)
     {
+        abort_unless($company->type === CompanyType::AGENT, 403);
+        abort_unless(
+            auth()->user() && CompanyPermissionMap::userHasScopedPermission(auth()->user(), $company, 'vendor-config.mutation'),
+            403,
+        );
+
         $vendor = Company::where('username', $vendor)->firstOrFail();
+        $this->ensureTourBelongsToVendorCatalog($vendor, $tour);
 
         $company->agentTours()->firstOrCreate(
             ['tour_id' => $tour->id],
@@ -252,8 +267,16 @@ class VendorTourCatalogController extends Controller
         return back()->with('success', "{$agents->count()} agent notification(s) sent successfully.");
     }
 
-    public function viewBrochure(Company $company, string $username, Tour $tour)
+    public function viewBrochure(Company $company, string $username, Tour $tour, Request $request)
     {
+        $this->authorizeCatalogIndex($company, $username, $request);
+
+        $catalogOwner = Company::query()
+            ->select(['id', 'username', 'name', 'type'])
+            ->where('username', $username)
+            ->firstOrFail();
+        $this->ensureTourBelongsToVendorCatalog($catalogOwner, $tour);
+
         if ($company->type === CompanyType::AGENT) {
             $agentTour = $company->agentTours()
                 ->with('agentDocument')
@@ -273,6 +296,40 @@ class VendorTourCatalogController extends Controller
             'username' => $username,
             'tour' => $tour,
         ]);
+    }
+
+    private function authorizeCatalogIndex(Company $company, string $username, Request $request): void
+    {
+        $isOwnCatalog = $company->username === $username;
+
+        if ($company->type === CompanyType::VENDOR) {
+            abort_unless($isOwnCatalog, 403);
+            abort_unless(
+                $request->user()
+                    && CompanyPermissionMap::userHasScopedPermission($request->user(), $company, 'tour-management.query'),
+                403,
+            );
+
+            return;
+        }
+
+        abort_unless($company->type === CompanyType::AGENT, 403);
+
+        if ($isOwnCatalog) {
+            abort_unless(
+                $request->user()
+                    && CompanyPermissionMap::userHasScopedPermission($request->user(), $company, 'tour-management.query'),
+                403,
+            );
+
+            return;
+        }
+
+        abort_unless(
+            $request->user()
+                && CompanyPermissionMap::userHasScopedPermission($request->user(), $company, 'vendor-config.query'),
+            403,
+        );
     }
 
     public function viewPublicBrochure($vendor, $tourId)

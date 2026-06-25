@@ -9,6 +9,7 @@ use App\Models\AgentSubscriptionPackage;
 use App\Models\AgentSubscriptionPayment;
 use App\Models\Company;
 use App\Models\Payment;
+use App\Support\CompanyPermissionMap;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
@@ -18,7 +19,7 @@ class AgentSubscriptionController extends Controller
     public function show(Request $request, Company $company)
     {
         abort_unless(
-            $request->user()->isAbleTo('company-settings.query', "company:{$company->id}"),
+            CompanyPermissionMap::userHasScopedPermission($request->user(), $company, 'subscription-ai.query'),
             403
         );
 
@@ -48,7 +49,7 @@ class AgentSubscriptionController extends Controller
     public function storeManualPayment(Request $request, Company $company)
     {
         abort_unless(
-            $request->user()->isAbleTo('company-settings.mutation', "company:{$company->id}"),
+            CompanyPermissionMap::userHasScopedPermission($request->user(), $company, 'subscription-ai.mutation'),
             403
         );
 
@@ -77,6 +78,8 @@ class AgentSubscriptionController extends Controller
                 'provider' => 'manual',
                 'status' => PaymentStatus::PENDING,
                 'payload' => [
+                    'description' => 'Manual Subscription Extension',
+                    'payment_context' => 'manual_subscription_extension',
                     'sender_bank_name' => $validated['sender_bank_name'],
                     'sender_account_number' => $validated['sender_account_number'],
                     'payment_date' => $validated['payment_date'],

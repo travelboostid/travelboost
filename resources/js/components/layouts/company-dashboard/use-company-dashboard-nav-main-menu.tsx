@@ -85,6 +85,102 @@ export function useCompanyDashboardNavMainMenu() {
         e?.stopPropagation();
     };
 
+    const isSuperAdmin = auth.roles.some(
+        (role: string) =>
+            role.endsWith(':superadmin') || role === 'admin:superadmin',
+    );
+
+    const SUPERADMIN_PERMISSIONS = [
+        'agents.query',
+        'agents.mutation',
+        'customers.query',
+        'customers.mutation',
+        'tour-management.query',
+        'tour-management.mutation',
+        'booking.query',
+        'booking.mutation',
+        'funds.query',
+        'funds.mutation',
+        'reports.query',
+        'reports.mutation',
+        'booking-list.query',
+        'booking-list.mutation',
+        'room-listings.query',
+        'room-listings.mutation',
+        'seat-availability.query',
+        'seat-availability.mutation',
+        'settings.query',
+        'settings.mutation',
+        'parameter.query',
+        'parameter.mutation',
+        'chat-ai.query',
+        'chat-ai.mutation',
+        'commission.query',
+        'commission.mutation',
+        'vendor-config.query',
+        'vendor-config.mutation',
+        'marketings.query',
+        'marketings.mutation',
+        'subscription-ai.query',
+        'subscription-ai.mutation',
+        'user.query',
+        'user.mutation',
+        'company.query',
+        'company.mutation',
+        'company-settings.query',
+        'company-settings.mutation',
+        'company-team.query',
+        'company-team.mutation',
+        'wallet.query',
+        'wallet.mutation',
+        'wallet-transaction.query',
+        'wallet-transaction.mutation',
+        'withdrawal.query',
+        'withdrawal.mutation',
+        'payment.query',
+        'payment.mutation',
+        'bank-account.query',
+        'bank-account.mutation',
+        'tour.query',
+        'tour.mutation',
+        'tour-category.query',
+        'tour-category.mutation',
+        'role.query',
+        'role.mutation',
+        'media.query',
+        'media.mutation',
+    ];
+
+    const effectivePermissions = isSuperAdmin
+        ? SUPERADMIN_PERMISSIONS
+        : auth.permissions;
+
+    const hasRole = (role: string): boolean => auth.roles.includes(role);
+
+    const hasPermission = (permission: string): boolean =>
+        effectivePermissions.includes(permission);
+
+    const hasAnyPermission = (permissions: string[]): boolean =>
+        permissions.some((permission) => hasPermission(permission));
+
+    const canViewTourManagement = hasPermission('tour-management.query');
+    const canViewTourCategories = hasPermission('tour-management.query');
+    const canViewAgents = hasPermission('agents.query');
+    const canViewCustomers = hasPermission('customers.query');
+    const canViewFunds = hasPermission('funds.query');
+    const canViewReports = hasPermission('reports.query');
+    const canViewBookingList = hasPermission('booking-list.query');
+    const canViewRoomListings = hasPermission('room-listings.query');
+    const canViewSeatAvailability = hasPermission('seat-availability.query');
+    const canViewSettings = hasPermission('settings.query');
+    const canViewParameters = hasPermission('parameter.query');
+    const canViewChatbot = hasPermission('chat-ai.query');
+    const canViewVendorConfig = hasPermission('vendor-config.query');
+    const canViewSubscription = hasPermission('subscription-ai.query');
+    const canViewCommission = hasPermission('commission.query');
+    const canViewMarketings = hasPermission('marketings.query');
+    const canViewBookings = hasPermission('booking.query');
+
     const unfilteredMenus = [
         {
             id: 'home',
@@ -104,10 +200,12 @@ export function useCompanyDashboardNavMainMenu() {
                     id: `vendor-tours.${vendor.username}`,
                     title: vendor.name,
                     urlOrAction: `/companies/${company.username}/dashboard/vendors/${vendor.username}/tours`,
+                    shouldDisplay: () =>
+                        hasRole('user:agent') && canViewVendorConfig,
                 })) || [],
-            shouldDisplay: (roles, permissions) =>
-                roles.includes('user:agent') &&
-                permissions.includes('tour.query') &&
+            shouldDisplay: () =>
+                hasRole('user:agent') &&
+                canViewVendorConfig &&
                 (data?.data || []).length > 0,
         },
         {
@@ -115,8 +213,7 @@ export function useCompanyDashboardNavMainMenu() {
             title: <FormattedMessage defaultMessage="Agents" />,
             urlOrAction: `/companies/${company.username}/dashboard/agent-registrations`,
             icon: UsersRoundIcon,
-            shouldDisplay: (roles, _permissions) =>
-                roles.includes('user:vendor'),
+            shouldDisplay: () => hasRole('user:vendor') && canViewAgents,
         },
         {
             id: 'tours',
@@ -128,20 +225,29 @@ export function useCompanyDashboardNavMainMenu() {
                     id: 'tours.index',
                     title: <FormattedMessage defaultMessage="Products" />,
                     urlOrAction: `/companies/${company.username}/dashboard/tours`,
-                    shouldDisplay: (_roles, permissions) =>
-                        permissions.includes('tour.query'),
+                    shouldDisplay: () =>
+                        hasRole('user:vendor') && canViewTourManagement,
                 },
                 {
                     id: 'tours.preview',
                     title: <FormattedMessage defaultMessage="My Catalogs" />,
                     urlOrAction: `/companies/${company.username}/dashboard/vendors/${company.username}/tours`,
-                    shouldDisplay: (_roles, permissions) =>
-                        permissions.includes('tour.query'),
+                    shouldDisplay: () =>
+                        hasRole('user:vendor') && canViewTourManagement,
                 },
                 {
                     id: 'tours.orders',
                     title: <FormattedMessage defaultMessage="Bookings" />,
                     urlOrAction: `/companies/${company.username}/dashboard/bookings`,
+                    shouldDisplay: () =>
+                        hasRole('user:vendor') && canViewBookings,
+                },
+                {
+                    id: 'tours.waiting-lists',
+                    title: <FormattedMessage defaultMessage="Waiting Lists" />,
+                    urlOrAction: `/companies/${company.username}/dashboard/waiting-lists`,
+                    shouldDisplay: () =>
+                        hasRole('user:vendor') && canViewBookings,
                 },
                 {
                     id: 'tours.booking-correction',
@@ -150,6 +256,8 @@ export function useCompanyDashboardNavMainMenu() {
                     ),
                     urlOrAction: `/companies/${company.username}/dashboard/booking-correction`,
                     badgeCount: bookingModificationRequestBadgeCount,
+                    shouldDisplay: () =>
+                        hasRole('user:vendor') && canViewBookings,
                 },
                 {
                     id: 'tours.categories',
@@ -157,6 +265,8 @@ export function useCompanyDashboardNavMainMenu() {
                         <FormattedMessage defaultMessage="Product Categories" />
                     ),
                     urlOrAction: `/companies/${company.username}/dashboard/categories`,
+                    shouldDisplay: () =>
+                        hasRole('user:vendor') && canViewTourCategories,
                 },
                 {
                     id: 'tours.price-categories',
@@ -164,6 +274,8 @@ export function useCompanyDashboardNavMainMenu() {
                         <FormattedMessage defaultMessage="Price Categories" />
                     ),
                     urlOrAction: `/companies/${company.username}/dashboard/price-categories`,
+                    shouldDisplay: () =>
+                        hasRole('user:vendor') && canViewTourCategories,
                 },
                 {
                     id: 'tours.visa-categories',
@@ -171,14 +283,16 @@ export function useCompanyDashboardNavMainMenu() {
                         <FormattedMessage defaultMessage="Visa Categories" />
                     ),
                     urlOrAction: `/companies/${company.username}/dashboard/visa-categories`,
+                    shouldDisplay: () =>
+                        hasRole('user:vendor') && canViewTourCategories,
                 },
             ],
-            shouldDisplay: (roles, permissions) =>
-                roles.includes('user:vendor') &&
-                permissions.includes('tour.query'),
+            shouldDisplay: () =>
+                hasRole('user:vendor') &&
+                hasAnyPermission(['tour-management.query', 'booking.query']),
         },
         {
-            id: 'tours',
+            id: 'agent-tours',
             title: <FormattedMessage defaultMessage="Tours" />,
             urlOrAction: '#',
             icon: PlaneIcon,
@@ -187,47 +301,59 @@ export function useCompanyDashboardNavMainMenu() {
                     id: 'agent-tours.index',
                     title: <FormattedMessage defaultMessage="Products" />,
                     urlOrAction: `/companies/${company.username}/dashboard/agent-tours`,
-                    shouldDisplay: (_roles, permissions) =>
-                        permissions.includes('tour.query'),
+                    shouldDisplay: () =>
+                        hasRole('user:agent') && canViewTourManagement,
                 },
                 {
-                    id: 'tours.cats',
+                    id: 'agent-tours.catalogs',
                     title: <FormattedMessage defaultMessage="My Catalogs" />,
                     urlOrAction: `/companies/${company.username}/dashboard/vendors/${company.username}/tours`,
-                    shouldDisplay: (_roles, permissions) =>
-                        permissions.includes('tour-category.query'),
+                    shouldDisplay: () =>
+                        hasRole('user:agent') && canViewTourManagement,
                 },
                 {
-                    id: 'tours.bookings',
+                    id: 'agent-tours.bookings',
                     title: <FormattedMessage defaultMessage="Bookings" />,
                     urlOrAction: `/companies/${company.username}/dashboard/bookings`,
+                    shouldDisplay: () =>
+                        hasRole('user:agent') && canViewBookings,
                 },
                 {
-                    id: 'tours.booking-correction',
+                    id: 'agent-tours.waiting-lists',
+                    title: <FormattedMessage defaultMessage="Waiting Lists" />,
+                    urlOrAction: `/companies/${company.username}/dashboard/waiting-lists`,
+                    shouldDisplay: () =>
+                        hasRole('user:agent') && canViewBookings,
+                },
+                {
+                    id: 'agent-tours.booking-correction',
                     title: (
                         <FormattedMessage defaultMessage="Booking Correction" />
                     ),
                     urlOrAction: `/companies/${company.username}/dashboard/booking-correction`,
+                    shouldDisplay: () =>
+                        hasRole('user:agent') && canViewBookings,
                 },
                 {
-                    id: 'tours.categories',
+                    id: 'agent-tours.categories',
                     title: (
                         <FormattedMessage defaultMessage="Product Categories" />
                     ),
                     urlOrAction: `/companies/${company.username}/dashboard/categories`,
+                    shouldDisplay: () =>
+                        hasRole('user:agent') && canViewTourCategories,
                 },
             ],
-            shouldDisplay: (roles, permissions) =>
-                roles.includes('user:agent') &&
-                permissions.includes('tour.query'),
+            shouldDisplay: () =>
+                hasRole('user:agent') &&
+                hasAnyPermission(['tour-management.query', 'booking.query']),
         },
         {
             id: 'customers',
             title: <FormattedMessage defaultMessage="Customers" />,
             urlOrAction: `/companies/${company.username}/dashboard/customers`,
             icon: BookUserIcon,
-            shouldDisplay: (_roles, permissions) =>
-                permissions.includes('user.query'),
+            shouldDisplay: () => canViewCustomers,
         },
         {
             id: 'funds',
@@ -239,8 +365,7 @@ export function useCompanyDashboardNavMainMenu() {
                     id: 'funds.wallets',
                     title: <FormattedMessage defaultMessage="Wallet" />,
                     urlOrAction: `/companies/${company.username}/dashboard/wallets`,
-                    shouldDisplay: (_roles, permissions) =>
-                        permissions.includes('wallet.query'),
+                    shouldDisplay: () => hasPermission('funds.query'),
                 },
                 {
                     id: 'funds.wallet-transactions',
@@ -248,8 +373,7 @@ export function useCompanyDashboardNavMainMenu() {
                         <FormattedMessage defaultMessage="Wallet Transactions" />
                     ),
                     urlOrAction: `/companies/${company.username}/dashboard/wallet-transactions`,
-                    shouldDisplay: (_roles, permissions) =>
-                        permissions.includes('wallet-transaction.query'),
+                    shouldDisplay: () => hasPermission('funds.query'),
                 },
                 {
                     id: 'funds.commission-history',
@@ -257,22 +381,20 @@ export function useCompanyDashboardNavMainMenu() {
                         <FormattedMessage defaultMessage="Commission History" />
                     ),
                     urlOrAction: `/companies/${company.username}/dashboard/commission-history`,
-                    shouldDisplay: (roles, _permissions) =>
-                        roles.includes('user:agent'),
+                    shouldDisplay: () =>
+                        hasRole('user:agent') && hasPermission('funds.query'),
                 },
                 {
                     id: 'funds.bank-accounts',
                     title: <FormattedMessage defaultMessage="Bank Accounts" />,
                     urlOrAction: `/companies/${company.username}/dashboard/bank-accounts`,
-                    shouldDisplay: (_roles, permissions) =>
-                        permissions.includes('bank-account.query'),
+                    shouldDisplay: () => hasPermission('funds.query'),
                 },
                 {
                     id: 'funds.withdrawals',
                     title: <FormattedMessage defaultMessage="Withdrawals" />,
                     urlOrAction: `/companies/${company.username}/dashboard/withdrawals`,
-                    shouldDisplay: (_roles, permissions) =>
-                        permissions.includes('withdrawal.query'),
+                    shouldDisplay: () => hasPermission('funds.query'),
                 },
                 {
                     id: 'funds.payments',
@@ -280,14 +402,12 @@ export function useCompanyDashboardNavMainMenu() {
                         <FormattedMessage defaultMessage="Payment History" />
                     ),
                     urlOrAction: `/companies/${company.username}/dashboard/payments`,
-                    shouldDisplay: (_roles, permissions) =>
-                        permissions.includes('payment.query'),
+                    shouldDisplay: () => hasPermission('funds.query'),
                 },
             ],
-            shouldDisplay: (roles, permissions) =>
-                (roles.includes('user:agent') ||
-                    roles.includes('user:vendor')) &&
-                permissions.includes('wallet.query'),
+            shouldDisplay: () =>
+                (hasRole('user:agent') || hasRole('user:vendor')) &&
+                canViewFunds,
         },
         {
             id: 'marketings',
@@ -305,6 +425,8 @@ export function useCompanyDashboardNavMainMenu() {
                         ? (handleLockedClick as any)
                         : `/companies/${company.username}/dashboard/page/edit`,
                     disabled: isMarketingDisabled,
+                    shouldDisplay: () =>
+                        hasRole('user:agent') && canViewMarketings,
                 },
                 {
                     id: 'marketings.landing-page.view',
@@ -317,6 +439,8 @@ export function useCompanyDashboardNavMainMenu() {
                         : companySubdomain,
                     target: isMarketingDisabled ? undefined : '_blank',
                     disabled: isMarketingDisabled,
+                    shouldDisplay: () =>
+                        hasRole('user:agent') && canViewMarketings,
                 },
                 {
                     id: 'marketings.analytics',
@@ -328,21 +452,11 @@ export function useCompanyDashboardNavMainMenu() {
                         ? (handleLockedClick as any)
                         : `/companies/${company.username}/dashboard/analytics`,
                     disabled: isMarketingDisabled,
+                    shouldDisplay: () =>
+                        hasRole('user:agent') && canViewMarketings,
                 },
-                // {
-                //     id: 'marketings.budgeting',
-                //     title: renderTitle(
-                //         <FormattedMessage defaultMessage="Promotion Budgetting" />,
-                //         isMarketingDisabled,
-                //     ),
-                //     urlOrAction: isMarketingDisabled
-                //         ? (handleLockedClick as any)
-                //         : '#',
-                //     disabled: isMarketingDisabled,
-                // },
             ],
-            shouldDisplay: (roles, _permissions) =>
-                roles.includes('user:agent'),
+            shouldDisplay: () => hasRole('user:agent') && canViewMarketings,
         },
         {
             id: 'reports',
@@ -354,9 +468,9 @@ export function useCompanyDashboardNavMainMenu() {
                     id: 'reports.sales',
                     title: <FormattedMessage defaultMessage="Sales Report" />,
                     urlOrAction: `/companies/${company.username}/dashboard/reports/sales`,
-                    shouldDisplay: (roles, _permissions) =>
-                        roles.includes('user:agent') ||
-                        roles.includes('user:vendor'),
+                    shouldDisplay: () =>
+                        (hasRole('user:agent') || hasRole('user:vendor')) &&
+                        canViewReports,
                 },
                 {
                     id: 'reports.commissions',
@@ -364,24 +478,24 @@ export function useCompanyDashboardNavMainMenu() {
                         <FormattedMessage defaultMessage="Commission Report" />
                     ),
                     urlOrAction: `/companies/${company.username}/dashboard/reports/commissions`,
-                    shouldDisplay: (roles, _permissions) =>
-                        roles.includes('user:agent') ||
-                        roles.includes('user:vendor'),
+                    shouldDisplay: () =>
+                        (hasRole('user:agent') || hasRole('user:vendor')) &&
+                        canViewReports,
                 },
                 {
                     id: 'reports.bookings',
                     title: <FormattedMessage defaultMessage="Booking List" />,
                     urlOrAction: `/companies/${company.username}/dashboard/reports/bookings`,
-                    shouldDisplay: (roles, _permissions) =>
-                        roles.includes('user:agent') ||
-                        roles.includes('user:vendor'),
+                    shouldDisplay: () =>
+                        (hasRole('user:agent') || hasRole('user:vendor')) &&
+                        canViewBookingList,
                 },
                 {
                     id: 'reports.room-listings',
                     title: <FormattedMessage defaultMessage="Room Listings" />,
                     urlOrAction: `/companies/${company.username}/dashboard/reports/room-listings`,
-                    shouldDisplay: (roles, _permissions) =>
-                        roles.includes('user:vendor'),
+                    shouldDisplay: () =>
+                        hasRole('user:vendor') && canViewRoomListings,
                 },
                 {
                     id: 'reports.seat-availability',
@@ -389,9 +503,18 @@ export function useCompanyDashboardNavMainMenu() {
                         <FormattedMessage defaultMessage="Seat Availability" />
                     ),
                     urlOrAction: `/companies/${company.username}/dashboard/reports/seat-availabilities`,
-                    visibleToCompanyTypes: ['vendor'],
+                    shouldDisplay: () =>
+                        hasRole('user:vendor') && canViewSeatAvailability,
                 },
             ],
+            shouldDisplay: () =>
+                (hasRole('user:agent') || hasRole('user:vendor')) &&
+                hasAnyPermission([
+                    'reports.query',
+                    'booking-list.query',
+                    'room-listings.query',
+                    'seat-availability.query',
+                ]),
         },
         {
             id: 'settings',
@@ -403,8 +526,7 @@ export function useCompanyDashboardNavMainMenu() {
                     id: 'settings.profile',
                     title: <FormattedMessage defaultMessage="Profile" />,
                     urlOrAction: `/companies/${company.username}/dashboard/profile`,
-                    shouldDisplay: (roles, permissions) =>
-                        permissions.includes('company-settings.query'),
+                    shouldDisplay: () => canViewSettings,
                 },
                 {
                     id: 'settings.linked-accounts',
@@ -412,24 +534,21 @@ export function useCompanyDashboardNavMainMenu() {
                         <FormattedMessage defaultMessage="Linked accounts" />
                     ),
                     urlOrAction: `/companies/${company.username}/dashboard/linked-accounts`,
-                    shouldDisplay: (_roles, permissions) =>
-                        permissions.includes('company-settings.query'),
+                    shouldDisplay: () => canViewSettings,
                 },
                 {
                     id: 'settings.parameter-vendor',
                     title: <FormattedMessage defaultMessage="Parameters" />,
                     urlOrAction: `/companies/${company.username}/dashboard/parameter-vendor`,
-                    shouldDisplay: (roles, permissions) =>
-                        roles.includes('user:vendor') &&
-                        permissions.includes('company-settings.query'),
+                    shouldDisplay: () =>
+                        hasRole('user:vendor') && canViewParameters,
                 },
                 {
                     id: 'settings.parameter-agent',
                     title: <FormattedMessage defaultMessage="Parameters" />,
                     urlOrAction: `/companies/${company.username}/dashboard/parameter-agent`,
-                    shouldDisplay: (roles, permissions) =>
-                        roles.includes('user:agent') &&
-                        permissions.includes('company-settings.query'),
+                    shouldDisplay: () =>
+                        hasRole('user:agent') && canViewParameters,
                 },
                 {
                     id: 'settings.teams',
@@ -437,22 +556,21 @@ export function useCompanyDashboardNavMainMenu() {
                         <FormattedMessage defaultMessage="User Management" />
                     ),
                     urlOrAction: `/companies/${company.username}/dashboard/teams`,
-                    shouldDisplay: (_roles, permissions) =>
-                        permissions.includes('company-team.query'),
+                    shouldDisplay: () => canViewSettings,
                 },
                 {
                     id: 'settings.roles',
                     title: <FormattedMessage defaultMessage="Access Roles" />,
                     urlOrAction: `/companies/${company.username}/dashboard/roles`,
-                    shouldDisplay: (_roles, permissions) =>
-                        permissions.includes('role.query'),
+                    shouldDisplay: () => canViewSettings,
                 },
                 {
                     id: 'settings.chatbot',
                     title: <FormattedMessage defaultMessage="Chat AI" />,
                     urlOrAction: `/companies/${company.username}/dashboard/chatbot`,
-                    shouldDisplay: (roles, permissions) =>
-                        permissions.includes('company-settings.query'),
+                    shouldDisplay: () =>
+                        (hasRole('user:vendor') && canViewChatbot) ||
+                        (hasRole('user:agent') && canViewSubscription),
                 },
                 {
                     id: 'settings.vendor-registrations',
@@ -460,21 +578,26 @@ export function useCompanyDashboardNavMainMenu() {
                         <FormattedMessage defaultMessage="Registration to Vendor" />
                     ),
                     urlOrAction: `/companies/${company.username}/dashboard/vendor-registrations`,
-                    shouldDisplay: (roles, permissions) =>
-                        roles.includes('user:agent') &&
-                        permissions.includes('company-settings.query'),
+                    shouldDisplay: () =>
+                        hasRole('user:agent') && canViewVendorConfig,
                 },
                 {
                     id: 'settings.agent-subscriptions',
                     title: 'Agent Subscriptions',
                     urlOrAction: `/companies/${company.username}/dashboard/agent-subscriptions`,
-                    shouldDisplay: (roles, permissions) =>
-                        roles.includes('user:agent') &&
-                        permissions.includes('company-settings.query'),
+                    shouldDisplay: () =>
+                        hasRole('user:agent') && canViewSubscription,
                 },
             ],
-            shouldDisplay: (roles, _permissions) =>
-                roles.includes('user:agent') || roles.includes('user:vendor'),
+            shouldDisplay: () =>
+                (hasRole('user:agent') || hasRole('user:vendor')) &&
+                hasAnyPermission([
+                    'settings.query',
+                    'parameter.query',
+                    'chat-ai.query',
+                    'vendor-config.query',
+                    'subscription-ai.query',
+                ]),
         },
         {
             id: 'commission-setup',
@@ -488,9 +611,8 @@ export function useCompanyDashboardNavMainMenu() {
                         <FormattedMessage defaultMessage="Agent Categories" />
                     ),
                     urlOrAction: `/companies/${company.username}/dashboard/agent-tiers`,
-                    shouldDisplay: (roles, permissions) =>
-                        roles.includes('user:vendor') &&
-                        permissions.includes('company-settings.query'),
+                    shouldDisplay: () =>
+                        hasRole('user:vendor') && canViewCommission,
                 },
                 {
                     id: 'commission-setup.product-categories',
@@ -498,9 +620,8 @@ export function useCompanyDashboardNavMainMenu() {
                         <FormattedMessage defaultMessage="Product Categories" />
                     ),
                     urlOrAction: `/companies/${company.username}/dashboard/product-commission-categories`,
-                    shouldDisplay: (roles, permissions) =>
-                        roles.includes('user:vendor') &&
-                        permissions.includes('company-settings.query'),
+                    shouldDisplay: () =>
+                        hasRole('user:vendor') && canViewCommission,
                 },
                 {
                     id: 'commission-setup.tour-rules',
@@ -508,9 +629,8 @@ export function useCompanyDashboardNavMainMenu() {
                         <FormattedMessage defaultMessage="Base Commission" />
                     ),
                     urlOrAction: `/companies/${company.username}/dashboard/tour-commission-rules`,
-                    shouldDisplay: (roles, permissions) =>
-                        roles.includes('user:vendor') &&
-                        permissions.includes('company-settings.query'),
+                    shouldDisplay: () =>
+                        hasRole('user:vendor') && canViewCommission,
                 },
                 {
                     id: 'commission-setup.additional-rules',
@@ -518,31 +638,37 @@ export function useCompanyDashboardNavMainMenu() {
                         <FormattedMessage defaultMessage="Additional Commission" />
                     ),
                     urlOrAction: `/companies/${company.username}/dashboard/tour-commission-rules/additional`,
-                    shouldDisplay: (roles, permissions) =>
-                        roles.includes('user:vendor') &&
-                        permissions.includes('company-settings.query'),
+                    shouldDisplay: () =>
+                        hasRole('user:vendor') && canViewCommission,
                 },
             ],
-            shouldDisplay: (roles, permissions) =>
-                roles.includes('user:vendor') &&
-                permissions.includes('company-settings.query'),
+            shouldDisplay: () => hasRole('user:vendor') && canViewCommission,
         },
     ] as MenuItem[];
 
     const isMenuVisible = (menu: MenuItem): boolean => {
         if (menu.shouldDisplay) {
-            return menu.shouldDisplay(auth.roles, auth.permissions);
+            return menu.shouldDisplay(auth.roles, effectivePermissions);
         }
         return true;
     };
 
     const filterMenuItems = (menus: MenuItem[]): MenuItem[] => {
-        return menus.filter(isMenuVisible).map((menu) => {
-            if (menu.items) {
-                return { ...menu, items: filterMenuItems(menu.items) };
+        const filtered: MenuItem[] = [];
+        for (const menu of menus) {
+            if (!isMenuVisible(menu)) {
+                continue;
             }
-            return menu;
-        });
+            if (menu.items) {
+                const filteredChildren = filterMenuItems(menu.items);
+                if (filteredChildren.length > 0) {
+                    filtered.push({ ...menu, items: filteredChildren });
+                }
+            } else {
+                filtered.push(menu);
+            }
+        }
+        return filtered;
     };
 
     return filterMenuItems(unfilteredMenus);

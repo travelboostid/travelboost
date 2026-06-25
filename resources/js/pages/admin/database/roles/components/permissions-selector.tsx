@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { Checkbox } from '@/components/ui/checkbox';
 import {
@@ -25,8 +25,25 @@ export default function PermissionsSelector({
         value || defaultValue || {},
     );
 
+    useEffect(() => {
+        if (value) {
+            // eslint-disable-next-line react-hooks/set-state-in-effect
+            setInternalValue(value);
+        }
+    }, [value]);
+
     const handleChange = (v: Record<string, boolean>) => {
-        const newValue = { ...internalValue, ...v };
+        const updates = { ...v };
+        for (const [key, val] of Object.entries(v)) {
+            if (key.endsWith('.mutation') && val === true) {
+                const queryKey = key.replace(/\.mutation$/, '.query');
+                updates[queryKey] = true;
+            } else if (key.endsWith('.query') && val === false) {
+                const mutationKey = key.replace(/\.query$/, '.mutation');
+                updates[mutationKey] = false;
+            }
+        }
+        const newValue = { ...internalValue, ...updates };
         setInternalValue(newValue);
         onChange?.(newValue);
     };

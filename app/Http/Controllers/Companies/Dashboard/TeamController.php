@@ -16,6 +16,7 @@ use App\Models\CompanyTeam;
 use App\Models\Role;
 use App\Models\User;
 use App\Notifications\TeamAccountNotification;
+use App\Support\CompanyPermissionMap;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Carbon;
@@ -31,6 +32,15 @@ class TeamController extends Controller
 {
     public function index(Company $company, IndexCompanyTeamRequest $request): Response
     {
+        abort_unless(
+            CompanyPermissionMap::userHasScopedPermission(
+                $request->user(),
+                $company,
+                'settings.query',
+            ),
+            403
+        );
+
         $validated = $request->validated();
 
         $members = $this->filteredTeamsQuery($company, $validated)
@@ -46,10 +56,17 @@ class TeamController extends Controller
             ->where('user_id', auth()->id())
             ->first();
 
+        $isOwner = (bool) ($currentMember?->is_owner);
+        $hasMutationPermission = CompanyPermissionMap::userHasScopedPermission(
+            $request->user(),
+            $company,
+            'settings.mutation',
+        );
+
         return Inertia::render('companies/dashboard/teams/index', [
             'data' => $members,
             'roles' => $roles,
-            'canManageMembers' => (bool) $currentMember?->is_owner,
+            'canManageMembers' => $isOwner || $hasMutationPermission,
         ]);
     }
 
@@ -416,7 +433,12 @@ class TeamController extends Controller
             ->where('user_id', auth()->id())
             ->first();
 
-        abort_unless($currentMember?->is_owner, 403);
+        $isOwner = (bool) ($currentMember?->is_owner);
+        $hasMutationPermission = auth()->user()
+            ? CompanyPermissionMap::userHasScopedPermission(auth()->user(), $company, 'settings.mutation')
+            : false;
+
+        abort_unless($isOwner || $hasMutationPermission, 403);
     }
 
     private function ensureTeamBelongsToCompany(Company $company, CompanyTeam $team): CompanyTeam

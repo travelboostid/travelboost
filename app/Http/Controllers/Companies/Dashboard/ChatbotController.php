@@ -9,6 +9,7 @@ use App\Http\Resources\PaymentResource;
 use App\Models\AiCreditTopupPayment;
 use App\Models\Company;
 use App\Models\Payment;
+use App\Support\CompanyPermissionMap;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -19,7 +20,7 @@ class ChatbotController extends Controller
     public function show(Request $request, Company $company)
     {
         abort_unless(
-            $request->user()->isAbleTo('company-settings.query', "company:{$company->id}"),
+            CompanyPermissionMap::userHasScopedPermission($request->user(), $company, 'chat-ai.query'),
             403
         );
 
@@ -66,7 +67,7 @@ class ChatbotController extends Controller
     public function update(UpdateChatbotRequest $request, Company $company)
     {
         abort_unless(
-            $request->user()->isAbleTo('company-settings.mutation', "company:{$company->id}"),
+            CompanyPermissionMap::userHasScopedPermission($request->user(), $company, 'chat-ai.mutation'),
             403
         );
 
@@ -79,7 +80,7 @@ class ChatbotController extends Controller
     public function storeManualTopup(Request $request, Company $company)
     {
         abort_unless(
-            $request->user()->isAbleTo('company-settings.mutation', "company:{$company->id}"),
+            CompanyPermissionMap::userHasScopedPermission($request->user(), $company, 'chat-ai.mutation'),
             403
         );
         $validated = $request->validate([

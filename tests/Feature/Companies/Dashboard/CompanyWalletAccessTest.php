@@ -3,7 +3,6 @@
 use App\Enums\CompanyTeamStatus;
 use App\Models\Company;
 use App\Models\CompanyTeam;
-use App\Models\Permission;
 use App\Models\Role;
 use App\Models\User;
 use Database\Seeders\Common\RolePermissionSeeder;
@@ -106,8 +105,13 @@ test('wallet transactions page scopes activity to the selected wallet', function
             ->where('expense_amount', 0));
 });
 
-test('wallet page rejects users without wallet query permission', function () {
+test('wallet page rejects users without funds query permission', function () {
     $limitedUser = User::factory()->create();
+    $restrictedRole = Role::create([
+        'name' => "company:{$this->company->id}:restricted-funds",
+        'display_name' => 'Restricted Funds',
+        'description' => 'Cannot access funds pages',
+    ]);
 
     CompanyTeam::create([
         'company_id' => $this->company->id,
@@ -117,7 +121,7 @@ test('wallet page rejects users without wallet query permission', function () {
 
     $limitedUser->addRoles([
         'user:vendor',
-        "company:{$this->company->id}:admin",
+        $restrictedRole->name,
     ], "company:{$this->company->id}");
 
     $this->actingAs($limitedUser)
@@ -125,19 +129,12 @@ test('wallet page rejects users without wallet query permission', function () {
         ->assertForbidden();
 });
 
-test('wallet transactions page rejects users without wallet transaction permission', function () {
+test('wallet transactions page rejects users without funds query permission', function () {
     $limitedUser = User::factory()->create();
-    $walletOnlyRoleName = "company:{$this->company->id}:wallet-only";
-
-    $walletOnlyRole = Role::create([
-        'name' => $walletOnlyRoleName,
-        'display_name' => 'Wallet Only',
-        'description' => 'Can view wallet balance but not transactions',
-    ]);
-
-    $walletOnlyRole->syncPermissions([
-        Permission::query()->where('name', 'company.query')->firstOrFail(),
-        Permission::query()->where('name', 'wallet.query')->firstOrFail(),
+    $restrictedRole = Role::create([
+        'name' => "company:{$this->company->id}:restricted-wallet-transactions",
+        'display_name' => 'Restricted Wallet Transactions',
+        'description' => 'Cannot access funds pages',
     ]);
 
     CompanyTeam::create([
@@ -148,7 +145,7 @@ test('wallet transactions page rejects users without wallet transaction permissi
 
     $limitedUser->addRoles([
         'user:vendor',
-        $walletOnlyRoleName,
+        $restrictedRole->name,
     ], "company:{$this->company->id}");
 
     $this->actingAs($limitedUser)

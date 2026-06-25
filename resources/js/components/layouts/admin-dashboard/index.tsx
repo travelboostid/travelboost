@@ -4,7 +4,9 @@ import {
     SidebarProvider,
     SidebarTrigger,
 } from '@/components/ui/sidebar';
-import { type ReactNode } from 'react';
+import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
+import { type ReactNode, useEffect } from 'react';
+import { toast } from 'sonner';
 import type { BreadcrumbItemInfo } from '../components/breadcrumb-renderer';
 import BreadcrumbRenderer from '../components/breadcrumb-renderer';
 import { SidebarSection } from './sidebar-section';
@@ -20,6 +22,13 @@ export type AdminDashboardLayoutProps = {
 
 export default function AdminDashboardLayout(props: AdminDashboardLayoutProps) {
     const { children, breadcrumb, applet, containerClassName } = props;
+    const { flash } = usePageSharedDataProps() as any;
+
+    useEffect(() => {
+        if (flash?.warning) {
+            toast.warning(flash.warning);
+        }
+    }, [flash?.warning]);
 
     return (
         <SidebarProvider>

@@ -23,7 +23,10 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
 
 class User extends Authenticatable implements Customer, LaratrustUser, MustVerifyEmailContract, Wallet
 {
-    use CanPay, HasBankAccounts, HasFactory, HasRolesAndPermissions, HasWallet, HasWallets, MustVerifyEmailTrait, Notifiable, TwoFactorAuthenticatable;
+    use CanPay, HasBankAccounts, HasFactory, HasWallet, HasWallets, MustVerifyEmailTrait, Notifiable, TwoFactorAuthenticatable;
+    use HasRolesAndPermissions {
+        isAbleTo as laratrustIsAbleTo;
+    }
 
     protected $fillable = [
         'name',
@@ -146,5 +149,69 @@ class User extends Authenticatable implements Customer, LaratrustUser, MustVerif
     public function savedPassengers()
     {
         return $this->hasMany(SavedPassenger::class);
+    }
+
+    /**
+     * Check if user has permissions, scoped to a company if a team is provided.
+     *
+     * @param  string|array|\BackedEnum  $permissions
+     * @param  mixed  $team
+     */
+    public function isAbleTo($permissions, $team = null, bool $requireAll = false): bool
+    {
+        $companyId = null;
+
+        if ($team !== null) {
+            if ($team instanceof Company) {
+                $companyId = $team->id;
+            } elseif (is_string($team) && str_starts_with($team, 'company:')) {
+                $companyId = (int) substr($team, 8);
+            } elseif (is_numeric($team)) {
+                $companyId = (int) $team;
+            }
+        }
+
+        if ($companyId !== null) {
+            if ($permissions instanceof \BackedEnum) {
+                $permissions = $permissions->value;
+            }
+
+            $permissionsArray = is_array($permissions) ? $permissions : [$permissions];
+            $permissionsArray = array_map(function ($perm) {
+                return $perm instanceof \BackedEnum ? $perm->value : $perm;
+            }, $permissionsArray);
+
+            if ($requireAll) {
+                foreach ($permissionsArray as $permission) {
+                    $hasPermission = $this->roles()
+                        ->where('name', 'like', "company:{$companyId}:%")
+                        ->whereHas('permissions', function ($query) use ($permission) {
+                            $query->where('name', $permission);
+                        })
+                        ->exists();
+
+                    if (! $hasPermission) {
+                        return false;
+                    }
+                }
+
+                return true;
+            }
+
+            $hasPermission = $this->roles()
+                ->where('name', 'like', "company:{$companyId}:%")
+                ->whereHas('permissions', function ($query) use ($permissionsArray) {
+                    $query->whereIn('name', $permissionsArray);
+                })
+                ->exists();
+
+            if ($hasPermission) {
+                return true;
+            }
+
+            return false;
+        }
+
+        return $this->laratrustIsAbleTo($permissions, $team, $requireAll);
     }
 }

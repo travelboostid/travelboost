@@ -8,11 +8,29 @@ use App\Models\User;
 class CompanyPolicy
 {
     /**
+     * Determine whether the user has a scoped company permission on any company.
+     */
+    private function hasAnyScopedPermission(User $user, string $permission): bool
+    {
+        if ($user->roles()->where('name', 'like', 'company:%:superadmin')->exists()) {
+            return true;
+        }
+
+        return $user->roles()
+            ->where('name', 'like', 'company:%')
+            ->whereHas('permissions', function ($query) use ($permission) {
+                $query->where('name', $permission);
+            })
+            ->exists();
+    }
+
+    /**
      * Determine whether the user can view any models.
      */
     public function viewAny(User $user): bool
     {
-        return $user->isAbleTo('company.query');
+        return $user->hasRole('user:admin')
+            || $this->hasAnyScopedPermission($user, 'company.query');
     }
 
     /**
@@ -20,11 +38,11 @@ class CompanyPolicy
      */
     public function view(User $user, Company $company): bool
     {
-        if (! $user->isAbleTo('company.query')) {
-            return false;
+        if ($user->hasRole('user:admin')) {
+            return true;
         }
 
-        return $this->belongsToCompanyTeam($user, $company) || $user->hasRole('user:admin');
+        return $this->belongsToCompanyTeam($user, $company);
     }
 
     /**
@@ -32,7 +50,8 @@ class CompanyPolicy
      */
     public function create(User $user): bool
     {
-        return $user->isAbleTo('company.mutation');
+        return $user->hasRole('user:admin')
+            || $this->hasAnyScopedPermission($user, 'company.mutation');
     }
 
     /**
@@ -40,11 +59,15 @@ class CompanyPolicy
      */
     public function update(User $user, Company $company): bool
     {
-        if (! $user->isAbleTo('company.mutation')) {
+        if ($user->hasRole('user:admin')) {
+            return true;
+        }
+
+        if (! $user->isAbleTo('company.mutation', "company:{$company->id}")) {
             return false;
         }
 
-        return $this->belongsToCompanyTeam($user, $company) || $user->hasRole('user:admin');
+        return $this->belongsToCompanyTeam($user, $company);
     }
 
     /**
@@ -52,11 +75,15 @@ class CompanyPolicy
      */
     public function delete(User $user, Company $company): bool
     {
-        if (! $user->isAbleTo('company.mutation')) {
+        if ($user->hasRole('user:admin')) {
+            return true;
+        }
+
+        if (! $user->isAbleTo('company.mutation', "company:{$company->id}")) {
             return false;
         }
 
-        return $this->belongsToCompanyTeam($user, $company) || $user->hasRole('user:admin');
+        return $this->belongsToCompanyTeam($user, $company);
     }
 
     /**

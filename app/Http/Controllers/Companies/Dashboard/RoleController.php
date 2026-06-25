@@ -9,8 +9,10 @@ use App\Http\Requests\Companies\UpdateRoleRequest;
 use App\Models\Company;
 use App\Models\Permission;
 use App\Models\Role;
+use App\Support\CompanyPermissionMap;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -19,9 +21,18 @@ class RoleController extends Controller
 {
     public function index(Company $company, IndexCompanyRoleRequest $request): Response
     {
+        abort_unless(
+            CompanyPermissionMap::userHasScopedPermission(
+                $request->user(),
+                $company,
+                'settings.query',
+            ),
+            403
+        );
+
         $validated = $request->validated();
 
-        $companyUsablePermissions = config('travelboost.company_usable_permissions');
+        $companyUsablePermissions = CompanyPermissionMap::userFacingPermissionsForCompany($company);
         $permissions = Permission::query()
             ->whereIn('name', $companyUsablePermissions)
             ->orderBy('name')
@@ -29,30 +40,61 @@ class RoleController extends Controller
 
         $roles = $this->filteredRolesQuery($company, $validated)
             ->paginate($validated['per_page'] ?? 10)
+            ->through(function (Role $role) use ($company): Role {
+                $role->setRelation('permissions', $role->permissions->filter(
+                    fn (Permission $permission): bool => in_array(
+                        $permission->name,
+                        CompanyPermissionMap::userFacingPermissionsForCompany($company),
+                        true,
+                    ),
+                )->values());
+
+                return $role;
+            })
             ->withQueryString();
 
         return Inertia::render('companies/dashboard/roles/index', [
             'data' => $roles,
-            'permissions' => $permissions,
+            'permissions' => $permissions->values()->all(),
         ]);
     }
 
     public function store(StoreRoleRequest $request, Company $company): RedirectResponse
     {
+        abort_unless(
+            CompanyPermissionMap::userHasScopedPermission(
+                $request->user(),
+                $company,
+                'settings.mutation',
+            ),
+            403
+        );
+
         $validated = $request->validated();
 
         $permissions = Arr::where($validated['permissions'] ?? [], fn ($v) => $v);
+        $selectedPermissions = CompanyPermissionMap::visibleSelection(array_keys($permissions), $company);
+        $syncedPermissions = CompanyPermissionMap::expand($selectedPermissions);
 
         $validated['name'] = "company:{$company->id}:{$validated['name']}";
 
         $role = Role::create($validated);
-        $role->syncPermissions(array_keys($permissions));
+        $role->syncPermissions($syncedPermissions);
 
         return back()->with('success', 'Role created successfully.');
     }
 
     public function update(UpdateRoleRequest $request, Company $company, Role $role): RedirectResponse
     {
+        abort_unless(
+            CompanyPermissionMap::userHasScopedPermission(
+                $request->user(),
+                $company,
+                'settings.mutation',
+            ),
+            403
+        );
+
         $role = $this->ensureRoleBelongsToCompany($company, $role);
 
         if ($this->isProtectedRole($role)) {
@@ -62,6 +104,14 @@ class RoleController extends Controller
         $validated = $request->validated();
 
         $permissions = Arr::where($validated['permissions'] ?? [], fn ($v) => $v);
+        $selectedPermissions = CompanyPermissionMap::visibleSelection(array_keys($permissions), $company);
+        $syncedPermissions = CompanyPermissionMap::expand($selectedPermissions);
+
+        if (isset($validated['permissions']) && $request->user()->roles->contains('id', $role->id)) {
+            if (! in_array('settings.query', $selectedPermissions, true) || ! in_array('settings.mutation', $selectedPermissions, true)) {
+                return back()->withErrors(['permissions' => 'You cannot remove View Settings or Manage Settings from your own role.']);
+            }
+        }
 
         if (isset($validated['name'])) {
             $validated['name'] = "company:{$company->id}:{$validated['name']}";
@@ -70,18 +120,31 @@ class RoleController extends Controller
         $role->update($validated);
 
         if (isset($validated['permissions'])) {
-            $role->syncPermissions(array_keys($permissions));
+            $role->syncPermissions($syncedPermissions);
         }
 
         return back()->with('success', 'Role updated successfully.');
     }
 
-    public function destroy(Company $company, Role $role): RedirectResponse
+    public function destroy(Request $request, Company $company, Role $role): RedirectResponse
     {
+        abort_unless(
+            CompanyPermissionMap::userHasScopedPermission(
+                $request->user(),
+                $company,
+                'settings.mutation',
+            ),
+            403
+        );
+
         $role = $this->ensureRoleBelongsToCompany($company, $role);
 
         if ($this->isProtectedRole($role)) {
             return back()->withErrors(['role' => 'The superadmin role cannot be deleted.']);
+        }
+
+        if ($request->user()->roles->contains('id', $role->id)) {
+            return back()->withErrors(['role' => 'You cannot delete a role assigned to yourself.']);
         }
 
         $role->delete();
