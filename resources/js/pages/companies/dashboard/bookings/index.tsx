@@ -52,6 +52,10 @@ import type {
     PageProps,
     PaymentDetail,
 } from './booking-index-types';
+import {
+    BookingIndexFollowupSummary,
+    FollowupSummarySkeleton,
+} from './components/booking-index-followup-summary';
 
 const BookingIndexRowActions = lazy(() =>
     import('./components/booking-index-row-actions').then((module) => ({
@@ -670,7 +674,7 @@ function buildColumns(
 // Page
 // ---------------------------------------------------------------------------
 
-export default function Page({ data, followupSummary }: PageProps) {
+export default function Page({ data }: PageProps) {
     const intl = useIntl();
     const { company } = usePageSharedDataProps();
     const statusTabs = React.useMemo(() => getStatusTabs(intl), [intl]);
@@ -874,12 +878,7 @@ export default function Page({ data, followupSummary }: PageProps) {
                         data="followupSummary"
                         fallback={<FollowupSummarySkeleton />}
                     >
-                        {followupSummary ? (
-                            <FollowupSummaryCards
-                                summary={followupSummary}
-                                companyUsername={company.username}
-                            />
-                        ) : null}
+                        <BookingIndexFollowupSummary />
                     </Deferred>
 
                     {/* ── Toolbar: search + view-columns ──────────────────── */}
