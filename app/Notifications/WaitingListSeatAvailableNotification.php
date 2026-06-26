@@ -38,7 +38,7 @@ class WaitingListSeatAvailableNotification extends Notification
             ->subject((string) $data['title'])
             ->greeting('Hello,')
             ->line((string) $data['message'])
-            ->action('Complete Booking', url((string) $data['action_url']))
+            ->action('Complete Booking', (string) $data['action_url'])
             ->line('This seat offer expires on '.$this->offerExpiresAt->timezone(config('app.timezone'))->format('d M Y H:i').'.');
     }
 
@@ -63,36 +63,7 @@ class WaitingListSeatAvailableNotification extends Notification
             'booking_id' => $this->booking->id,
             'booking_number' => $this->booking->booking_number,
             'offer_expires_at' => $this->offerExpiresAt->toIso8601String(),
-            'action_url' => $this->bookingActionUrl(),
+            'action_url' => WaitingListBookingCreateUrl::fromOffer($this->booking, $this->schedule, absolute: true),
         ];
-    }
-
-    private function bookingActionUrl(): string
-    {
-        $this->schedule->loadMissing([
-            'tourSchedule:id,departure_date',
-            'waitingList.tour.company:id,username',
-        ]);
-        $this->booking->loadMissing(['agent:id,username', 'vendor:id,username', 'tour:id']);
-
-        $url = WaitingListBookingCreateUrl::fromOffer($this->booking, $this->schedule);
-
-        if ($url !== null) {
-            return $url;
-        }
-
-        $departureDate = $this->schedule->tourSchedule?->departure_date;
-        $date = $departureDate instanceof \DateTimeInterface
-            ? $departureDate->format('Y-m-d')
-            : (string) $departureDate;
-        $tourId = $this->booking->tour_id;
-
-        $params = http_build_query([
-            'date' => $date,
-            'booking_number' => $this->booking->booking_number,
-            'waiting_list_schedule_id' => $this->schedule->id,
-        ]);
-
-        return '/bookings/'.$tourId.'/create?'.$params;
     }
 }

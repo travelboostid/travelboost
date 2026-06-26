@@ -14,11 +14,38 @@ class ResolveWaitingListQueuePositionAction
             return null;
         }
 
-        $orderedIds = WaitingListQueueOrdering::queuedCandidatesForSchedule((int) $schedule->tour_schedule_id)
+        return $this->mapForSchedule((int) $schedule->tour_schedule_id)[$schedule->id] ?? null;
+    }
+
+    /**
+     * @return array<int, int> entry id => 1-based queue position
+     */
+    public function mapForSchedule(int $tourScheduleId): array
+    {
+        $orderedIds = WaitingListQueueOrdering::queuedCandidatesForSchedule($tourScheduleId)
             ->pluck('tour_waiting_list_schedules.id');
 
-        $index = $orderedIds->search($schedule->id);
+        $positions = [];
 
-        return $index === false ? null : $index + 1;
+        foreach ($orderedIds as $index => $id) {
+            $positions[(int) $id] = $index + 1;
+        }
+
+        return $positions;
+    }
+
+    /**
+     * @param  array<int, int>  $tourScheduleIds
+     * @return array<int, array<int, int>> tour_schedule_id => [entry id => position]
+     */
+    public function mapsForScheduleIds(array $tourScheduleIds): array
+    {
+        $maps = [];
+
+        foreach (array_unique($tourScheduleIds) as $tourScheduleId) {
+            $maps[(int) $tourScheduleId] = $this->mapForSchedule((int) $tourScheduleId);
+        }
+
+        return $maps;
     }
 }

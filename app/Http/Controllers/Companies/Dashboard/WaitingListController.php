@@ -63,6 +63,8 @@ class WaitingListController extends Controller
 
         $isPastBookingDeadline = WaitingListBookingDeadline::isPastDeadline($schedule, $schedule->tour);
         $permissions = $this->waitingListPermissions($company);
+        $queuePositions = app(ResolveWaitingListQueuePositionAction::class)
+            ->mapForSchedule((int) $schedule->id);
 
         $queue = TourWaitingListSchedule::query()
             ->where('tour_schedule_id', $schedule->id)
@@ -75,17 +77,17 @@ class WaitingListController extends Controller
                 'tourSchedule:id,departure_date,return_date,tour_id',
             ])
             ->get()
-            ->sortBy(function (TourWaitingListSchedule $entry): array {
+            ->sortBy(function (TourWaitingListSchedule $entry) use ($queuePositions): array {
                 if ($entry->status === TourWaitingListScheduleStatus::OFFERED) {
                     return [0, 0, $entry->offered_at?->timestamp ?? 0];
                 }
 
-                $position = app(ResolveWaitingListQueuePositionAction::class)->execute($entry) ?? PHP_INT_MAX;
+                $position = $queuePositions[$entry->id] ?? PHP_INT_MAX;
 
                 return [1, $position, $entry->waitingList?->created_at?->timestamp ?? 0];
             })
             ->values()
-            ->map(fn (TourWaitingListSchedule $entry): array => $this->formatQueueEntry($entry));
+            ->map(fn (TourWaitingListSchedule $entry): array => $this->formatQueueEntry($entry, $queuePositions));
 
         return Inertia::render('companies/dashboard/waiting-lists/show', [
             'schedule' => [
@@ -221,15 +223,18 @@ class WaitingListController extends Controller
     }
 
     /**
+     * @param  array<int, int>  $queuePositions
      * @return array<string, mixed>
      */
-    private function formatQueueEntry(TourWaitingListSchedule $entry): array
-    {
+    private function formatQueueEntry(
+        TourWaitingListSchedule $entry,
+        array $queuePositions = [],
+    ): array {
         return [
             'id' => $entry->id,
             'status' => $entry->status?->value,
             'queue_position' => $entry->status === TourWaitingListScheduleStatus::QUEUED
-                ? app(ResolveWaitingListQueuePositionAction::class)->execute($entry)
+                ? ($queuePositions[$entry->id] ?? null)
                 : null,
             'manual_queue_position' => $entry->manual_queue_position,
             'pax_adult' => $entry->pax_adult,

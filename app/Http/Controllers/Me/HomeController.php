@@ -19,6 +19,7 @@ use App\Models\TourWaitingListSchedule;
 use App\Services\BookingPaymentReceiverService;
 use App\Services\BookingPaymentWorkflowService;
 use App\Services\BookingTravelDocumentService;
+use App\Support\WaitingListBookingCreateUrl;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -656,6 +657,14 @@ class HomeController extends Controller
     private function appendWaitingListPayload(TourWaitingList $waitingList): array
     {
         $positionResolver = app(ResolveWaitingListQueuePositionAction::class);
+        $queuedTourScheduleIds = $waitingList->schedules
+            ->filter(fn (TourWaitingListSchedule $schedule): bool => $schedule->status === TourWaitingListScheduleStatus::QUEUED)
+            ->pluck('tour_schedule_id')
+            ->map(fn ($id): int => (int) $id)
+            ->unique()
+            ->values()
+            ->all();
+        $queuePositionMaps = $positionResolver->mapsForScheduleIds($queuedTourScheduleIds);
 
         $canManage = $this->customerCanManageWaitingList(request()->user(), $waitingList);
 
@@ -689,7 +698,7 @@ class HomeController extends Controller
             'schedules' => $waitingList->schedules
                 ->sortBy('preference_order')
                 ->values()
-                ->map(function (TourWaitingListSchedule $schedule) use ($positionResolver, $waitingList): array {
+                ->map(function (TourWaitingListSchedule $schedule) use ($queuePositionMaps, $waitingList): array {
                     $departureDate = $schedule->tourSchedule?->departure_date;
                     $booking = $schedule->booking;
                     $status = $schedule->status?->value ?? (string) $schedule->status;
@@ -702,21 +711,16 @@ class HomeController extends Controller
                         && $waitingList->tour
                         && $departureDate
                     ) {
-                        $params = http_build_query([
-                            'date' => $departureDate instanceof \DateTimeInterface
-                                ? $departureDate->format('Y-m-d')
-                                : (string) $departureDate,
-                            'booking_number' => $booking->booking_number,
-                            'waiting_list_schedule_id' => $schedule->id,
-                        ]);
-                        $bookingHref = '/bookings/'.$waitingList->tour->id.'/create?'.$params;
+                        $bookingHref = WaitingListBookingCreateUrl::fromOffer($booking, $schedule);
                     }
+
+                    $tourScheduleId = (int) $schedule->tour_schedule_id;
 
                     return [
                         'id' => $schedule->id,
                         'status' => $status,
                         'queue_position' => $schedule->status === TourWaitingListScheduleStatus::QUEUED
-                            ? $positionResolver->execute($schedule)
+                            ? ($queuePositionMaps[$tourScheduleId][$schedule->id] ?? null)
                             : null,
                         'pax_adult' => $schedule->pax_adult,
                         'pax_child' => $schedule->pax_child,
