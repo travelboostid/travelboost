@@ -479,7 +479,27 @@ function getBookingAction(
         };
     }
 
-    if (status === 'full payment') {
+    if (status === 'full payment' && href) {
+        const remaining =
+            booking.remaining_balance !== null &&
+            booking.remaining_balance !== undefined
+                ? Number(booking.remaining_balance)
+                : Math.max(
+                      0,
+                      Number(booking.grand_total ?? 0) -
+                          Number(booking.paid_amount ?? 0),
+                  );
+
+        if (remaining > 0.01) {
+            return {
+                label: 'Pay Balance',
+                icon: CreditCardIcon,
+                href:
+                    bookingCreateHref(booking, { reuseBookingNumber: true }) ??
+                    href,
+            };
+        }
+
         return {
             label: 'Invoice',
             icon: FileTextIcon,

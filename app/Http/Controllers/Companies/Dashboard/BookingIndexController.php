@@ -6,6 +6,7 @@ use App\Actions\Booking\ExpireBookingReservationsAction;
 use App\Actions\Booking\FinalizeBookingPaymentAction;
 use App\Actions\Booking\NotifyBookingPaymentEventAction;
 use App\Actions\Booking\ReactivateBookingAction;
+use App\Actions\Booking\ReconcileBookingPaymentAfterRepriceAction;
 use App\Actions\Booking\RescheduleBookingAction;
 use App\Actions\Booking\SyncAvailabilityAction;
 use App\Enums\BookingStatus;
@@ -175,13 +176,23 @@ class BookingIndexController extends Controller
         $bookings->getCollection()->transform(function ($booking) use ($company, $paymentReceiverService, $paymentWorkflowService, $pricingService, $travelDocumentService) {
             $booking = $pricingService->reconcileSnapshotTotals($booking);
             $booking = $this->reconcilePaidBookingStatusIfStale($booking);
-            $booking->commission_amount = $this->resolveCommissionAmount($booking);
+
+            if (in_array($this->bookingStatusValue($booking), self::INVOICEABLE_STATUSES, true)) {
+                $booking = app(ReconcileBookingPaymentAfterRepriceAction::class)
+                    ->reconcileStaleStatusIfBalanceDue($booking);
+            }
+
+            $commissionAmount = (float) ($booking->commission_amount ?? 0);
+            $booking->commission_amount = $commissionAmount > 0
+                ? $commissionAmount
+                : $this->resolveCommissionAmount($booking);
 
             $this->attachFollowupPayloads($company, $booking);
             $booking->input_by = $this->inputByPayload($booking);
             $booking->down_payment_detail = $this->paymentDetailPayload($booking, 'down_payment', $paymentReceiverService);
             $booking->full_payment_detail = $this->paymentDetailPayload($booking, 'full_payment', $paymentReceiverService);
-            $booking->remaining_balance_visible = $this->bookingStatusValue($booking) === BookingStatus::DOWN_PAYMENT->value;
+            $booking->remaining_balance_visible = $this->bookingStatusValue($booking) === BookingStatus::DOWN_PAYMENT->value
+                || (float) ($booking->remaining_balance ?? 0) > 0.01;
             $booking->continue_booking_url = $this->continueBookingUrl($company, $booking);
             $booking->document_detail = $travelDocumentService->documentDetails($booking);
             $booking->payment_workflow = $paymentWorkflowService->workflowPayload($company, $booking);

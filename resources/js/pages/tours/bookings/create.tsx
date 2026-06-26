@@ -533,6 +533,10 @@ export default function Page() {
             : null;
 
     // ─── Wizard state ───────────────────────────────────────────────────
+    const initialRemainingBalance = Math.max(0, Number(remainingBalance ?? 0));
+    const shouldStartOnPaymentStep =
+        resumedStatusValue === 'down payment' ||
+        (isResuming && isPaidBookingMode && initialRemainingBalance > 0.01);
     const [currentStep, setCurrentStep] = useState<WizardStepId>(
         isDashboardPaymentStep
             ? 4
@@ -540,7 +544,7 @@ export default function Page() {
               ? 4
               : isDocumentUpdateMode
                 ? 3
-                : resumedStatusValue === 'down payment'
+                : shouldStartOnPaymentStep
                   ? 4
                   : 1,
     );
@@ -615,11 +619,13 @@ export default function Page() {
         reservedExpiresAtTimestamp,
         timerStarted,
     ]);
-    const isBalancePayment = resumedStatusValue === 'down payment';
-    const conflictStatus = normalizePaymentValue(bookingConflict?.status);
-    const hasBookingConflict = Boolean(bookingConflict);
     const paidAmountValue = Number(paidAmount ?? 0);
     const remainingBalanceValue = Math.max(0, Number(remainingBalance ?? 0));
+    const isBalancePayment =
+        resumedStatusValue === 'down payment' ||
+        (isResuming && isPaidBookingMode && remainingBalanceValue > 0.01);
+    const conflictStatus = normalizePaymentValue(bookingConflict?.status);
+    const hasBookingConflict = Boolean(bookingConflict);
     const bookingInfoStatus: BookingStatusCode = isReviewMode
         ? toBookingInfoStatus(resumedStatusValue)
         : isBalancePayment

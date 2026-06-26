@@ -30,3 +30,12 @@ test('resolve target status returns down payment when nothing has been paid yet'
     expect($action->resolveTargetStatus(0, 10_000_000))
         ->toBe(BookingStatus::DOWN_PAYMENT);
 });
+
+test('resolve target status uses epsilon when comparing due amount', function () {
+    $action = new ReconcileBookingPaymentAfterRepriceAction;
+
+    expect($action->resolveTargetStatus(9_999_999.995, 10_000_000))
+        ->toBe(BookingStatus::FULL_PAYMENT)
+        ->and($action->resolveTargetStatus(9_999_999.98, 10_000_000))
+        ->toBe(BookingStatus::DOWN_PAYMENT);
+});
