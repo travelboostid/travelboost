@@ -774,8 +774,9 @@ test('my bookings disables continue booking after vendor cancels a waiting list 
     CompanyTeam::create([
         'company_id' => $vendor->id,
         'user_id' => $vendorUser->id,
-        'role' => 'owner',
         'status' => CompanyTeamStatus::ACTIVE,
+        'is_owner' => true,
+        'accepted_at' => now(),
     ]);
 
     $schedule = waitingListScheduleFixture($tour, available: 2);

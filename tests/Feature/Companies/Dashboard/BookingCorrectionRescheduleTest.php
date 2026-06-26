@@ -1,10 +1,12 @@
 <?php
 
 use App\Actions\Booking\CancelOverdueDownPaymentBookingsAction;
+use App\Actions\Booking\FinalizeBookingPaymentAction;
 use App\Actions\Booking\RescheduleBookingAction;
 use App\Enums\BookingStatus;
 use App\Enums\CompanyTeamStatus;
 use App\Enums\PaymentStatus;
+use App\Models\AppConfig;
 use App\Models\Booking;
 use App\Models\BookingActionRequest;
 use App\Models\BookingPassenger;
@@ -19,6 +21,7 @@ use App\Models\TourSchedule;
 use App\Models\User;
 use App\Notifications\BookingPaymentNotification;
 use App\Services\BookingPricingService;
+use App\Support\BookingReschedulePayment;
 use Database\Seeders\Common\RolePermissionSeeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
@@ -115,6 +118,54 @@ function attachCompanyTeam(User $user, Company $company): void
     ]);
 }
 
+function setupSettlementWalletInfrastructure(Company $vendor, int $vendorBalance = 50_000_000): void
+{
+    AppConfig::updateOrCreate(['key' => 'admin'], [
+        'description' => 'Admin Parameter configuration',
+        'value' => [
+            'platform_fee' => '30000',
+            'commission_min' => '50000',
+            'commission_mid' => '75000',
+            'commission_max' => '75000',
+        ],
+    ]);
+
+    $rootUser = User::query()
+        ->where('username', 'root')
+        ->orWhere('email', 'root@travelboost.co.id')
+        ->first();
+
+    if (! $rootUser) {
+        $rootUser = User::factory()->create([
+            'name' => 'Travelboost Root',
+            'username' => 'root',
+            'email' => 'root@travelboost.co.id',
+        ]);
+    }
+
+    if (! $rootUser->wallet) {
+        $rootUser->wallet()->create(['balance' => 0, 'name' => 'Root Wallet']);
+    }
+
+    if (! $vendor->wallet) {
+        $vendor->wallet()->create(['balance' => $vendorBalance, 'name' => 'Vendor Wallet']);
+
+        return;
+    }
+
+    if ((int) $vendor->wallet->balance < $vendorBalance) {
+        $vendor->wallet->deposit($vendorBalance - (int) $vendor->wallet->balance, ['type' => 'test-wallet-topup']);
+    }
+}
+
+/**
+ * JSON encodes whole-number floats as integers; compare money values numerically.
+ */
+function inertiaMoneyEquals(float $expected): Closure
+{
+    return fn (mixed $actual): bool => abs((float) $actual - $expected) < 0.01;
+}
+
 test('agent can submit a reschedule request for a down payment booking', function () {
     ['vendor' => $vendor, 'agent' => $agent, 'booking' => $booking, 'newSchedule' => $newSchedule] = createRescheduleScenario();
     $agentUser = User::factory()->create();
@@ -176,7 +227,7 @@ test('vendor can approve an agent reschedule request and notify the customer', f
     Notification::assertSentTo(
         $booking->fresh()->user,
         BookingPaymentNotification::class,
-        fn (BookingPaymentNotification $notification): bool => $notification->stage === 'booking_rescheduled'
+        fn (BookingPaymentNotification $notification): bool => $notification->stage === 'booking_rescheduled_balance_due'
     );
 });
 
@@ -803,4 +854,332 @@ test('waived reschedule does not expose credit balance on bookings index', funct
             ->where('data.data.0.booking_number', $booking->booking_number)
             ->where('data.data.0.payment_followup.state', 'completed')
             ->where('data.data.0.remaining_balance', 0));
+});
+
+function createPriceIncreaseRescheduleScenario(): array
+{
+    ['vendor' => $vendor, 'agent' => $agent, 'tour' => $tour, 'booking' => $booking, 'newSchedule' => $newSchedule, 'newDeparture' => $newDeparture] = createRescheduleScenario();
+
+    $priceCategory = PriceCategory::create([
+        'company_id' => $vendor->id,
+        'name' => 'Adult Single',
+        'room_type' => 'single',
+    ]);
+
+    TourPrice::create([
+        'company_id' => $vendor->id,
+        'tour_code' => $tour->code,
+        'schedule_id' => $newSchedule->id,
+        'price_category_id' => $priceCategory->id,
+        'currency' => 'IDR',
+        'price' => 21_000_000,
+        'promotion_rate' => 10,
+    ]);
+
+    BookingPassenger::factory()->create([
+        'booking_id' => $booking->id,
+        'price_category' => 'Adult Single',
+        'price_amount' => 9_000_000,
+    ]);
+
+    Payment::query()->where('payable_id', $booking->id)->delete();
+
+    Payment::create([
+        'owner_type' => User::class,
+        'owner_id' => $booking->user_id,
+        'payable_type' => Booking::class,
+        'payable_id' => $booking->id,
+        'provider' => 'manual',
+        'payment_method' => 'bank_transfer',
+        'amount' => 10_000_000,
+        'status' => PaymentStatus::PAID,
+        'payload' => ['payment_type' => 'full_payment'],
+    ]);
+
+    $booking->update([
+        'status' => BookingStatus::FULL_PAYMENT,
+        'grand_total' => 10_000_000,
+        'platform_fee' => 25_000,
+        'tax_rate' => 0,
+        'tax_amount' => 0,
+        'total_price' => 10_000_000,
+    ]);
+
+    $expectedNewTotal = (float) app(BookingPricingService::class)->quoteForBookingData(
+        $tour,
+        $newSchedule->departure_date,
+        [['price_category' => 'Adult Single']],
+    )['grand_total'];
+
+    return compact('vendor', 'agent', 'tour', 'booking', 'newSchedule', 'newDeparture', 'expectedNewTotal');
+}
+
+test('vendor approving agent reschedule downgrades full payment to down payment when price increases', function () {
+    Notification::fake();
+
+    ['vendor' => $vendor, 'agent' => $agent, 'booking' => $booking, 'newSchedule' => $newSchedule, 'newDeparture' => $newDeparture, 'expectedNewTotal' => $expectedNewTotal] = createPriceIncreaseRescheduleScenario();
+    $vendorUser = User::factory()->create();
+    attachCompanyTeam($vendorUser, $vendor);
+
+    $pricePreview = app(RescheduleBookingAction::class)
+        ->previewPricingChange($booking->fresh(), $newSchedule);
+
+    $actionRequest = BookingActionRequest::create([
+        'booking_id' => $booking->id,
+        'requester_company_id' => $agent->id,
+        'requester_user_id' => User::factory()->create()->id,
+        'target_action' => 'reschedule',
+        'status' => 'pending',
+        'reason' => 'Customer requested new date',
+        'payload' => [
+            'requested_schedule_id' => $newSchedule->id,
+            'requested_departure_date' => $newDeparture,
+            'previous_departure_date' => $booking->departure_date?->toDateString(),
+            'price_before' => (float) $booking->grand_total,
+            'price_after' => $pricePreview['grand_total'],
+            'price_difference' => $pricePreview['price_difference'],
+            'apply_customer_price_adjustment' => true,
+        ],
+    ]);
+
+    $this->actingAs($vendorUser)
+        ->post("/companies/{$vendor->username}/dashboard/booking-correction/{$actionRequest->id}/approve", [
+            'apply_customer_price_adjustment' => true,
+        ])
+        ->assertRedirect()
+        ->assertSessionHas('success');
+
+    $booking->refresh();
+    $actionRequest->refresh();
+
+    expect($booking->departure_date?->toDateString())->toBe($newDeparture)
+        ->and((float) $booking->grand_total)->toBe($expectedNewTotal)
+        ->and($booking->status)->toBe(BookingStatus::DOWN_PAYMENT)
+        ->and($actionRequest->status)->toBe('approved')
+        ->and(data_get($actionRequest->payload, 'apply_customer_price_adjustment'))->toBeTrue();
+
+    Notification::assertSentTo(
+        $booking->user,
+        BookingPaymentNotification::class,
+        fn (BookingPaymentNotification $notification): bool => $notification->stage === 'booking_rescheduled_balance_due'
+    );
+
+    Notification::assertNotSentTo(
+        $booking->user,
+        BookingPaymentNotification::class,
+        fn (BookingPaymentNotification $notification): bool => $notification->stage === 'booking_rescheduled'
+    );
+});
+
+test('vendor approving agent reschedule exposes payment follow-up when price increases', function () {
+    ['vendor' => $vendor, 'booking' => $booking, 'newSchedule' => $newSchedule, 'newDeparture' => $newDeparture, 'expectedNewTotal' => $expectedNewTotal] = createPriceIncreaseRescheduleScenario();
+    $vendorUser = User::factory()->create();
+    attachCompanyTeam($vendorUser, $vendor);
+
+    $pricePreview = app(RescheduleBookingAction::class)
+        ->previewPricingChange($booking->fresh(), $newSchedule);
+
+    $actionRequest = BookingActionRequest::create([
+        'booking_id' => $booking->id,
+        'requester_company_id' => $booking->agent_id,
+        'requester_user_id' => User::factory()->create()->id,
+        'target_action' => 'reschedule',
+        'status' => 'pending',
+        'reason' => 'Customer requested new date',
+        'payload' => [
+            'requested_schedule_id' => $newSchedule->id,
+            'requested_departure_date' => $newDeparture,
+            'previous_departure_date' => $booking->departure_date?->toDateString(),
+            'price_before' => (float) $booking->grand_total,
+            'price_after' => $pricePreview['grand_total'],
+            'price_difference' => $pricePreview['price_difference'],
+        ],
+    ]);
+
+    $this->actingAs($vendorUser)
+        ->post("/companies/{$vendor->username}/dashboard/booking-correction/{$actionRequest->id}/approve")
+        ->assertRedirect();
+
+    $booking->refresh();
+
+    $expectedRemaining = app(BookingReschedulePayment::class)->remainingBalance($booking);
+
+    $this->actingAs($vendorUser)
+        ->get("/companies/{$vendor->username}/dashboard/bookings")
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('data.data.0.booking_number', $booking->booking_number)
+            ->where('data.data.0.status', BookingStatus::DOWN_PAYMENT->value)
+            ->where('data.data.0.remaining_balance_visible', true)
+            ->where('data.data.0.remaining_balance', inertiaMoneyEquals($expectedRemaining))
+            ->where('data.data.0.payment_followup.state', 'due')
+            ->where('data.data.0.payment_followup.amount_due', inertiaMoneyEquals($expectedRemaining))
+            ->where('data.data.0.payment_followup.action_label', 'Complete Payment'));
+});
+
+test('dashboard payment step exposes correct remaining balance after repriced reschedule', function () {
+    ['vendor' => $vendor, 'tour' => $tour, 'booking' => $booking, 'newSchedule' => $newSchedule, 'newDeparture' => $newDeparture] = createPriceIncreaseRescheduleScenario();
+    $vendorUser = User::factory()->create();
+    attachCompanyTeam($vendorUser, $vendor);
+
+    app(RescheduleBookingAction::class)->execute($booking->fresh(), $newSchedule, true);
+
+    $booking->refresh();
+    $expectedRemaining = app(BookingReschedulePayment::class)->remainingBalance($booking);
+
+    $this->actingAs($vendorUser)
+        ->get("/companies/{$vendor->username}/dashboard/bookings/create/{$tour->id}?date={$newDeparture}&booking_number={$booking->booking_number}&step=payment")
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('tours/bookings/create')
+            ->where('isResumingExistingBooking', true)
+            ->where('remainingBalance', inertiaMoneyEquals($expectedRemaining))
+            ->where('paidAmount', inertiaMoneyEquals(10_000_000.0)));
+});
+
+test('completing reschedule remaining balance restores full payment status', function () {
+    ['vendor' => $vendor, 'booking' => $booking, 'newSchedule' => $newSchedule] = createPriceIncreaseRescheduleScenario();
+    setupSettlementWalletInfrastructure($vendor);
+    $vendorUser = User::factory()->create();
+    attachCompanyTeam($vendorUser, $vendor);
+
+    app(RescheduleBookingAction::class)->execute($booking->fresh(), $newSchedule, true);
+    $booking->refresh();
+
+    $remaining = app(BookingReschedulePayment::class)->remainingBalance($booking);
+
+    expect($booking->status)->toBe(BookingStatus::DOWN_PAYMENT)
+        ->and($remaining)->toBeGreaterThan(0);
+
+    $topUpPayment = Payment::create([
+        'owner_type' => User::class,
+        'owner_id' => $booking->user_id,
+        'payable_type' => Booking::class,
+        'payable_id' => $booking->id,
+        'provider' => 'manual',
+        'payment_method' => 'bank_transfer',
+        'amount' => $remaining,
+        'status' => PaymentStatus::PAID,
+        'paid_at' => now(),
+        'payload' => ['payment_type' => 'full_payment'],
+    ]);
+
+    app(FinalizeBookingPaymentAction::class)->execute($booking->fresh(), $topUpPayment);
+
+    expect($booking->fresh()->status)->toBe(BookingStatus::FULL_PAYMENT);
+});
+
+test('rescheduled full payment booking shows prior payment in down payment column', function () {
+    ['vendor' => $vendor, 'booking' => $booking, 'newSchedule' => $newSchedule, 'newDeparture' => $newDeparture] = createPriceIncreaseRescheduleScenario();
+    $vendorUser = User::factory()->create();
+    attachCompanyTeam($vendorUser, $vendor);
+
+    $pricePreview = app(RescheduleBookingAction::class)
+        ->previewPricingChange($booking->fresh(), $newSchedule);
+
+    $actionRequest = BookingActionRequest::create([
+        'booking_id' => $booking->id,
+        'requester_company_id' => $booking->agent_id,
+        'requester_user_id' => User::factory()->create()->id,
+        'target_action' => 'reschedule',
+        'status' => 'approved',
+        'reason' => 'Customer requested new date',
+        'payload' => [
+            'requested_schedule_id' => $newSchedule->id,
+            'requested_departure_date' => $newDeparture,
+            'previous_departure_date' => $booking->departure_date?->toDateString(),
+            'price_before' => (float) $booking->grand_total,
+            'price_after' => $pricePreview['grand_total'],
+            'price_difference' => $pricePreview['price_difference'],
+            'apply_customer_price_adjustment' => true,
+        ],
+        'reviewer_company_id' => $vendor->id,
+        'reviewer_user_id' => $vendorUser->id,
+        'reviewed_at' => now(),
+    ]);
+
+    app(RescheduleBookingAction::class)->execute(
+        $booking->fresh(),
+        $newSchedule,
+        true,
+    );
+
+    $this->actingAs($vendorUser)
+        ->get("/companies/{$vendor->username}/dashboard/bookings")
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('data.data.0.booking_number', $booking->booking_number)
+            ->where('data.data.0.status', BookingStatus::DOWN_PAYMENT->value)
+            ->where('data.data.0.was_rescheduled', true)
+            ->where('data.data.0.down_payment_detail.display_label', 'Prior full payment (reschedule)')
+            ->where('data.data.0.down_payment_detail.amount', 10_000_000)
+            ->where('data.data.0.full_payment_detail', null));
+});
+
+test('vendor approving agent reschedule without price adjustment keeps full payment status', function () {
+    ['vendor' => $vendor, 'agent' => $agent, 'booking' => $booking, 'newSchedule' => $newSchedule, 'newDeparture' => $newDeparture] = createPriceIncreaseRescheduleScenario();
+    $vendorUser = User::factory()->create();
+    attachCompanyTeam($vendorUser, $vendor);
+
+    $pricePreview = app(RescheduleBookingAction::class)
+        ->previewPricingChange($booking->fresh(), $newSchedule);
+
+    $actionRequest = BookingActionRequest::create([
+        'booking_id' => $booking->id,
+        'requester_company_id' => $agent->id,
+        'requester_user_id' => User::factory()->create()->id,
+        'target_action' => 'reschedule',
+        'status' => 'pending',
+        'reason' => 'Vendor absorbs increase',
+        'payload' => [
+            'requested_schedule_id' => $newSchedule->id,
+            'requested_departure_date' => $newDeparture,
+            'previous_departure_date' => $booking->departure_date?->toDateString(),
+            'price_before' => (float) $booking->grand_total,
+            'price_after' => $pricePreview['grand_total'],
+            'price_difference' => $pricePreview['price_difference'],
+        ],
+    ]);
+
+    $this->actingAs($vendorUser)
+        ->post("/companies/{$vendor->username}/dashboard/booking-correction/{$actionRequest->id}/approve", [
+            'apply_customer_price_adjustment' => false,
+        ])
+        ->assertRedirect();
+
+    expect($booking->fresh()->status)->toBe(BookingStatus::FULL_PAYMENT);
+});
+
+test('finalize payment after waived reschedule keeps full payment status', function () {
+    ['vendor' => $vendor, 'booking' => $booking, 'newSchedule' => $newSchedule, 'newDeparture' => $newDeparture] = createPriceIncreaseRescheduleScenario();
+    setupSettlementWalletInfrastructure($vendor);
+    $priceBefore = (float) $booking->grand_total;
+
+    app(RescheduleBookingAction::class)->execute($booking->fresh(), $newSchedule, false);
+    $booking->refresh();
+
+    BookingActionRequest::create([
+        'booking_id' => $booking->id,
+        'requester_company_id' => $booking->agent_id,
+        'requester_user_id' => User::factory()->create()->id,
+        'target_action' => 'reschedule',
+        'status' => 'approved',
+        'reason' => 'Vendor absorbs increase',
+        'payload' => [
+            'requested_schedule_id' => $newSchedule->id,
+            'requested_departure_date' => $newDeparture,
+            'previous_departure_date' => $booking->departure_date?->toDateString(),
+            'price_before' => $priceBefore,
+            'price_after' => (float) $booking->grand_total,
+            'apply_customer_price_adjustment' => false,
+        ],
+        'reviewed_at' => now(),
+    ]);
+
+    expect($booking->status)->toBe(BookingStatus::FULL_PAYMENT)
+        ->and((float) $booking->grand_total)->toBeGreaterThan($priceBefore);
+
+    app(FinalizeBookingPaymentAction::class)->execute($booking->fresh(), notify: false);
+
+    expect($booking->fresh()->status)->toBe(BookingStatus::FULL_PAYMENT);
 });

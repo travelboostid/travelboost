@@ -124,6 +124,7 @@ type PaymentDetail = {
     amount: number;
     payment_date: string | null;
     booking_payment_type?: 'down_payment' | 'full_payment' | null;
+    display_label?: string | null;
     receipt: {
         type: 'manual' | 'online';
         url?: string | null;
@@ -517,8 +518,9 @@ function PaymentDetailCell({
         return <span className="text-slate-400">—</span>;
     }
 
-    const paymentLabel =
-        `${detail.method_label} to ${detail.receiver_label}`.toUpperCase();
+    const paymentLabel = detail.display_label
+        ? detail.display_label
+        : `${detail.method_label} to ${detail.receiver_label}`.toUpperCase();
     const hasReceipt =
         Boolean(detail.receipt) ||
         Boolean(
