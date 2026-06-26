@@ -1,11 +1,16 @@
 <?php
 
 use App\Actions\Booking\ExpireBookingReservationsAction;
+use App\Actions\WaitingList\ExpirePastDeadlineWaitingListSchedulesAction;
+use App\Actions\WaitingList\ExpireWaitingListOffersAction;
+use App\Actions\WaitingList\ProcessWaitingListOffersForScheduleAction;
 use App\Console\Commands\CancelOverdueDownPaymentBookings;
 use App\Console\Commands\CheckAgentSubscriptionExpiry;
 use App\Console\Commands\ExpireManualReservedAvailabilities;
 use App\Console\Commands\SendBookingDeadlineReminders;
+use App\Enums\TourWaitingListScheduleStatus;
 use App\Jobs\MarkExpiredPaymentsJob;
+use App\Models\TourWaitingListSchedule;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
@@ -65,6 +70,37 @@ Schedule::job(new MarkExpiredPaymentsJob)
 Schedule::command(ExpireManualReservedAvailabilities::class)
     ->everyMinute()
     ->name('expire-manual-reserved-availabilities')
+    ->timezone(config('travelboost.scheduler_timezone'))
+    ->withoutOverlapping()
+    ->onOneServer();
+
+Schedule::call(function () {
+    app(ExpireWaitingListOffersAction::class)->execute();
+})->everyMinute()
+    ->name('expire-waiting-list-offers')
+    ->timezone(config('travelboost.scheduler_timezone'))
+    ->withoutOverlapping()
+    ->onOneServer();
+
+Schedule::call(function () {
+    app(ExpirePastDeadlineWaitingListSchedulesAction::class)->execute();
+})->everyMinute()
+    ->name('expire-past-deadline-waiting-lists')
+    ->timezone(config('travelboost.scheduler_timezone'))
+    ->withoutOverlapping()
+    ->onOneServer();
+
+Schedule::call(function () {
+    $scheduleIds = TourWaitingListSchedule::query()
+        ->where('status', TourWaitingListScheduleStatus::QUEUED)
+        ->distinct()
+        ->pluck('tour_schedule_id');
+
+    foreach ($scheduleIds as $tourScheduleId) {
+        app(ProcessWaitingListOffersForScheduleAction::class)->execute((int) $tourScheduleId);
+    }
+})->everyFiveMinutes()
+    ->name('process-waiting-list-offers-recovery')
     ->timezone(config('travelboost.scheduler_timezone'))
     ->withoutOverlapping()
     ->onOneServer();

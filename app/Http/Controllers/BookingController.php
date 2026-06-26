@@ -9,6 +9,7 @@ use App\Actions\Booking\SyncAvailabilityAction;
 use App\Enums\BookingStatus;
 use App\Enums\PaymentMethodStatus;
 use App\Enums\PaymentStatus;
+use App\Enums\TourWaitingListScheduleStatus;
 use App\Http\Requests\StoreBookingRequest;
 use App\Http\Requests\UpdateBookingRequest;
 use App\Models\Booking;
@@ -19,6 +20,7 @@ use App\Models\Tour;
 use App\Models\TourAvailability;
 use App\Models\TourPrice;
 use App\Models\TourSchedule;
+use App\Models\TourWaitingListSchedule;
 use App\Models\User;
 use App\Services\AgentCommissionResolver;
 use App\Services\BookingAddOnOptionsService;
@@ -119,6 +121,44 @@ class BookingController extends Controller
         $isResumingExistingBooking = false;
         $requestedBookingNumber = request()->string('booking_number')->toString();
         $forceNewBooking = request()->boolean('force_new');
+        $waitingListScheduleId = request()->integer('waiting_list_schedule_id');
+        $isWaitingListBooking = false;
+
+        if ($user && $waitingListScheduleId > 0 && $requestedBookingNumber === '') {
+            $waitingListSchedule = TourWaitingListSchedule::query()
+                ->with(['waitingList', 'booking.passengers', 'booking.rooms', 'booking.addons', 'tourSchedule'])
+                ->whereKey($waitingListScheduleId)
+                ->where('status', TourWaitingListScheduleStatus::OFFERED)
+                ->whereHas('waitingList', function ($query) use ($user, $tour): void {
+                    $query
+                        ->where('customer_user_id', $user->id)
+                        ->where('tour_id', $tour->id);
+                })
+                ->first();
+
+            if ($waitingListSchedule?->booking) {
+                $existingBooking = $waitingListSchedule->booking;
+                $isResumingExistingBooking = true;
+                $isWaitingListBooking = true;
+                $schedule = $waitingListSchedule->tourSchedule ?? $schedule;
+                $requestedBookingNumber = $existingBooking->booking_number;
+
+                if ($schedule) {
+                    $requestedDepartureDate = $schedule->departure_date instanceof \DateTimeInterface
+                        ? $schedule->departure_date->format('Y-m-d')
+                        : (string) $schedule->departure_date;
+                    $isScheduleBookable = $this->isDepartureDateInsideBookingWindow($tour, $requestedDepartureDate);
+
+                    $availability = TourAvailability::where('schedule_id', $schedule->id)
+                        ->where('tour_id', $tour->id)
+                        ->first();
+                    $availableSeats = $isScheduleBookable && $availability
+                        ? (int) $availability->available
+                        : 0;
+                    $addOns = $this->buildAddOnOptions($tour, $schedule);
+                }
+            }
+        }
 
         if ($user && $schedule) {
             $draftStatuses = [
@@ -134,7 +174,7 @@ class BookingController extends Controller
                 BookingStatus::RESERVED,
             ];
 
-            if ($requestedBookingNumber !== '') {
+            if ($requestedBookingNumber !== '' && ! $existingBooking) {
                 $requestedBookingStatuses = $isScheduleBookable
                     ? [
                         ...$resumableStatuses,
@@ -198,6 +238,7 @@ class BookingController extends Controller
                 $existingBooking->loadMissing(['passengers', 'rooms', 'addons']);
                 $bookingNumber = $existingBooking->booking_number;
                 $isResumingExistingBooking = true;
+                $isWaitingListBooking = $isWaitingListBooking || $this->isWaitingListOfferBooking($existingBooking);
             }
         }
 
@@ -264,6 +305,7 @@ class BookingController extends Controller
             ],
             'termConditions' => $settings?->term_conditions,
             'isResumingExistingBooking' => $isResumingExistingBooking,
+            'isWaitingListBooking' => $isWaitingListBooking,
             'serverNow' => now()->toIso8601String(),
             'reservedExpiresAt' => $existingBooking?->reserved_expires_at?->toIso8601String(),
             'remainingHoldSeconds' => $this->remainingHoldSeconds($existingBooking),
@@ -460,6 +502,10 @@ class BookingController extends Controller
                     ? $existingBooking->reserved_expires_at
                     : now()->addMinutes($bookingTimeLimitMinutes);
 
+            $reservedType = $existingBooking && $this->isWaitingListOfferBooking($existingBooking)
+                ? 'waiting_list_offer'
+                : 'system';
+
             $booking = Booking::updateOrCreate(
                 [
                     'booking_number' => $data['booking_number'],
@@ -472,7 +518,7 @@ class BookingController extends Controller
                     'pax_child' => $data['pax_child'],
                     'pax_infant' => $data['pax_infant'],
                     'status' => BookingStatus::BOOKING_RESERVED,
-                    'reserved_type' => 'system',
+                    'reserved_type' => $reservedType,
                     'reserved_expires_at' => $reservedExpiresAt,
                     'vendor_id' => $vendorId,
                     'agent_id' => $data['agent_id'] ?? null,
@@ -527,6 +573,7 @@ class BookingController extends Controller
             if (
                 $lockedBooking->status === BookingStatus::BOOKING_RESERVED
                 && $lockedBooking->reserved_type === 'system'
+                && ! $this->isWaitingListOfferBooking($lockedBooking)
             ) {
                 $lockedBooking->update([
                     'status' => BookingStatus::EXPIRED,
@@ -1234,6 +1281,17 @@ class BookingController extends Controller
         Payment $payment
     ): JsonResponse {
         return $this->confirmOnlinePayment($request, $booking, $payment);
+    }
+
+    private function isWaitingListOfferBooking(Booking $booking): bool
+    {
+        if ($booking->reserved_type === 'waiting_list_offer') {
+            return true;
+        }
+
+        return TourWaitingListSchedule::query()
+            ->where('booking_id', $booking->id)
+            ->exists();
     }
 
     private function tourPricesForSchedule(Tour $tour, ?TourSchedule $schedule, ?int $agentId = null): Collection

@@ -2,6 +2,7 @@
 
 namespace App\Actions\Booking;
 
+use App\Actions\WaitingList\FulfillTourWaitingListFromBookingAction;
 use App\Enums\BookingStatus;
 use App\Models\Booking;
 use App\Models\Payment;
@@ -70,7 +71,9 @@ class FinalizeBookingPaymentAction
             return $lockedBooking;
         });
 
-        app(SyncAvailabilityAction::class)->executeForBooking($booking->fresh());
+        $freshBooking = $booking->fresh();
+        app(SyncAvailabilityAction::class)->executeForBooking($freshBooking);
+        app(FulfillTourWaitingListFromBookingAction::class)->execute($freshBooking);
     }
 
     public function reconcilePaidStatusIfStale(Booking $booking, ?Payment $payment = null): bool

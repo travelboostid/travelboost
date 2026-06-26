@@ -99,6 +99,14 @@ Route::prefix('companies')->middleware(['can:access-company-pages', 'use-analyti
         Route::resource('tours', TourController::class);
         Route::get('waiting-lists', [WaitingListController::class, 'index'])
             ->name('waiting-lists.index');
+        Route::get('waiting-lists/schedules/{schedule}', [WaitingListController::class, 'showSchedule'])
+            ->name('waiting-lists.schedules.show');
+        Route::patch('waiting-lists/schedules/{schedule}/queue/reorder', [WaitingListController::class, 'reorderQueue'])
+            ->name('waiting-lists.schedules.reorder');
+        Route::post('waiting-lists/{waitingList}/schedules/{schedule}/offer', [WaitingListController::class, 'offerSchedule'])
+            ->name('waiting-lists.schedules.offer');
+        Route::patch('waiting-lists/{waitingList}/status', [WaitingListController::class, 'updateStatus'])
+            ->name('waiting-lists.status.update');
         Route::post('tours/{tour}/waiting-lists', [TourWaitingListController::class, 'store'])
             ->name('tours.waiting-lists.store');
 

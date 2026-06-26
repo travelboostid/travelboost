@@ -1,10 +1,12 @@
 <?php
 
 use App\Actions\Booking\ExpireBookingReservationsAction;
+use App\Actions\WaitingList\OfferWaitingListSeatAction;
 use App\Enums\BookingStatus;
 use App\Enums\CompanyTeamStatus;
 use App\Enums\MediaType;
 use App\Enums\PaymentStatus;
+use App\Enums\TourWaitingListScheduleStatus;
 use App\Enums\UserStatus;
 use App\Enums\VendorAgentPartnerStatus;
 use App\Http\Middleware\UseCustomerProps;
@@ -757,6 +759,128 @@ test('my bookings lazily expires stale booking reserved rows before rendering', 
         ->has('bookings.data', 1)
         ->where('bookings.data.0.booking_number', 'BKG-LAZY-EXPIRED')
         ->where('bookings.data.0.status', BookingStatus::EXPIRED->value));
+});
+
+test('my bookings disables continue booking after vendor cancels a waiting list offer', function () {
+    require_once __DIR__.'/../Support/WaitingListTestHelpers.php';
+
+    $customer = User::factory()->create(['status' => UserStatus::ACTIVE]);
+    $customer->addRole('user:customer');
+    $vendorUser = User::factory()->create(['status' => UserStatus::ACTIVE]);
+
+    ['vendor' => $vendor, 'tour' => $tour] = waitingListTourFixture();
+    CompanyTeam::create([
+        'company_id' => $vendor->id,
+        'user_id' => $vendorUser->id,
+        'role' => 'owner',
+        'status' => CompanyTeamStatus::ACTIVE,
+    ]);
+
+    $schedule = waitingListScheduleFixture($tour, available: 2);
+    $waitingList = createCustomerWaitingList($tour, $customer, $schedule->id, adult: 2);
+    $entry = $waitingList->schedules->firstOrFail();
+
+    app(OfferWaitingListSeatAction::class)->execute($entry);
+
+    $booking = Booking::query()->findOrFail($entry->fresh()->booking_id);
+
+    $this->actingAs($customer)
+        ->get('/mybookings?tab=current')
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('activeTab', 'current')
+            ->has('bookings.data', 1)
+            ->where('bookings.data.0.booking_number', $booking->booking_number)
+            ->where('bookings.data.0.status', BookingStatus::BOOKING_RESERVED->value)
+            ->where('bookings.data.0.can_continue_booking', true));
+
+    $this->actingAs($vendorUser)
+        ->post("/companies/{$vendor->username}/dashboard/bookings/{$booking->id}/cancel", [
+            'reason' => 'Seat offer withdrawn by vendor',
+        ])
+        ->assertRedirect();
+
+    $this->actingAs($customer)
+        ->get('/mybookings?tab=history')
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('activeTab', 'history')
+            ->has('bookings.data', 1)
+            ->where('bookings.data.0.booking_number', $booking->booking_number)
+            ->where('bookings.data.0.status', BookingStatus::CANCELLED->value)
+            ->where('bookings.data.0.can_continue_booking', false));
+
+    $this->actingAs($customer)
+        ->get('/mybookings?tab=waiting_list')
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('activeTab', 'waiting_list')
+            ->where('waitingLists.data.0.schedules.0.complete_booking_href', null));
+});
+
+test('my bookings disables continue booking when a waiting list schedule is no longer offered', function () {
+    require_once __DIR__.'/../Support/WaitingListTestHelpers.php';
+
+    $customer = User::factory()->create(['status' => UserStatus::ACTIVE]);
+    $customer->addRole('user:customer');
+
+    ['tour' => $tour] = waitingListTourFixture();
+    $schedule = waitingListScheduleFixture($tour, available: 2);
+    $waitingList = createCustomerWaitingList($tour, $customer, $schedule->id, adult: 2);
+    $entry = $waitingList->schedules->firstOrFail();
+
+    app(OfferWaitingListSeatAction::class)->execute($entry);
+
+    $offeredEntry = $entry->fresh();
+    $booking = Booking::query()->findOrFail($offeredEntry->booking_id);
+
+    $offeredEntry->update([
+        'status' => TourWaitingListScheduleStatus::CANCELLED,
+    ]);
+
+    $response = $this->actingAs($customer)->get('/mybookings?tab=current');
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->where('activeTab', 'current')
+        ->has('bookings.data', 1)
+        ->where('bookings.data.0.booking_number', $booking->booking_number)
+        ->where('bookings.data.0.status', BookingStatus::CANCELLED->value)
+        ->where('bookings.data.0.can_continue_booking', false));
+
+    expect($booking->fresh()->status)->toBe(BookingStatus::BOOKING_RESERVED);
+});
+
+test('my bookings shows expired when a waiting list offer timer has elapsed', function () {
+    require_once __DIR__.'/../Support/WaitingListTestHelpers.php';
+
+    $customer = User::factory()->create(['status' => UserStatus::ACTIVE]);
+    $customer->addRole('user:customer');
+
+    ['tour' => $tour] = waitingListTourFixture();
+    $schedule = waitingListScheduleFixture($tour, available: 2);
+    $waitingList = createCustomerWaitingList($tour, $customer, $schedule->id, adult: 2);
+    $entry = $waitingList->schedules->firstOrFail();
+
+    app(OfferWaitingListSeatAction::class)->execute($entry);
+
+    $offeredEntry = $entry->fresh();
+    $booking = Booking::query()->findOrFail($offeredEntry->booking_id);
+
+    $offeredEntry->update([
+        'status' => TourWaitingListScheduleStatus::EXPIRED,
+    ]);
+
+    $response = $this->actingAs($customer)->get('/mybookings?tab=current');
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->where('activeTab', 'current')
+        ->has('bookings.data', 1)
+        ->where('bookings.data.0.booking_number', $booking->booking_number)
+        ->where('bookings.data.0.status', BookingStatus::EXPIRED->value)
+        ->where('bookings.data.0.can_continue_booking', false)
+        ->where('bookings.data.0.can_reorder', false));
 });
 
 test('authenticated users see liked tours in favorites', function () {

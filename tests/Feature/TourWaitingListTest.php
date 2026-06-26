@@ -1,73 +1,20 @@
 <?php
 
-use App\Enums\CompanyTeamStatus;
 use App\Enums\TourWaitingListStatus;
 use App\Models\AgentTour;
 use App\Models\Company;
-use App\Models\CompanyTeam;
 use App\Models\Domain;
-use App\Models\Tour;
-use App\Models\TourAvailability;
 use App\Models\TourSchedule;
 use App\Models\TourWaitingList;
+use App\Models\TourWaitingListSchedule;
 use App\Models\User;
 use Database\Seeders\Common\RolePermissionSeeder;
+
+require_once __DIR__.'/../Support/WaitingListTestHelpers.php';
 
 beforeEach(function () {
     $this->seed(RolePermissionSeeder::class);
 });
-
-/** @return array{vendor: Company, tour: Tour} */
-function waitingListTourFixture(int $bookingDeadline = 0): array
-{
-    $vendor = Company::factory()->create(['type' => 'vendor']);
-    $vendor->companySetting()->update(['booking_deadline' => $bookingDeadline]);
-    $tour = Tour::factory()->create([
-        'company_id' => $vendor->id,
-        'status' => 'active',
-        'showprice' => 2_500_000,
-    ]);
-
-    return compact('vendor', 'tour');
-}
-
-function waitingListScheduleFixture(
-    Tour $tour,
-    int $available = 2,
-    int $departureInDays = 30,
-): TourSchedule {
-    $schedule = TourSchedule::query()->create([
-        'tour_id' => $tour->id,
-        'tour_code' => $tour->code,
-        'company_id' => $tour->company_id,
-        'departure_date' => now()->addDays($departureInDays)->toDateString(),
-        'return_date' => now()->addDays($departureInDays + 7)->toDateString(),
-        'is_active' => true,
-    ]);
-
-    TourAvailability::query()->create([
-        'company_id' => $tour->company_id,
-        'tour_id' => $tour->id,
-        'schedule_id' => $schedule->id,
-        'max_pax' => max(10, $available),
-        'available' => $available,
-    ]);
-
-    return $schedule;
-}
-
-function attachWaitingListUserToCompany(User $user, Company $company): void
-{
-    CompanyTeam::query()->create([
-        'company_id' => $company->id,
-        'user_id' => $user->id,
-        'invite_role' => 'superadmin',
-        'status' => CompanyTeamStatus::ACTIVE,
-        'is_owner' => true,
-        'accepted_at' => now(),
-    ]);
-    $user->addRole("company:{$company->id}:superadmin", "company:{$company->id}");
-}
 
 /**
  * @param  list<int>  $scheduleIds
@@ -87,8 +34,8 @@ function waitingListRequestPayload(
                 'pax_adult' => $adult,
                 'pax_child' => $child,
                 'pax_infant' => $infant,
-                'accepts_partial_fulfillment' => true,
-                'minimum_partial_seats' => max(1, $adult + $child - 1),
+                'accepts_partial_fulfillment' => false,
+                'minimum_partial_seats' => null,
                 'is_priority' => $index === 0,
             ])
             ->all(),
@@ -101,7 +48,7 @@ function waitingListRequestPayload(
 
 test('vendor can submit two waiting list schedules without changing availability', function () {
     ['vendor' => $vendor, 'tour' => $tour] = waitingListTourFixture();
-    $firstSchedule = waitingListScheduleFixture($tour);
+    $firstSchedule = waitingListScheduleFixture($tour, available: 0);
     $secondSchedule = waitingListScheduleFixture($tour, departureInDays: 40);
     $user = User::factory()->create();
     attachWaitingListUserToCompany($user, $vendor);
@@ -130,12 +77,12 @@ test('vendor can submit two waiting list schedules without changing availability
         ->and($waitingList->schedules)->toHaveCount(2)
         ->and($waitingList->schedules->first()->is_priority)->toBeTrue()
         ->and($waitingList->schedules->first()->pax_adult)->toBe(3)
-        ->and($waitingList->schedules->first()->minimum_partial_seats)->toBe(2)
+        ->and($waitingList->schedules->first()->minimum_partial_seats)->toBeNull()
         ->and($waitingList->schedules->last()->pax_child)->toBe(2)
         ->and($waitingList->schedules->last()->pax_infant)->toBe(1)
         ->and($waitingList->schedules->last()->accepts_partial_fulfillment)->toBeFalse()
         ->and($waitingList->schedules->last()->minimum_partial_seats)->toBeNull()
-        ->and((int) $firstSchedule->availability()->value('available'))->toBe(2);
+        ->and((int) $firstSchedule->availability()->value('available'))->toBe(0);
 });
 
 test('available seats use standard booking and infants do not consume seats', function () {
@@ -178,18 +125,21 @@ test('partial fulfillment requires a minimum seat threshold within adult and chi
     $url = "/companies/{$vendor->username}/dashboard/tours/{$tour->id}/waiting-lists";
 
     $missingMinimumPayload = waitingListRequestPayload([$schedule->id]);
+    $missingMinimumPayload['schedules'][0]['accepts_partial_fulfillment'] = true;
     $missingMinimumPayload['schedules'][0]['minimum_partial_seats'] = null;
 
     $this->actingAs($user)->post($url, $missingMinimumPayload)
         ->assertSessionHasErrors('schedules.0.minimum_partial_seats');
 
     $overflowMinimumPayload = waitingListRequestPayload([$schedule->id], adult: 4, child: 1);
+    $overflowMinimumPayload['schedules'][0]['accepts_partial_fulfillment'] = true;
     $overflowMinimumPayload['schedules'][0]['minimum_partial_seats'] = 6;
 
     $this->actingAs($user)->post($url, $overflowMinimumPayload)
         ->assertSessionHasErrors('schedules.0.minimum_partial_seats');
 
     $insufficientAgainstAvailabilityPayload = waitingListRequestPayload([$schedule->id], adult: 5, child: 1);
+    $insufficientAgainstAvailabilityPayload['schedules'][0]['accepts_partial_fulfillment'] = true;
     $insufficientAgainstAvailabilityPayload['schedules'][0]['minimum_partial_seats'] = 2;
 
     $this->actingAs($user)->post($url, $insufficientAgainstAvailabilityPayload)
@@ -314,6 +264,94 @@ test('terminal customer requests no longer count toward the global limit', funct
     expect(TourWaitingList::query()->where('customer_user_id', $customer->id)->count())->toBe(2);
 });
 
+test('customer schedules past the booking deadline no longer count toward the global limit', function () {
+    ['tour' => $tour] = waitingListTourFixture(bookingDeadline: 10);
+    $initialSchedules = collect([12, 13])->map(
+        fn (int $days): TourSchedule => waitingListScheduleFixture($tour, departureInDays: $days),
+    );
+    $futureSchedule = waitingListScheduleFixture($tour, departureInDays: 40);
+    $agent = Company::factory()->create(['type' => 'agent']);
+    Domain::create([
+        'subdomain' => $agent->username,
+        'owner_type' => 'company',
+        'owner_id' => $agent->id,
+        'subdomain_enabled' => true,
+    ]);
+    AgentTour::query()->create([
+        'company_id' => $agent->id,
+        'tour_id' => $tour->id,
+        'status' => 'active',
+    ]);
+    $customer = User::factory()->create();
+    $customer->addRole('user:customer');
+    $appHost = env('APP_HOST', 'localhost');
+    $url = "http://{$agent->username}.{$appHost}/tours/{$tour->id}/waiting-lists";
+
+    $this->actingAs($customer)->post(
+        $url,
+        waitingListRequestPayload($initialSchedules->pluck('id')->all()),
+    )->assertSessionHasNoErrors();
+
+    $this->travelTo(now()->addDays(5));
+
+    $this->actingAs($customer)->post(
+        $url,
+        waitingListRequestPayload([$futureSchedule->id]),
+    )->assertSessionHasNoErrors();
+
+    expect(TourWaitingList::query()->where('customer_user_id', $customer->id)->count())->toBe(2);
+});
+
+test('customer must confirm before replacing an active priority waiting list', function () {
+    ['tour' => $tour] = waitingListTourFixture();
+    $schedules = collect([20, 30])->map(
+        fn (int $days): TourSchedule => waitingListScheduleFixture($tour, departureInDays: $days),
+    );
+    $agent = Company::factory()->create(['type' => 'agent']);
+    Domain::create([
+        'subdomain' => $agent->username,
+        'owner_type' => 'company',
+        'owner_id' => $agent->id,
+        'subdomain_enabled' => true,
+    ]);
+    AgentTour::query()->create([
+        'company_id' => $agent->id,
+        'tour_id' => $tour->id,
+        'status' => 'active',
+    ]);
+    $customer = User::factory()->create();
+    $customer->addRole('user:customer');
+    $appHost = env('APP_HOST', 'localhost');
+    $url = "http://{$agent->username}.{$appHost}/tours/{$tour->id}/waiting-lists";
+
+    $this->actingAs($customer)->post(
+        $url,
+        waitingListRequestPayload([$schedules[0]->id]),
+    )->assertSessionHasNoErrors();
+
+    $this->actingAs($customer)->post(
+        $url,
+        waitingListRequestPayload([$schedules[1]->id]),
+    )->assertSessionHasErrors('replace_existing_priority');
+
+    $replacePayload = waitingListRequestPayload([$schedules[1]->id]);
+    $replacePayload['replace_existing_priority'] = true;
+
+    $this->actingAs($customer)->post(
+        $url,
+        $replacePayload,
+    )->assertSessionHasNoErrors();
+
+    $prioritySchedules = TourWaitingListSchedule::query()
+        ->whereHas('waitingList', fn ($query) => $query->where('customer_user_id', $customer->id))
+        ->orderBy('tour_schedule_id')
+        ->get();
+
+    expect($prioritySchedules)->toHaveCount(2)
+        ->and((bool) $prioritySchedules[0]->is_priority)->toBeFalse()
+        ->and((bool) $prioritySchedules[1]->is_priority)->toBeTrue();
+});
+
 test('guest cannot submit a customer waiting list', function () {
     ['tour' => $tour] = waitingListTourFixture();
     $schedule = waitingListScheduleFixture($tour);
@@ -338,4 +376,54 @@ test('guest cannot submit a customer waiting list', function () {
 
     $response->assertRedirect();
     expect(TourWaitingList::query()->count())->toBe(0);
+});
+
+test('customer can join waiting list when schedule availability is zero', function () {
+    ['tour' => $tour] = waitingListTourFixture();
+    $schedule = waitingListScheduleFixture($tour, available: 0);
+    $agent = Company::factory()->create(['type' => 'agent']);
+    Domain::create([
+        'subdomain' => $agent->username,
+        'owner_type' => 'company',
+        'owner_id' => $agent->id,
+        'subdomain_enabled' => true,
+    ]);
+    AgentTour::query()->create([
+        'company_id' => $agent->id,
+        'tour_id' => $tour->id,
+        'status' => 'active',
+    ]);
+    $customer = User::factory()->create();
+    $customer->addRole('user:customer');
+    $appHost = env('APP_HOST', 'localhost');
+    $url = "http://{$agent->username}.{$appHost}/tours/{$tour->id}/waiting-lists";
+    $payload = waitingListRequestPayload([$schedule->id], adult: 2);
+    $payload['schedules'][0]['accepts_partial_fulfillment'] = true;
+    $payload['schedules'][0]['minimum_partial_seats'] = 1;
+
+    $this->actingAs($customer)->post($url, $payload)->assertSessionHasNoErrors();
+
+    $waitingList = TourWaitingList::query()->sole();
+
+    expect($waitingList->agent_company_id)->toBe($agent->id)
+        ->and($waitingList->customer_user_id)->toBe($customer->id)
+        ->and($waitingList->schedules)->toHaveCount(1)
+        ->and($waitingList->schedules->first()->status->value)->toBe('queued')
+        ->and($waitingList->schedules->first()->accepts_partial_fulfillment)->toBeFalse()
+        ->and($waitingList->schedules->first()->minimum_partial_seats)->toBeNull()
+        ->and((int) $schedule->availability()->value('available'))->toBe(0);
+});
+
+test('vendor waiting list submission stores schedule queue status', function () {
+    ['vendor' => $vendor, 'tour' => $tour] = waitingListTourFixture();
+    $schedule = waitingListScheduleFixture($tour);
+    $user = User::factory()->create();
+    attachWaitingListUserToCompany($user, $vendor);
+
+    $this->actingAs($user)->post(
+        "/companies/{$vendor->username}/dashboard/tours/{$tour->id}/waiting-lists",
+        waitingListRequestPayload([$schedule->id]),
+    )->assertSessionHasNoErrors();
+
+    expect(TourWaitingList::query()->sole()->schedules->first()->status->value)->toBe('queued');
 });

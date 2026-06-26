@@ -764,6 +764,8 @@ type Step1Props = {
     onCustomerSelect?: (customer: DashboardCustomerOption | null) => void;
     customerOptionsEmptyMessage?: string;
     readOnly?: boolean;
+    guestCountLocked?: boolean;
+    infantCountLocked?: boolean;
 };
 
 export default function Step1GuestInformation({
@@ -797,6 +799,8 @@ export default function Step1GuestInformation({
     onCustomerSelect,
     customerOptionsEmptyMessage = 'No customer accounts available.',
     readOnly = false,
+    guestCountLocked = false,
+    infantCountLocked = false,
 }: Step1Props) {
     const [
         uncontrolledContactAsGuestAdded,
@@ -809,6 +813,8 @@ export default function Step1GuestInformation({
               uncontrolledContactAsGuestAdded);
     const setContactAsGuestAdded =
         onContactAsGuestAddedChange ?? setUncontrolledContactAsGuestAdded;
+    const seatTakingGuestCountersDisabled = readOnly || guestCountLocked;
+    const infantCounterDisabled = readOnly || infantCountLocked;
     const filledCount = guests.filter(
         (g) =>
             g.title.trim() !== '' &&
@@ -1138,6 +1144,13 @@ export default function Step1GuestInformation({
             {/* Guest Count */}
             <motion.div variants={itemVariants} className="space-y-2">
                 <h3 className="text-sm font-semibold">Number of Guest</h3>
+                {guestCountLocked && !readOnly ? (
+                    <p className="text-xs leading-5 text-muted-foreground">
+                        Adult and child counts follow the waiting list request
+                        and cannot be changed here. Infant count can still be
+                        updated because it does not reduce seat availability.
+                    </p>
+                ) : null}
                 <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
                     <Stepper
                         label="Adult"
@@ -1147,7 +1160,7 @@ export default function Step1GuestInformation({
                         min={0}
                         max={Math.max(0, maxGuests - children)}
                         onChange={onAdultsChange}
-                        disabled={readOnly}
+                        disabled={seatTakingGuestCountersDisabled}
                     />
                     <Stepper
                         label="Child"
@@ -1157,7 +1170,7 @@ export default function Step1GuestInformation({
                         min={0}
                         max={Math.max(0, maxGuests - adults)}
                         onChange={onChildrenChange}
-                        disabled={readOnly}
+                        disabled={seatTakingGuestCountersDisabled}
                     />
                     <Stepper
                         label="Infant"
@@ -1167,7 +1180,7 @@ export default function Step1GuestInformation({
                         min={0}
                         max={Math.max(0, maxInfants)}
                         onChange={onInfantsChange}
-                        disabled={readOnly}
+                        disabled={infantCounterDisabled}
                     />
                 </div>
             </motion.div>

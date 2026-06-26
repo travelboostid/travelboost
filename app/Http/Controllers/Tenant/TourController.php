@@ -2,13 +2,12 @@
 
 namespace App\Http\Controllers\Tenant;
 
-use App\Enums\TourWaitingListStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Company;
 use App\Models\TourAvailability;
 use App\Models\TourCategory;
-use App\Models\TourWaitingListSchedule;
 use App\Models\VendorAgentPartner;
+use App\Support\CustomerActiveWaitingListResolver;
 use App\Support\ResolvesTourScheduleDisplayPrice;
 use App\Support\TourCatalogPreload;
 use Inertia\Inertia;
@@ -133,13 +132,13 @@ class TourController extends Controller
 
         $phone = $tenant->customer_service_phone ?: $tenant->phone;
         $customer = request()->user();
+        $activeWaitingListResolver = app(CustomerActiveWaitingListResolver::class);
         $activeWaitingListScheduleCount = $customer?->hasRole('user:customer')
-            ? TourWaitingListSchedule::query()
-                ->whereHas('waitingList', fn ($query) => $query
-                    ->where('customer_user_id', $customer->id)
-                    ->whereIn('status', TourWaitingListStatus::activeValues()))
-                ->count()
+            ? $activeWaitingListResolver->activeScheduleCountForCustomer($customer)
             : 0;
+        $activePriorityWaitingListSchedule = $customer?->hasRole('user:customer')
+            ? $activeWaitingListResolver->activePriorityScheduleForCustomer($customer)
+            : null;
 
         return Inertia::render('companies/agent-tours', [
             'data' => $validAgentTours,
@@ -149,6 +148,11 @@ class TourController extends Controller
             'categories' => $categories,
             'phone' => $phone,
             'activeWaitingListScheduleCount' => $activeWaitingListScheduleCount,
+            'activePriorityWaitingListSchedule' => $activePriorityWaitingListSchedule ? [
+                'schedule_id' => (int) $activePriorityWaitingListSchedule->tour_schedule_id,
+                'tour_name' => (string) ($activePriorityWaitingListSchedule->waitingList?->tour?->name ?? 'Another tour'),
+                'departure_date' => $activePriorityWaitingListSchedule->tourSchedule?->departure_date,
+            ] : null,
             'lcpImageUrl' => TourCatalogPreload::resolveFirstTourImageUrl($validAgentTours),
         ]);
     }

@@ -3,6 +3,7 @@
 use App\Http\Controllers\BookingController;
 use App\Http\Controllers\Customers\AuthController;
 use App\Http\Controllers\Customers\ProfileController as CustomerProfileController;
+use App\Http\Controllers\Me\CustomerWaitingListController;
 use App\Http\Controllers\Me\HomeController as MeHomeController;
 use App\Http\Controllers\Tenant\TourController;
 use App\Http\Controllers\Tenant\TourWaitingListController;
@@ -39,6 +40,10 @@ Route::domain('{username}.'.$appHost)->middleware(['can:access-customer-pages', 
         Route::post('/bookings/{tour}', [BookingController::class, 'store'])->name('bookings.store');
         Route::post('/tours/{tour}/waiting-lists', [TourWaitingListController::class, 'store'])
             ->name('waiting-lists.store');
+        Route::patch('/waiting-lists/{waitingList}', [CustomerWaitingListController::class, 'update'])
+            ->name('waiting-lists.update');
+        Route::patch('/waiting-lists/{waitingList}/cancel', [CustomerWaitingListController::class, 'cancel'])
+            ->name('waiting-lists.cancel');
         Route::post('/bookings/{booking}/release-hold', [BookingController::class, 'releaseHold']);
         Route::put('/bookings/{booking}', [BookingController::class, 'update']);
         Route::post('/bookings/{booking}/travel-documents', [BookingController::class, 'updateTravelDocuments']);

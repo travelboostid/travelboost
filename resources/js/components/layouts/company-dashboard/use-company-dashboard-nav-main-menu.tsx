@@ -152,6 +152,11 @@ export function useCompanyDashboardNavMainMenu() {
                     badgeCount: bookingModificationRequestBadgeCount,
                 },
                 {
+                    id: 'tours.waiting-lists',
+                    title: <FormattedMessage defaultMessage="Waiting Lists" />,
+                    urlOrAction: `/companies/${company.username}/dashboard/waiting-lists`,
+                },
+                {
                     id: 'tours.categories',
                     title: (
                         <FormattedMessage defaultMessage="Product Categories" />
@@ -208,6 +213,11 @@ export function useCompanyDashboardNavMainMenu() {
                         <FormattedMessage defaultMessage="Booking Correction" />
                     ),
                     urlOrAction: `/companies/${company.username}/dashboard/booking-correction`,
+                },
+                {
+                    id: 'tours.waiting-lists',
+                    title: <FormattedMessage defaultMessage="Waiting Lists" />,
+                    urlOrAction: `/companies/${company.username}/dashboard/waiting-lists`,
                 },
                 {
                     id: 'tours.categories',
