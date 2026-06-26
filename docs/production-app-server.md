@@ -10,7 +10,7 @@ Update the package index and install all required dependencies including PHP, Co
 
 ```bash
 sudo apt update
-sudo apt install -y composer supervisor php php-cli php-fpm php-common php-mbstring php-xml php-curl php-zip php-bcmath php-intl php-pgsql php-sqlite3 php-gd php-imagick
+sudo apt install -y composer supervisor php php-cli php-fpm php-common php-mbstring php-xml php-curl php-zip php-bcmath php-intl php-pgsql php-sqlite3 php-gd php-imagick php-redis redis-server
 ```
 
 Verify `bcmath` is loaded after install. The chatbot (`ChatbotAgent`) depends on it for AI credit billing:
@@ -90,6 +90,27 @@ Restart PHP FPM after updating the configuration.
 ```bash
 sudo systemctl restart php8.5-fpm
 ```
+
+---
+
+## OPcache (production)
+
+Copy `infra/php/99-travelboost-opcache.ini` to the PHP configuration directory on the app server, then restart PHP FPM. With `opcache.validate_timestamps=0`, reload PHP FPM after each deploy (`pnpm dev:deploy` already restarts Supervisor/PHP workloads).
+
+---
+
+## Redis (production)
+
+Use Redis for session and cache to reduce database round-trips on authenticated dashboard pages:
+
+```env
+SESSION_DRIVER=redis
+CACHE_STORE=redis
+REDIS_HOST=127.0.0.1
+REDIS_PORT=6379
+```
+
+Ensure `php-redis` is installed and `redis-server` is running before switching drivers.
 
 ---
 

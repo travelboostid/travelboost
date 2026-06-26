@@ -48,7 +48,7 @@ async function deploy() {
         )
         .option(
             '--skip-optimize',
-            'skip remote php artisan optimize:clear',
+            'skip remote php artisan optimize:clear && optimize',
         )
         .option(
             '--skip-local-branch',
@@ -61,9 +61,11 @@ async function deploy() {
         .parse(cliArgs())
         .opts();
 
-    // Load preset env (supports ${VAR} expansion)
+    // Load preset env (supports ${VAR} expansion). override: true ensures
+    // VITE_* / APP_* from the preset win over the developer's local .env
+    // when building frontend assets for the target environment.
     const envFile = path.join(root, `.env.preset.${opts.env}`);
-    const loaded = dotenv.config({ path: envFile });
+    const loaded = dotenv.config({ path: envFile, override: true });
     if (loaded.error) {
         throw new Error(`Failed to read ${envFile}: ${loaded.error.message}`);
     }
@@ -139,7 +141,9 @@ async function deploy() {
             steps.push('php artisan migrate --force');
         }
         if (!opts.skipOptimize) {
-            steps.push('php artisan optimize:clear');
+            steps.push(
+                'php artisan optimize:clear && php artisan optimize',
+            );
         }
         steps.push(
             'sudo chown -R travelboost:www-data storage bootstrap/cache',

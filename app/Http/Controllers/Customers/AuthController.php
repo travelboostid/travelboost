@@ -149,7 +149,7 @@ class AuthController extends Controller
 
     private function currentHost(): string
     {
-        $appHost = env('APP_HOST', 'localhost');
+        $appHost = (string) config('app.host', 'localhost');
         $requestHost = request()->getHost();
 
         if ($requestHost === $appHost) {

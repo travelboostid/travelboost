@@ -10,6 +10,9 @@ $s3Disk = [
     'endpoint' => env('S3_ENDPOINT'),
     'use_path_style_endpoint' => env('S3_USE_PATH_STYLE_ENDPOINT', false),
     'visibility' => 'public',
+    'options' => [
+        'CacheControl' => 'public, max-age=31536000, immutable',
+    ],
     'throw' => false,
     'report' => false,
 ];

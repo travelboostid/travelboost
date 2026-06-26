@@ -4,6 +4,7 @@ namespace App\Observers;
 
 use App\Jobs\SyncTourAvailabilityJob;
 use App\Models\Booking;
+use App\Support\BookingIndexFollowupSummaryCache;
 use Illuminate\Support\Facades\Log;
 
 class BookingObserver
@@ -30,9 +31,20 @@ class BookingObserver
      */
     private const SYNC_FIELDS = ['status', 'pax_adult', 'pax_child', 'pax_infant', 'departure_date', 'tour_id', 'vendor_id'];
 
+    private const FOLLOWUP_SUMMARY_FIELDS = [
+        'status',
+        'contact_name',
+        'departure_date',
+        'grand_total',
+        'pax_adult',
+        'pax_child',
+        'pax_infant',
+    ];
+
     public function created(Booking $booking): void
     {
         $this->dispatchForCurrentKey($booking);
+        BookingIndexFollowupSummaryCache::bumpForBooking($booking);
     }
 
     public function updated(Booking $booking): void
@@ -58,16 +70,22 @@ class BookingObserver
         if ($booking->isDirty(self::SYNC_FIELDS)) {
             $this->dispatchForCurrentKey($booking);
         }
+
+        if ($booking->isDirty(self::FOLLOWUP_SUMMARY_FIELDS)) {
+            BookingIndexFollowupSummaryCache::bumpForBooking($booking);
+        }
     }
 
     public function deleted(Booking $booking): void
     {
         $this->dispatchForCurrentKey($booking);
+        BookingIndexFollowupSummaryCache::bumpForBooking($booking);
     }
 
     public function restored(Booking $booking): void
     {
         $this->dispatchForCurrentKey($booking);
+        BookingIndexFollowupSummaryCache::bumpForBooking($booking);
     }
 
     /**

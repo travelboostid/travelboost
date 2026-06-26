@@ -56,6 +56,19 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Application Host
+    |--------------------------------------------------------------------------
+    |
+    | The primary hostname for this application (without scheme or port).
+    | Used for multi-tenant subdomain routing and domain resolution.
+    | Always read via config('app.host'), never env('APP_HOST') at runtime.
+    |
+    */
+
+    'host' => env('APP_HOST', 'localhost'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Application Timezone
     |--------------------------------------------------------------------------
     |

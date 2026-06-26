@@ -30,11 +30,13 @@ use App\Models\User;
 use App\Notifications\BookingPaymentReviewStatusNotification;
 use App\Services\AgentCommissionResolver;
 use App\Services\BookingDownPaymentRuleService;
+use App\Services\BookingIndexFollowupSummaryService;
 use App\Services\BookingPaymentReceiverService;
 use App\Services\BookingPaymentWorkflowService;
 use App\Services\BookingPricingService;
 use App\Services\BookingService;
 use App\Services\BookingTravelDocumentService;
+use App\Support\BookingIndexFollowupSummaryCache;
 use App\Support\BookingReschedulePayment;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Database\Eloquent\Builder;
@@ -44,6 +46,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
@@ -143,19 +146,26 @@ class BookingIndexController extends Controller
         // routes/console.php. Do not call it here: doing so adds DB load and
         // row-level locks to every dashboard page request.
         $paymentReceiverService = app(BookingPaymentReceiverService::class);
-        $paymentWorkflowService = app(BookingPaymentWorkflowService::class);
         $pricingService = app(BookingPricingService::class);
         $travelDocumentService = app(BookingTravelDocumentService::class);
+        $reschedulePayment = app(BookingReschedulePayment::class);
+        $companyScopeQuery = $this->bookingIndexCompanyScope($company);
         $baseQuery = $this->bookingIndexBaseQuery($company, $request);
-        $followupBookings = $this->followupBookingsForQuery(clone $baseQuery, $company);
-        $followupSummary = $this->followupSummaryFromCollection($followupBookings);
+        $followupFilter = filled($request->input('followup'))
+            ? (string) $request->input('followup')
+            : null;
+        $hasFollowupFilter = $followupFilter !== null
+            && in_array($followupFilter, self::FOLLOW_UP_FILTERS, true);
+        $followupBookings = $hasFollowupFilter
+            ? $this->followupBookingsForQuery(clone $baseQuery, $company)
+            : null;
 
         $bookingQuery = clone $baseQuery;
-        if (filled($request->input('followup'))) {
+        if ($hasFollowupFilter && $followupBookings !== null) {
             $this->applyFollowupFilterFromCollection(
                 $bookingQuery,
                 $followupBookings,
-                (string) $request->input('followup')
+                $followupFilter
             );
         } else {
             $this->applyStatusFilter($bookingQuery, $request->input('status'));
@@ -173,9 +183,16 @@ class BookingIndexController extends Controller
             ->paginate(10)
             ->withQueryString();
 
-        $bookings->getCollection()->transform(function ($booking) use ($company, $paymentReceiverService, $paymentWorkflowService, $pricingService, $travelDocumentService) {
+        $reschedulePayment->preloadApprovedReschedulePayloads(
+            $bookings->getCollection()->pluck('id')->map(fn (mixed $id): int => (int) $id)->all(),
+        );
+
+        $bookings->getCollection()->transform(function ($booking) use ($company, $paymentReceiverService, $pricingService, $travelDocumentService) {
+            if (in_array($this->bookingStatusValue($booking), self::PAID_STATUS_RECONCILABLE_STATUSES, true)) {
+                $booking = $this->reconcilePaidBookingStatusIfStale($booking);
+            }
+
             $booking = $pricingService->reconcileSnapshotTotals($booking);
-            $booking = $this->reconcilePaidBookingStatusIfStale($booking);
 
             if (in_array($this->bookingStatusValue($booking), self::INVOICEABLE_STATUSES, true)) {
                 $booking = app(ReconcileBookingPaymentAfterRepriceAction::class)
@@ -188,55 +205,127 @@ class BookingIndexController extends Controller
                 : $this->resolveCommissionAmount($booking);
 
             $this->attachFollowupPayloads($company, $booking);
+            $paymentReceiver = $paymentReceiverService->resolveForBooking($booking);
+            $booking->payment_receiver_type = $paymentReceiver['receiver_type'];
             $booking->input_by = $this->inputByPayload($booking);
             $booking->down_payment_detail = $this->paymentDetailPayload($booking, 'down_payment', $paymentReceiverService);
             $booking->full_payment_detail = $this->paymentDetailPayload($booking, 'full_payment', $paymentReceiverService);
             $booking->remaining_balance_visible = $this->bookingStatusValue($booking) === BookingStatus::DOWN_PAYMENT->value
                 || (float) ($booking->remaining_balance ?? 0) > 0.01;
             $booking->continue_booking_url = $this->continueBookingUrl($company, $booking);
-            $booking->document_detail = $travelDocumentService->documentDetails($booking);
-            $booking->payment_workflow = $paymentWorkflowService->workflowPayload($company, $booking);
-            $reviewablePayment = $paymentWorkflowService->reviewablePaymentForCompany($company, $booking);
-            $booking->manual_payment = $reviewablePayment
-                ? $this->paymentReviewPayload($booking, $reviewablePayment)
-                : null;
-            $booking->can_review_payment = $reviewablePayment !== null;
-            $booking->can_review_manual_payment = $reviewablePayment !== null;
-            $latestPayment = $booking->payments
-                ->sortByDesc('created_at')
-                ->first();
-            $paymentReceiver = $paymentReceiverService->resolveForBooking($booking);
-            $booking->payment_receiver_type = data_get($latestPayment?->payload, 'payment_receiver_type')
-                ?: $paymentReceiver['receiver_type'];
-            $booking->payment_receiver_company_id = data_get($latestPayment?->payload, 'payment_receiver_company_id')
-                ?: $paymentReceiver['receiver_company']?->id;
-            $booking->invoice_options = $this->invoiceOptions($company, $booking, $paymentReceiver['payment_mode']);
-            $pendingActionRequest = $booking->actionRequests->first();
-            $booking->pending_action_request = $pendingActionRequest
-                ? [
-                    'id' => $pendingActionRequest->id,
-                    'target_action' => $pendingActionRequest->target_action,
-                    'status' => $pendingActionRequest->status,
-                ]
-                : null;
-            $booking->can_cancel = in_array($this->bookingStatusValue($booking), self::CANCELLABLE_STATUSES, true);
-            $booking->can_refund = in_array($this->bookingStatusValue($booking), self::REFUNDABLE_STATUSES, true);
-            $booking->can_reschedule = app(RescheduleBookingAction::class)->canReschedule($booking);
-            $booking->can_reactivate = app(ReactivateBookingAction::class)->canReactivate($booking);
-            $booking->can_reorder = $this->canReorderBooking($booking);
-            $booking->proforma_invoice_available = $this->proformaInvoiceAvailable($booking);
+            $documentFollowupState = $booking->document_followup['state'] ?? null;
+            $booking->document_detail = $documentFollowupState === 'completed'
+                ? $travelDocumentService->documentDetails($booking)
+                : [];
             $booking->was_rescheduled = (bool) ($booking->was_rescheduled ?? false);
 
             return $booking;
         });
 
+        $followupSummary = $hasFollowupFilter && $followupBookings !== null
+            ? $this->followupSummaryFromCollection($followupBookings)
+            : $this->resolveFollowupSummaryProp($company, $companyScopeQuery);
+
         return Inertia::render('companies/dashboard/bookings/index', [
             'data' => $bookings,
             'followupSummary' => $followupSummary,
+            'filters' => [
+                'search' => (string) $request->input('search', ''),
+                'status' => (string) $request->input('status', ''),
+            ],
         ]);
     }
 
-    private function bookingIndexBaseQuery(Company $company, Request $request): Builder
+    public function rowActions(Company $company, Booking $booking): JsonResponse
+    {
+        $this->assertCompanyCanAccessBooking($company, $booking);
+
+        $booking->load($this->bookingIndexRelationships());
+        $booking->loadSum(['payments as paid_amount' => function ($query): void {
+            $query->where('status', PaymentStatus::PAID->value);
+        }], 'amount');
+
+        app(BookingReschedulePayment::class)->preloadApprovedReschedulePayloads([(int) $booking->id]);
+
+        return response()->json($this->buildBookingRowActionPayload($company, $booking));
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function buildBookingRowActionPayload(Company $company, Booking $booking): array
+    {
+        $paymentWorkflowService = app(BookingPaymentWorkflowService::class);
+        $paymentReceiverService = app(BookingPaymentReceiverService::class);
+        $rescheduleAction = app(RescheduleBookingAction::class);
+        $reactivateAction = app(ReactivateBookingAction::class);
+        $reviewablePayment = $paymentWorkflowService->reviewablePaymentForCompany($company, $booking);
+        $paymentReceiver = $paymentReceiverService->resolveForBooking($booking);
+        $pendingActionRequest = $booking->actionRequests->first();
+
+        return [
+            'payment_workflow' => $paymentWorkflowService->workflowPayload($company, $booking),
+            'manual_payment' => $reviewablePayment
+                ? $this->paymentReviewPayload($booking, $reviewablePayment)
+                : null,
+            'can_review_payment' => $reviewablePayment !== null,
+            'can_review_manual_payment' => $reviewablePayment !== null,
+            'invoice_options' => $this->invoiceOptions($company, $booking, $paymentReceiver['payment_mode']),
+            'can_cancel' => in_array($this->bookingStatusValue($booking), self::CANCELLABLE_STATUSES, true),
+            'can_refund' => in_array($this->bookingStatusValue($booking), self::REFUNDABLE_STATUSES, true),
+            'can_reschedule' => $rescheduleAction->canReschedule($booking),
+            'can_reactivate' => $reactivateAction->canReactivate($booking),
+            'can_reorder' => $this->canReorderBooking($booking),
+            'proforma_invoice_available' => $this->proformaInvoiceAvailable($booking),
+            'pending_action_request' => $pendingActionRequest
+                ? [
+                    'id' => $pendingActionRequest->id,
+                    'target_action' => $pendingActionRequest->target_action,
+                    'status' => $pendingActionRequest->status,
+                ]
+                : null,
+        ];
+    }
+
+    /**
+     * @return array<string, int|float>|mixed
+     */
+    private function resolveFollowupSummaryProp(Company $company, Builder $companyScopeQuery): mixed
+    {
+        $cacheKey = $this->followupSummaryCacheKey($company);
+
+        $cached = Cache::get($cacheKey);
+
+        if (is_array($cached)) {
+            return $cached;
+        }
+
+        return Inertia::defer(
+            fn () => $this->rememberFollowupSummary($company, $companyScopeQuery, $cacheKey),
+            'bookings-followup'
+        );
+    }
+
+    /**
+     * @return array<string, int|float>
+     */
+    private function rememberFollowupSummary(Company $company, Builder $companyScopeQuery, string $cacheKey): array
+    {
+        return Cache::remember($cacheKey, now()->addMinutes(2), function () use ($companyScopeQuery): array {
+            return app(BookingIndexFollowupSummaryService::class)->summarize(clone $companyScopeQuery);
+        });
+    }
+
+    private function followupSummaryCacheKey(Company $company): string
+    {
+        return sprintf(
+            'bookings.followup-summary.%d.%d',
+            $company->id,
+            BookingIndexFollowupSummaryCache::versionForCompany($company),
+        );
+    }
+
+    private function bookingIndexCompanyScope(Company $company): Builder
     {
         return Booking::query()
             ->when(($company->type->value ?? $company->type) === 'vendor', function (Builder $query) use ($company): void {
@@ -244,13 +333,52 @@ class BookingIndexController extends Controller
             })
             ->when(($company->type->value ?? $company->type) === 'agent', function (Builder $query) use ($company): void {
                 $query->where('agent_id', $company->id);
-            })
-            ->when($request->input('booking_number'), function (Builder $query, string $search): void {
-                $query->where('booking_number', 'ilike', "{$search}%");
-            })
-            ->when($request->input('contact_name'), function (Builder $query, string $search): void {
-                $query->where('contact_name', 'ilike', "{$search}%");
             });
+    }
+
+    private function bookingIndexBaseQuery(Company $company, Request $request): Builder
+    {
+        $query = $this->bookingIndexCompanyScope($company);
+
+        if ($request->filled('search')) {
+            $this->applyBookingIndexSearch($query, (string) $request->input('search'));
+        } else {
+            $bookingNumber = trim((string) $request->input('booking_number', ''));
+
+            if ($bookingNumber !== '') {
+                $escaped = str_replace(['%', '_'], ['\\%', '\\_'], $bookingNumber);
+                $query->where('booking_number', 'ilike', "{$escaped}%");
+            }
+
+            $contactName = trim((string) $request->input('contact_name', ''));
+
+            if ($contactName !== '') {
+                $escaped = str_replace(['%', '_'], ['\\%', '\\_'], $contactName);
+                $query->where('contact_name', 'ilike', "{$escaped}%");
+            }
+        }
+
+        return $query;
+    }
+
+    private function applyBookingIndexSearch(Builder $query, string $search): void
+    {
+        $term = trim($search);
+
+        if ($term === '') {
+            return;
+        }
+
+        $escaped = str_replace(['%', '_'], ['\\%', '\\_'], $term);
+        $containsLike = "%{$escaped}%";
+
+        $query->where(function (Builder $nested) use ($containsLike): void {
+            $nested->where('booking_number', 'ilike', $containsLike)
+                ->orWhere('contact_name', 'ilike', $containsLike)
+                ->orWhereHas('tour', fn (Builder $tourQuery) => $tourQuery->where('name', 'ilike', $containsLike))
+                ->orWhereHas('vendor', fn (Builder $vendorQuery) => $vendorQuery->where('name', 'ilike', $containsLike))
+                ->orWhereHas('agent', fn (Builder $agentQuery) => $agentQuery->where('name', 'ilike', $containsLike));
+        });
     }
 
     private function applyStatusFilter(Builder $query, mixed $status): void
@@ -307,24 +435,43 @@ class BookingIndexController extends Controller
     }
 
     /**
+     * @return array<int|string, mixed>
+     */
+    private function followupBookingRelationships(): array
+    {
+        return [
+            'vendor:id,name',
+            'vendor.companySetting',
+            'agent:id,name',
+            'agent.companySetting',
+            'passengers:id,booking_id,price_category,passport_number,passport_issue_date,passport_expiry_date,passport_file_path,visa_number,visa_file_path',
+            'payments:id,payable_id,payable_type,amount,status,provider,payment_method,created_at,payload',
+        ];
+    }
+
+    /**
      * @return Collection<int, Booking>
      */
     private function followupBookingsForQuery(Builder $query, Company $company): Collection
     {
-        return $query
+        $bookings = $query
             ->whereIn('status', self::FOLLOW_UP_STATUSES)
-            ->with($this->bookingIndexRelationships())
+            ->with($this->followupBookingRelationships())
             ->withSum(['payments as paid_amount' => function ($query): void {
                 $query->where('status', 'paid');
             }], 'amount')
             ->limit(500)
-            ->get()
-            ->map(function (Booking $booking) use ($company): Booking {
-                $booking = app(BookingPricingService::class)->reconcileSnapshotTotals($booking);
-                $this->attachFollowupPayloads($company, $booking);
+            ->get();
 
-                return $booking;
-            });
+        app(BookingReschedulePayment::class)->preloadApprovedReschedulePayloads(
+            $bookings->pluck('id')->map(fn (mixed $id): int => (int) $id)->all(),
+        );
+
+        return $bookings->map(function (Booking $booking) use ($company): Booking {
+            $this->attachFollowupPayloads($company, $booking);
+
+            return $booking;
+        });
     }
 
     /**

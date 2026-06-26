@@ -9,6 +9,7 @@ use App\Http\Requests\StoreMediaRequest;
 use App\Http\Resources\MediaResource;
 use App\Http\Resources\MessageResource;
 use App\Models\Media;
+use App\Support\PublicStorage;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Facades\Storage;
 use Intervention\Image\Drivers\Gd\Driver;
@@ -170,13 +171,9 @@ class MediaController extends Controller
             $filename = uniqid()."_{$variant['code']}.webp";
             $path = "images/{$variant['code']}_{$filename}";
 
-            Storage::disk('public')->put(
+            PublicStorage::put(
                 $path,
                 (string) $clone->encode(new WebpEncoder(quality: $variant['quality'])),
-                [
-                    'visibility' => 'public',
-                    'CacheControl' => 'public, max-age=31536000, immutable',
-                ],
             );
 
             $files[] = [
@@ -202,7 +199,7 @@ class MediaController extends Controller
         $file = $validated['data'];
         $filename = uniqid().'.'.$file->getClientOriginalExtension();
         $path = "media/documents/$filename";
-        Storage::disk('public')->putFileAs('media/documents', $file, $filename);
+        PublicStorage::putFileAs('media/documents', $file, $filename);
 
         return [
             'path' => Media::publicPath($path),
@@ -221,7 +218,7 @@ class MediaController extends Controller
         $file = $validated['data'];
         $filename = uniqid().'.'.$file->getClientOriginalExtension();
         $path = "media/raw/$filename";
-        Storage::disk('public')->putFileAs('media/raw', $file, $filename);
+        PublicStorage::putFileAs('media/raw', $file, $filename);
 
         return [
             'path' => Media::publicPath($path),

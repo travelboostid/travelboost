@@ -32,7 +32,7 @@ class HandleInertiaRequests extends Middleware
         return [
             ...parent::share($request),
             'name' => config('app.name'),
-            'appDomain' => env('APP_HOST', 'localhost'),
+            'appDomain' => config('app.host', 'localhost'),
             'auth' => [
                 'user' => $request->user()?->load(['companies']),
                 'permissions' => $request->user()?->allPermissions()->pluck('name')->toArray(),
@@ -82,7 +82,7 @@ class HandleInertiaRequests extends Middleware
             $port = $request->getPort();
             $portSuffix = in_array($port, [80, 443], true) ? '' : ':'.$port;
 
-            return $request->getScheme().'://'.$domain->subdomain.'.'.env('APP_HOST', 'localhost').$portSuffix;
+            return $request->getScheme().'://'.$domain->subdomain.'.'.config('app.host', 'localhost').$portSuffix;
         }
 
         return null;

@@ -23,7 +23,7 @@ class DomainResolver
 
     public function __construct()
     {
-        $this->appHost = env('APP_HOST', 'localhost');
+        $this->appHost = (string) config('app.host', 'localhost');
         $this->currentHost = request()->getHost();
         $this->isMainHost = $this->currentHost === $this->appHost;
     }

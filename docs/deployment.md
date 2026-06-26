@@ -100,7 +100,7 @@ Runs `scripts/dev-deploy.mjs`. Each step prints `> command` and streams output s
     - Upload `.env.preset.<name>` as `~/travelboost/.env`
     - `composer install --no-dev --optimize-autoloader`
     - `php artisan migrate --force`
-    - `php artisan optimize:clear`
+    - `php artisan optimize:clear` then `php artisan optimize` (config/route/view cache)
     - `sudo chown -R travelboost:www-data storage bootstrap/cache`
     - `sudo chmod -R 775 storage bootstrap/cache`
     - `sudo chmod -R g+w storage/logs`
@@ -123,7 +123,7 @@ pnpm dev:deploy -- --skip-frontend     # backend only
 pnpm dev:deploy -- --skip-backend      # frontend build + upload only
 pnpm dev:deploy -- --skip-composer     # skip remote composer install
 pnpm dev:deploy -- --skip-migrate      # skip remote migrate --force
-pnpm dev:deploy -- --skip-optimize     # skip remote optimize:clear
+pnpm dev:deploy -- --skip-optimize     # skip remote optimize:clear && optimize
 pnpm dev:deploy -- --skip-supervisor     # skip supervisorctl restart
 pnpm dev:deploy -- --skip-local-branch # skip local branch vs DEPLOY_BRANCH check
 pnpm dev:deploy -- --skip-remote-branch # skip VPS branch vs DEPLOY_BRANCH check

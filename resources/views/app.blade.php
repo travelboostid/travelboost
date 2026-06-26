@@ -74,7 +74,22 @@
         rel="apple-touch-icon"
         href="/images/logo/logo-square/apple-touch-icon.png"
     />
-    <link rel="manifest" href="/images/logo/logo-square/site.webmanifest" />
+    <script>
+        window.addEventListener(
+            'load',
+            function () {
+                if (document.querySelector('link[rel="manifest"]')) {
+                    return;
+                }
+
+                var manifest = document.createElement('link');
+                manifest.rel = 'manifest';
+                manifest.href = '/images/logo/logo-square/site.webmanifest';
+                document.head.appendChild(manifest);
+            },
+            { once: true },
+        );
+    </script>
 
     <link
         rel="preconnect"

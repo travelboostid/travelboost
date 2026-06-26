@@ -9,6 +9,7 @@ use App\Models\Media;
 use App\Models\User;
 use App\Notifications\AffiliateReferralRegistrationNotification;
 use App\Notifications\AffiliateRegistrationWelcomeNotification;
+use App\Support\PublicStorage;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -182,7 +183,7 @@ class AffiliateAuthController extends Controller
         $file = $request->file('ktp_file');
         $filename = uniqid().'.'.$file->getClientOriginalExtension();
         $path = "media/documents/$filename";
-        Storage::disk('public')->putFileAs('media/documents', $file, $filename);
+        PublicStorage::putFileAs('media/documents', $file, $filename);
 
         $media = Media::create([
             'owner_type' => User::class,
