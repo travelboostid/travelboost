@@ -45,13 +45,14 @@ import {
     TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { formatIDR } from '@/constants/booking';
+import { useDebouncedCallback } from '@/hooks/use-debounced-callback';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
 import { openOnlinePayment } from '@/lib/open-online-payment';
 import { hasOnlinePaymentInstructions } from '@/lib/payment-instructions';
 import { cn } from '@/lib/utils';
 import { CorrectionChangeSummary } from '@/pages/companies/dashboard/bookings/components/booking-correction/correction-change-summary';
 import ReschedulePriceAdjustmentField from '@/pages/companies/dashboard/bookings/components/booking-correction/reschedule-price-adjustment-field';
-import { Head, Link, router } from '@inertiajs/react';
+import { Deferred, Head, Link, router } from '@inertiajs/react';
 import {
     flexRender,
     getCoreRowModel,
@@ -260,7 +261,7 @@ type PageProps = {
         to: number | null;
         links: { url: string | null; label: string; active: boolean }[];
     };
-    followupSummary: FollowupSummary;
+    followupSummary?: FollowupSummary;
 };
 
 const STATUS_TAB_VALUES = [
@@ -668,6 +669,19 @@ function DocumentsDialog({
     );
 }
 
+function FollowupSummarySkeleton() {
+    return (
+        <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+            {Array.from({ length: 4 }).map((_, index) => (
+                <div
+                    key={index}
+                    className="h-[4.25rem] animate-pulse rounded-md border border-slate-200 bg-slate-100/80 dark:border-slate-800 dark:bg-slate-900/60"
+                />
+            ))}
+        </div>
+    );
+}
+
 function FollowupSummaryCards({
     summary,
     companyUsername,
@@ -791,26 +805,24 @@ function PaxCell({
     const intl = useIntl();
     const total = adult + child + infant;
     return (
-        <TooltipProvider>
-            <Tooltip>
-                <TooltipTrigger asChild>
-                    <span className="font-semibold tabular-nums text-sm text-slate-700 dark:text-slate-200">
-                        {total}
-                    </span>
-                </TooltipTrigger>
-                <TooltipContent>
-                    <p>
-                        {intl.formatMessage(
-                            {
-                                defaultMessage:
-                                    '{adult} Adult · {child} Child · {infant} Infant',
-                            },
-                            { adult, child, infant },
-                        )}
-                    </p>
-                </TooltipContent>
-            </Tooltip>
-        </TooltipProvider>
+        <Tooltip>
+            <TooltipTrigger asChild>
+                <span className="font-semibold tabular-nums text-sm text-slate-700 dark:text-slate-200">
+                    {total}
+                </span>
+            </TooltipTrigger>
+            <TooltipContent>
+                <p>
+                    {intl.formatMessage(
+                        {
+                            defaultMessage:
+                                '{adult} Adult · {child} Child · {infant} Infant',
+                        },
+                        { adult, child, infant },
+                    )}
+                </p>
+            </TooltipContent>
+        </Tooltip>
     );
 }
 
@@ -2257,26 +2269,23 @@ function buildColumns(
             cell: ({ cell }) => {
                 const status = cell.getValue<string>();
                 return (
-                    <TooltipProvider>
-                        <Tooltip>
-                            <TooltipTrigger asChild>
-                                <Badge
-                                    variant="secondary"
-                                    className={cn(
-                                        'cursor-help text-[10px] font-bold uppercase tracking-wider',
-                                        statusStyles[status] ??
-                                            statusStyles['expired'],
-                                    )}
-                                >
-                                    {statusLabels[status] ??
-                                        status.toUpperCase()}
-                                </Badge>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                                <p>{statusFullLabels[status] ?? status}</p>
-                            </TooltipContent>
-                        </Tooltip>
-                    </TooltipProvider>
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <Badge
+                                variant="secondary"
+                                className={cn(
+                                    'cursor-help text-[10px] font-bold uppercase tracking-wider',
+                                    statusStyles[status] ??
+                                        statusStyles['expired'],
+                                )}
+                            >
+                                {statusLabels[status] ?? status.toUpperCase()}
+                            </Badge>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                            <p>{statusFullLabels[status] ?? status}</p>
+                        </TooltipContent>
+                    </Tooltip>
                 );
             },
         },
@@ -2677,27 +2686,41 @@ export default function Page({ data, followupSummary }: PageProps) {
     const [sorting, setSorting] = React.useState<SortingState>([]);
     const [columnFilters, setColumnFilters] =
         React.useState<ColumnFiltersState>([]);
+    const [searchInput, setSearchInput] = React.useState('');
     const [globalFilter, setGlobalFilter] = React.useState('');
+    const debouncedSetGlobalFilter = useDebouncedCallback((value: string) => {
+        setGlobalFilter(value);
+    }, 200);
     const [columnVisibility, setColumnVisibility] =
         React.useState<VisibilityState>({});
 
     const fuzzyFilter = React.useCallback(
         (row: any, _columnId: string, value: string) => {
             const searchVal = String(value).toLowerCase();
-            return row.getAllCells().some((cell: any) => {
-                const val = cell.getValue();
-                if (val == null) return false;
+            if (searchVal === '') {
+                return true;
+            }
 
-                let strVal = String(val);
-                if (
-                    cell.column.id === 'created_at' ||
-                    cell.column.id === 'departure_date'
-                ) {
-                    strVal = dayjs(val).format('DD MMM YYYY');
-                }
+            const booking = row.original as BookingResource;
 
-                return strVal.toLowerCase().includes(searchVal);
-            });
+            return [
+                booking.booking_number,
+                booking.contact_name,
+                booking.tour?.name,
+                booking.vendor?.name,
+                booking.agent?.name,
+                booking.status,
+                booking.created_at
+                    ? dayjs(booking.created_at).format('DD MMM YYYY')
+                    : null,
+                booking.departure_date
+                    ? dayjs(booking.departure_date).format('DD MMM YYYY')
+                    : null,
+            ].some((candidate) =>
+                candidate == null
+                    ? false
+                    : String(candidate).toLowerCase().includes(searchVal),
+            );
         },
         [],
     );
@@ -2747,20 +2770,20 @@ export default function Page({ data, followupSummary }: PageProps) {
                 })}
             />
 
-            <div className="w-full flex flex-col gap-6 p-4 md:p-6 max-w-screen-2xl mx-auto pb-20 min-w-0 overflow-hidden">
-                {/* ── Page header ─────────────────────────────────────── */}
-                {/* ── Status filter tabs ───────────────────────────── */}
-                <div className="flex flex-wrap justify-center gap-1.5">
-                    {statusTabs.map((tab) => {
-                        const params = new URLSearchParams(
-                            window.location.search,
-                        );
-                        const activeStatus = params.get('status') ?? '';
-                        const isActive = activeStatus === tab.value;
+            <TooltipProvider delayDuration={300}>
+                <div className="w-full flex flex-col gap-6 p-4 md:p-6 max-w-screen-2xl mx-auto pb-20 min-w-0 overflow-hidden">
+                    {/* ── Page header ─────────────────────────────────────── */}
+                    {/* ── Status filter tabs ───────────────────────────── */}
+                    <div className="flex flex-wrap justify-center gap-1.5">
+                        {statusTabs.map((tab) => {
+                            const params = new URLSearchParams(
+                                window.location.search,
+                            );
+                            const activeStatus = params.get('status') ?? '';
+                            const isActive = activeStatus === tab.value;
 
-                        return (
-                            <TooltipProvider key={tab.value}>
-                                <Tooltip>
+                            return (
+                                <Tooltip key={tab.value}>
                                     <TooltipTrigger asChild>
                                         <button
                                             type="button"
@@ -2814,217 +2837,246 @@ export default function Page({ data, followupSummary }: PageProps) {
                                         <p>{tab.fullLabel}</p>
                                     </TooltipContent>
                                 </Tooltip>
-                            </TooltipProvider>
-                        );
-                    })}
-                </div>
+                            );
+                        })}
+                    </div>
 
-                <FollowupSummaryCards
-                    summary={followupSummary}
-                    companyUsername={company.username}
-                />
-
-                {/* ── Toolbar: search + view-columns ──────────────────── */}
-                <div className="order-first flex flex-col gap-2 rounded-xl border border-slate-200/80 bg-card/95 p-2 shadow-sm dark:border-slate-800 dark:bg-slate-950/80 sm:flex-row sm:items-center sm:justify-between">
-                    <div className="w-full min-w-0 sm:max-w-xs md:max-w-sm">
-                        <div className="relative">
-                            <span className="pointer-events-none absolute left-2 top-1/2 flex size-6 -translate-y-1/2 items-center justify-center rounded-lg bg-primary/10 text-primary ring-1 ring-primary/15 dark:bg-primary/15">
-                                <Search className="size-3.5" />
-                            </span>
-                            <Input
-                                placeholder={intl.formatMessage({
-                                    defaultMessage:
-                                        'Search booking number, tour, guest, vendor, or agent',
-                                })}
-                                value={globalFilter}
-                                onChange={(event) =>
-                                    setGlobalFilter(event.target.value)
-                                }
-                                className="h-9 w-full rounded-lg border-slate-200 bg-background pl-9 pr-9 text-xs font-medium shadow-inner shadow-slate-100/70 transition-all placeholder:text-[13px] placeholder:font-normal placeholder:text-muted-foreground/70 focus-visible:border-primary/50 focus-visible:ring-2 focus-visible:ring-primary/20 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:shadow-black/20 dark:placeholder:text-slate-500"
+                    <Deferred
+                        data="followupSummary"
+                        fallback={<FollowupSummarySkeleton />}
+                    >
+                        {followupSummary ? (
+                            <FollowupSummaryCards
+                                summary={followupSummary}
+                                companyUsername={company.username}
                             />
-                            {globalFilter.trim() !== '' && (
-                                <button
-                                    type="button"
-                                    aria-label={intl.formatMessage({
-                                        defaultMessage: 'Clear search',
+                        ) : null}
+                    </Deferred>
+
+                    {/* ── Toolbar: search + view-columns ──────────────────── */}
+                    <div className="order-first flex flex-col gap-2 rounded-xl border border-slate-200/80 bg-card/95 p-2 shadow-sm dark:border-slate-800 dark:bg-slate-950/80 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="w-full min-w-0 sm:max-w-xs md:max-w-sm">
+                            <div className="relative">
+                                <span className="pointer-events-none absolute left-2 top-1/2 flex size-6 -translate-y-1/2 items-center justify-center rounded-lg bg-primary/10 text-primary ring-1 ring-primary/15 dark:bg-primary/15">
+                                    <Search className="size-3.5" />
+                                </span>
+                                <Input
+                                    placeholder={intl.formatMessage({
+                                        defaultMessage:
+                                            'Search booking number, tour, guest, vendor, or agent',
                                     })}
-                                    onClick={() => setGlobalFilter('')}
-                                    className="absolute right-2 top-1/2 flex size-6 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                                    value={searchInput}
+                                    onChange={(event) => {
+                                        const nextValue = event.target.value;
+                                        setSearchInput(nextValue);
+                                        debouncedSetGlobalFilter(nextValue);
+                                    }}
+                                    className="h-9 w-full rounded-lg border-slate-200 bg-background pl-9 pr-9 text-xs font-medium shadow-inner shadow-slate-100/70 transition-all placeholder:text-[13px] placeholder:font-normal placeholder:text-muted-foreground/70 focus-visible:border-primary/50 focus-visible:ring-2 focus-visible:ring-primary/20 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:shadow-black/20 dark:placeholder:text-slate-500"
+                                />
+                                {searchInput.trim() !== '' && (
+                                    <button
+                                        type="button"
+                                        aria-label={intl.formatMessage({
+                                            defaultMessage: 'Clear search',
+                                        })}
+                                        onClick={() => {
+                                            setSearchInput('');
+                                            setGlobalFilter('');
+                                        }}
+                                        className="absolute right-2 top-1/2 flex size-6 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                                    >
+                                        <XIcon className="size-3.5" />
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button
+                                    variant="outline"
+                                    className="ml-auto h-9 w-full border-slate-200 bg-white text-xs dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:hover:bg-slate-900 sm:w-auto"
                                 >
-                                    <XIcon className="size-3.5" />
-                                </button>
-                            )}
+                                    <FormattedMessage defaultMessage="View Columns" />{' '}
+                                    <ChevronDown className="ml-2 h-4 w-4 opacity-50" />
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent
+                                align="end"
+                                className="w-[200px]"
+                            >
+                                <DropdownMenuGroup>
+                                    {table
+                                        .getAllColumns()
+                                        .filter((column) => column.getCanHide())
+                                        .map((column) => (
+                                            <DropdownMenuCheckboxItem
+                                                key={column.id}
+                                                className="capitalize cursor-pointer"
+                                                checked={column.getIsVisible()}
+                                                onCheckedChange={(value) =>
+                                                    column.toggleVisibility(
+                                                        !!value,
+                                                    )
+                                                }
+                                            >
+                                                {column.id.replace(/_/g, ' ')}
+                                            </DropdownMenuCheckboxItem>
+                                        ))}
+                                </DropdownMenuGroup>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    </div>
+
+                    {/* ── Table card ──────────────────────────────────────── */}
+                    <div className="rounded-xl border border-border bg-card shadow-sm w-full overflow-hidden dark:border-slate-800 dark:bg-slate-950/80 dark:shadow-none">
+                        <div className="w-full overflow-x-auto overflow-y-visible relative [scrollbar-gutter:stable]">
+                            <Table
+                                unwrapped
+                                className="w-full border-separate border-spacing-0 text-sm"
+                            >
+                                <TableHeader className="sticky top-0 z-40 bg-slate-50 dark:bg-slate-900/90 shadow-[0_1px_0_0_theme(colors.border)]">
+                                    {table
+                                        .getHeaderGroups()
+                                        .map((headerGroup) => (
+                                            <TableRow
+                                                key={headerGroup.id}
+                                                className="border-none bg-slate-50 hover:bg-slate-50 dark:bg-slate-900/90 dark:hover:bg-slate-900/90"
+                                            >
+                                                {headerGroup.headers.map(
+                                                    (header) => (
+                                                        <TableHead
+                                                            key={header.id}
+                                                            className={cn(
+                                                                'bg-slate-50 dark:bg-slate-900/90 text-primary font-bold h-12 px-3 whitespace-nowrap',
+                                                                header.column
+                                                                    .id ===
+                                                                    'actions' &&
+                                                                    'sticky left-0 z-50 w-[3.75rem] min-w-[3.75rem] max-w-[3.75rem] overflow-visible rounded-tl-xl border-r border-border/70 px-0 text-center shadow-[10px_0_14px_-16px_rgba(15,23,42,0.55)]',
+                                                            )}
+                                                        >
+                                                            {header.isPlaceholder
+                                                                ? null
+                                                                : flexRender(
+                                                                      header
+                                                                          .column
+                                                                          .columnDef
+                                                                          .header,
+                                                                      header.getContext(),
+                                                                  )}
+                                                        </TableHead>
+                                                    ),
+                                                )}
+                                            </TableRow>
+                                        ))}
+                                </TableHeader>
+                                <TableBody>
+                                    {tableRows.length ? (
+                                        tableRows.map((row, rowIndex) => (
+                                            <TableRow
+                                                key={row.id}
+                                                className="group border-none transition-colors hover:bg-slate-50 dark:hover:bg-slate-900/50"
+                                            >
+                                                {row
+                                                    .getVisibleCells()
+                                                    .map((cell) => (
+                                                        <TableCell
+                                                            key={cell.id}
+                                                            className={cn(
+                                                                'border-b border-border py-3 px-3',
+                                                                cell.column
+                                                                    .id ===
+                                                                    'actions' &&
+                                                                    'sticky left-0 z-20 w-[3.75rem] min-w-[3.75rem] max-w-[3.75rem] overflow-visible border-r border-border/70 bg-card px-0 text-center shadow-[10px_0_14px_-16px_rgba(15,23,42,0.55)] transition-colors group-hover:bg-slate-50 dark:bg-slate-950/95 dark:group-hover:bg-slate-900/50',
+                                                                cell.column
+                                                                    .id ===
+                                                                    'actions' &&
+                                                                    rowIndex ===
+                                                                        tableRows.length -
+                                                                            1 &&
+                                                                    'rounded-bl-xl',
+                                                            )}
+                                                        >
+                                                            {flexRender(
+                                                                cell.column
+                                                                    .columnDef
+                                                                    .cell,
+                                                                cell.getContext(),
+                                                            )}
+                                                        </TableCell>
+                                                    ))}
+                                            </TableRow>
+                                        ))
+                                    ) : (
+                                        <TableRow>
+                                            <TableCell
+                                                colSpan={columns.length}
+                                                className="h-32 text-center text-muted-foreground"
+                                            >
+                                                <div className="flex flex-col items-center justify-center">
+                                                    <span className="text-lg mb-1">
+                                                        📭
+                                                    </span>
+                                                    <p>
+                                                        <FormattedMessage defaultMessage="No bookings found." />
+                                                    </p>
+                                                </div>
+                                            </TableCell>
+                                        </TableRow>
+                                    )}
+                                </TableBody>
+                            </Table>
                         </div>
                     </div>
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button
-                                variant="outline"
-                                className="ml-auto h-9 w-full border-slate-200 bg-white text-xs dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:hover:bg-slate-900 sm:w-auto"
-                            >
-                                <FormattedMessage defaultMessage="View Columns" />{' '}
-                                <ChevronDown className="ml-2 h-4 w-4 opacity-50" />
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-[200px]">
-                            <DropdownMenuGroup>
-                                {table
-                                    .getAllColumns()
-                                    .filter((column) => column.getCanHide())
-                                    .map((column) => (
-                                        <DropdownMenuCheckboxItem
-                                            key={column.id}
-                                            className="capitalize cursor-pointer"
-                                            checked={column.getIsVisible()}
-                                            onCheckedChange={(value) =>
-                                                column.toggleVisibility(!!value)
-                                            }
-                                        >
-                                            {column.id.replace(/_/g, ' ')}
-                                        </DropdownMenuCheckboxItem>
-                                    ))}
-                            </DropdownMenuGroup>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
-                </div>
 
-                {/* ── Table card ──────────────────────────────────────── */}
-                <div className="rounded-xl border border-border bg-card shadow-sm w-full overflow-hidden dark:border-slate-800 dark:bg-slate-950/80 dark:shadow-none">
-                    <div className="w-full overflow-x-auto overflow-y-visible relative [scrollbar-gutter:stable]">
-                        <Table
-                            unwrapped
-                            className="w-full border-separate border-spacing-0 text-sm"
-                        >
-                            <TableHeader className="sticky top-0 z-40 bg-slate-50 dark:bg-slate-900/90 shadow-[0_1px_0_0_theme(colors.border)]">
-                                {table.getHeaderGroups().map((headerGroup) => (
-                                    <TableRow
-                                        key={headerGroup.id}
-                                        className="border-none bg-slate-50 hover:bg-slate-50 dark:bg-slate-900/90 dark:hover:bg-slate-900/90"
-                                    >
-                                        {headerGroup.headers.map((header) => (
-                                            <TableHead
-                                                key={header.id}
-                                                className={cn(
-                                                    'bg-slate-50 dark:bg-slate-900/90 text-primary font-bold h-12 px-3 whitespace-nowrap',
-                                                    header.column.id ===
-                                                        'actions' &&
-                                                        'sticky left-0 z-50 w-[3.75rem] min-w-[3.75rem] max-w-[3.75rem] overflow-visible rounded-tl-xl border-r border-border/70 px-0 text-center shadow-[10px_0_14px_-16px_rgba(15,23,42,0.55)]',
-                                                )}
-                                            >
-                                                {header.isPlaceholder
-                                                    ? null
-                                                    : flexRender(
-                                                          header.column
-                                                              .columnDef.header,
-                                                          header.getContext(),
-                                                      )}
-                                            </TableHead>
-                                        ))}
-                                    </TableRow>
-                                ))}
-                            </TableHeader>
-                            <TableBody>
-                                {tableRows.length ? (
-                                    tableRows.map((row, rowIndex) => (
-                                        <TableRow
-                                            key={row.id}
-                                            className="group border-none transition-colors hover:bg-slate-50 dark:hover:bg-slate-900/50"
-                                        >
-                                            {row
-                                                .getVisibleCells()
-                                                .map((cell) => (
-                                                    <TableCell
-                                                        key={cell.id}
-                                                        className={cn(
-                                                            'border-b border-border py-3 px-3',
-                                                            cell.column.id ===
-                                                                'actions' &&
-                                                                'sticky left-0 z-20 w-[3.75rem] min-w-[3.75rem] max-w-[3.75rem] overflow-visible border-r border-border/70 bg-card px-0 text-center shadow-[10px_0_14px_-16px_rgba(15,23,42,0.55)] transition-colors group-hover:bg-slate-50 dark:bg-slate-950/95 dark:group-hover:bg-slate-900/50',
-                                                            cell.column.id ===
-                                                                'actions' &&
-                                                                rowIndex ===
-                                                                    tableRows.length -
-                                                                        1 &&
-                                                                'rounded-bl-xl',
-                                                        )}
-                                                    >
-                                                        {flexRender(
-                                                            cell.column
-                                                                .columnDef.cell,
-                                                            cell.getContext(),
-                                                        )}
-                                                    </TableCell>
-                                                ))}
-                                        </TableRow>
-                                    ))
-                                ) : (
-                                    <TableRow>
-                                        <TableCell
-                                            colSpan={columns.length}
-                                            className="h-32 text-center text-muted-foreground"
-                                        >
-                                            <div className="flex flex-col items-center justify-center">
-                                                <span className="text-lg mb-1">
-                                                    📭
-                                                </span>
-                                                <p>
-                                                    <FormattedMessage defaultMessage="No bookings found." />
-                                                </p>
-                                            </div>
-                                        </TableCell>
-                                    </TableRow>
-                                )}
-                            </TableBody>
-                        </Table>
-                    </div>
-                </div>
-
-                {/* ── Pagination footer ───────────────────────────────── */}
-                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-2">
-                    <p className="text-sm text-muted-foreground bg-slate-50 px-3 py-1.5 rounded-md border border-slate-100 dark:bg-slate-950 dark:border-slate-800 dark:text-slate-400">
-                        <FormattedMessage
-                            defaultMessage="{from} - {to} of {total} booking(s)"
-                            values={{
-                                from: (
-                                    <span className="font-semibold text-foreground">
-                                        {data.from ?? 0}
-                                    </span>
-                                ),
-                                to: (
-                                    <span className="font-semibold text-foreground">
-                                        {data.to ?? 0}
-                                    </span>
-                                ),
-                                total: (
-                                    <span className="font-semibold text-foreground">
-                                        {data.total}
-                                    </span>
-                                ),
-                            }}
-                        />
-                    </p>
-                    <div className="flex flex-wrap justify-center gap-2">
-                        {data.links.map((link, index) => (
-                            <Button
-                                key={`${link.label}-${index}`}
-                                variant={link.active ? 'default' : 'outline'}
-                                size="sm"
-                                onClick={() => {
-                                    if (link.url) {
-                                        router.visit(link.url, {
-                                            preserveState: true,
-                                        });
-                                    }
+                    {/* ── Pagination footer ───────────────────────────────── */}
+                    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-2">
+                        <p className="text-sm text-muted-foreground bg-slate-50 px-3 py-1.5 rounded-md border border-slate-100 dark:bg-slate-950 dark:border-slate-800 dark:text-slate-400">
+                            <FormattedMessage
+                                defaultMessage="{from} - {to} of {total} booking(s)"
+                                values={{
+                                    from: (
+                                        <span className="font-semibold text-foreground">
+                                            {data.from ?? 0}
+                                        </span>
+                                    ),
+                                    to: (
+                                        <span className="font-semibold text-foreground">
+                                            {data.to ?? 0}
+                                        </span>
+                                    ),
+                                    total: (
+                                        <span className="font-semibold text-foreground">
+                                            {data.total}
+                                        </span>
+                                    ),
                                 }}
-                                disabled={!link.url}
-                                className="min-w-9 border-slate-200"
-                            >
-                                {paginationLabel(link.label, intl)}
-                            </Button>
-                        ))}
+                            />
+                        </p>
+                        <div className="flex flex-wrap justify-center gap-2">
+                            {data.links.map((link, index) => (
+                                <Button
+                                    key={`${link.label}-${index}`}
+                                    variant={
+                                        link.active ? 'default' : 'outline'
+                                    }
+                                    size="sm"
+                                    onClick={() => {
+                                        if (link.url) {
+                                            router.visit(link.url, {
+                                                preserveState: true,
+                                            });
+                                        }
+                                    }}
+                                    disabled={!link.url}
+                                    className="min-w-9 border-slate-200"
+                                >
+                                    {paginationLabel(link.label, intl)}
+                                </Button>
+                            ))}
+                        </div>
                     </div>
                 </div>
-            </div>
+            </TooltipProvider>
             <ReceiptDialog
                 payment={receiptDialogPayment}
                 onOpenChange={(open) => {

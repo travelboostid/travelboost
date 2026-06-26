@@ -1103,11 +1103,12 @@ test('booking index exposes payment and document follow up payloads with summary
         ->where('data.data.0.document_followup.is_overdue', false)
         ->where('data.data.0.document_followup.action_label', 'Complete Documents')
         ->where('data.data.0.document_followup.action_url', "/companies/{$vendor->username}/dashboard/bookings/{$booking->id}/edit?step=documents")
-        ->where('followupSummary.payment_overdue', 0)
-        ->where('followupSummary.payment_due_soon', 1)
-        ->where('followupSummary.payment_due_soon_amount', 600_000)
-        ->where('followupSummary.documents_incomplete', 1)
-        ->where('followupSummary.documents_due_soon', 1));
+        ->loadDeferredProps('bookings-followup', fn ($page) => $page
+            ->where('followupSummary.payment_overdue', 0)
+            ->where('followupSummary.payment_due_soon', 1)
+            ->where('followupSummary.payment_due_soon_amount', 600_000)
+            ->where('followupSummary.documents_incomplete', 1)
+            ->where('followupSummary.documents_due_soon', 1)));
 });
 
 test('booking follow up summary ignores status filters and includes payment totals', function () {
@@ -1160,10 +1161,11 @@ test('booking follow up summary ignores status filters and includes payment tota
     $response->assertOk();
     $response->assertInertia(fn ($page) => $page
         ->where('data.total', 0)
-        ->where('followupSummary.payment_overdue', 1)
-        ->where('followupSummary.payment_overdue_amount', 800_000)
-        ->where('followupSummary.payment_due_soon', 1)
-        ->where('followupSummary.payment_due_soon_amount', 600_000));
+        ->loadDeferredProps('bookings-followup', fn ($page) => $page
+            ->where('followupSummary.payment_overdue', 1)
+            ->where('followupSummary.payment_overdue_amount', 800_000)
+            ->where('followupSummary.payment_due_soon', 1)
+            ->where('followupSummary.payment_due_soon_amount', 600_000)));
 });
 
 test('booking index filters rows by follow up card query', function () {
@@ -1391,10 +1393,11 @@ test('booking follow up summary excludes terminal bookings', function () {
 
     $response->assertOk();
     $response->assertInertia(fn ($page) => $page
-        ->where('followupSummary.payment_overdue', 0)
-        ->where('followupSummary.payment_due_soon', 0)
-        ->where('followupSummary.documents_incomplete', 0)
-        ->where('followupSummary.documents_due_soon', 0));
+        ->loadDeferredProps('bookings-followup', fn ($page) => $page
+            ->where('followupSummary.payment_overdue', 0)
+            ->where('followupSummary.payment_due_soon', 0)
+            ->where('followupSummary.documents_incomplete', 0)
+            ->where('followupSummary.documents_due_soon', 0)));
 });
 
 test('booking index derives commission amount', function () {
