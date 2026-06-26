@@ -84,6 +84,8 @@ Route::prefix('companies')->middleware(['can:access-company-pages', 'use-analyti
 
         Route::middleware(['company.permission:booking.query'])->group(function () {
             Route::get('waiting-lists', [WaitingListController::class, 'index'])->name('waiting-lists.index');
+            Route::get('waiting-lists/schedules/{schedule}', [WaitingListController::class, 'showSchedule'])
+                ->name('waiting-lists.schedules.show');
             Route::get('bookings', [BookingIndexController::class, 'index'])->name('bookings.index');
             Route::get('bookings/create/{tour}', [DashboardBookingController::class, 'create'])->name('bookings.create');
             Route::get('bookings/{booking}/payment-result', [DashboardBookingController::class, 'paymentResult'])->name('bookings.payment-result');
@@ -97,6 +99,12 @@ Route::prefix('companies')->middleware(['can:access-company-pages', 'use-analyti
 
         Route::middleware(['company.permission:booking.mutation'])->group(function () {
             Route::post('tours/{tour}/waiting-lists', [TourWaitingListController::class, 'store'])->name('tours.waiting-lists.store');
+            Route::patch('waiting-lists/schedules/{schedule}/queue/reorder', [WaitingListController::class, 'reorderQueue'])
+                ->name('waiting-lists.schedules.reorder');
+            Route::post('waiting-lists/{waitingList}/schedules/{schedule}/offer', [WaitingListController::class, 'offerSchedule'])
+                ->name('waiting-lists.schedules.offer');
+            Route::patch('waiting-lists/{waitingList}/status', [WaitingListController::class, 'updateStatus'])
+                ->name('waiting-lists.status.update');
             Route::post('bookings/create/{tour}/reserve', [DashboardBookingController::class, 'reserve'])->name('bookings.create.reserve');
             Route::post('bookings/create/{tour}', [DashboardBookingController::class, 'store'])->name('bookings.create.store');
             Route::post('bookings/{booking}/release-hold', [DashboardBookingController::class, 'releaseHold'])->name('bookings.release-hold');

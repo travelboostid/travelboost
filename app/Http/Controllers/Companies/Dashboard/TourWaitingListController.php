@@ -21,7 +21,7 @@ class TourWaitingListController extends Controller
     ): RedirectResponse {
         abort_unless(
             $request->user()
-                && CompanyPermissionMap::userHasScopedPermission($request->user(), $company, 'booking.query'),
+                && CompanyPermissionMap::userHasScopedPermission($request->user(), $company, 'booking.mutation'),
             403,
         );
 

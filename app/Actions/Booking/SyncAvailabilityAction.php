@@ -2,6 +2,7 @@
 
 namespace App\Actions\Booking;
 
+use App\Actions\WaitingList\ProcessWaitingListOffersForScheduleAction;
 use App\Models\Booking;
 use App\Models\TourAvailability;
 use App\Models\TourSchedule;
@@ -194,6 +195,23 @@ class SyncAvailabilityAction
             ...$snapshotValues,
             'available' => $available,
         ]);
+
+        $this->dispatchWaitingListOfferProcessing((int) $availability->schedule_id);
+    }
+
+    private function dispatchWaitingListOfferProcessing(int $tourScheduleId): void
+    {
+        $processOffers = static function () use ($tourScheduleId): void {
+            app(ProcessWaitingListOffersForScheduleAction::class)->execute($tourScheduleId);
+        };
+
+        if (DB::transactionLevel() > 0) {
+            DB::afterCommit($processOffers);
+
+            return;
+        }
+
+        $processOffers();
     }
 
     private function manualReservedShouldActivate(TourAvailability $availability): bool

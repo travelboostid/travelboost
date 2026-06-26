@@ -29,7 +29,7 @@ import {
     Trash2Icon,
 } from 'lucide-react';
 import type { FormEvent } from 'react';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 export type WaitingListScheduleOption = {
     id: number;
@@ -57,6 +57,7 @@ type WaitingListScheduleForm = {
 
 type WaitingListForm = {
     schedules: WaitingListScheduleForm[];
+    replace_existing_priority: boolean;
     contact_name: string;
     contact_phone: string;
     contact_email: string;
@@ -72,6 +73,11 @@ type TourWaitingListDialogProps = {
 
 type WaitingListPageProps = {
     activeWaitingListScheduleCount?: number;
+    activePriorityWaitingListSchedule?: {
+        schedule_id: number;
+        tour_name: string;
+        departure_date: string | null;
+    } | null;
 };
 
 const formatCurrency = (value: number) =>
@@ -81,12 +87,15 @@ const formatCurrency = (value: number) =>
         maximumFractionDigits: 0,
     }).format(value);
 
-const emptySchedule = (isPriority: boolean): WaitingListScheduleForm => ({
+const emptySchedule = (
+    isPriority: boolean,
+    isCustomer: boolean,
+): WaitingListScheduleForm => ({
     schedule_id: 0,
     pax_adult: 0,
     pax_child: 0,
     pax_infant: 0,
-    accepts_partial_fulfillment: null,
+    accepts_partial_fulfillment: isCustomer ? false : null,
     minimum_partial_seats: null,
     is_priority: isPriority,
 });
@@ -98,8 +107,10 @@ export default function TourWaitingListDialog({
     schedules,
 }: TourWaitingListDialogProps) {
     const { auth, company } = usePageSharedDataProps();
-    const { activeWaitingListScheduleCount = 0 } =
-        usePage<WaitingListPageProps>().props;
+    const {
+        activeWaitingListScheduleCount = 0,
+        activePriorityWaitingListSchedule = null,
+    } = usePage<WaitingListPageProps>().props;
     const isDashboardRoute =
         typeof window !== 'undefined' &&
         window.location.pathname.includes('/dashboard');
@@ -110,15 +121,30 @@ export default function TourWaitingListDialog({
         ? Math.max(0, 2 - activeWaitingListScheduleCount)
         : 2;
     const maximumRows = Math.min(2, customerRemainingSlots);
+    const [priorityDecision, setPriorityDecision] = useState<
+        'replace' | 'keep' | null
+    >(null);
+    const [priorityPromptIndex, setPriorityPromptIndex] = useState<
+        number | null
+    >(null);
 
-    const { data, setData, post, processing, errors, clearErrors, reset } =
-        useForm<WaitingListForm>({
-            schedules: [],
-            contact_name: '',
-            contact_phone: '',
-            contact_email: '',
-            contact_address: '',
-        });
+    const {
+        data,
+        setData,
+        post,
+        transform,
+        processing,
+        errors,
+        clearErrors,
+        reset,
+    } = useForm<WaitingListForm>({
+        schedules: [],
+        replace_existing_priority: false,
+        contact_name: '',
+        contact_phone: '',
+        contact_email: '',
+        contact_address: '',
+    });
 
     useEffect(() => {
         if (!isOpen) {
@@ -127,6 +153,7 @@ export default function TourWaitingListDialog({
 
         setData({
             schedules: [],
+            replace_existing_priority: false,
             contact_name: customer?.name ?? '',
             contact_phone: customer?.phone ?? '',
             contact_email: customer?.email ?? '',
@@ -152,7 +179,11 @@ export default function TourWaitingListDialog({
         clearErrors();
         setData('schedules', [
             ...data.schedules,
-            emptySchedule(data.schedules.length === 0),
+            emptySchedule(
+                data.schedules.length === 0 &&
+                    (!isDirectCustomer || !activePriorityWaitingListSchedule),
+                isDirectCustomer,
+            ),
         ]);
     };
 
@@ -167,6 +198,9 @@ export default function TourWaitingListDialog({
         }
 
         clearErrors();
+        setPriorityPromptIndex((currentIndex) =>
+            currentIndex === index ? null : currentIndex,
+        );
         setData('schedules', remaining);
     };
 
@@ -199,6 +233,39 @@ export default function TourWaitingListDialog({
 
     const setPriority = (priorityIndex: number) => {
         clearErrors();
+
+        if (isDirectCustomer && activePriorityWaitingListSchedule) {
+            setPriorityPromptIndex(priorityIndex);
+            setPriorityDecision(null);
+        }
+
+        setData(
+            'schedules',
+            data.schedules.map((schedule, index) => ({
+                ...schedule,
+                is_priority:
+                    !isDirectCustomer || !activePriorityWaitingListSchedule
+                        ? index === priorityIndex
+                        : false,
+            })),
+        );
+    };
+
+    const keepExistingPriority = () => {
+        clearErrors();
+        setPriorityDecision('keep');
+        setData(
+            'schedules',
+            data.schedules.map((schedule) => ({
+                ...schedule,
+                is_priority: false,
+            })),
+        );
+    };
+
+    const replaceExistingPriority = (priorityIndex: number) => {
+        clearErrors();
+        setPriorityDecision('replace');
         setData(
             'schedules',
             data.schedules.map((schedule, index) => ({
@@ -223,8 +290,12 @@ export default function TourWaitingListDialog({
             return 'Enter at least one adult or child passenger. Infants are recorded only and do not reduce availability.';
         }
 
+        if (schedule.available === 0) {
+            return null;
+        }
+
         if (requiredSeats <= schedule.available) {
-            return `This schedule still has ${schedule.available} seats. Add more than ${schedule.available} seat-using passengers or use Book Tour instead.`;
+            return `This schedule still has ${schedule.available} seats. Use Book Tour instead, or request more seat-using passengers than currently available.`;
         }
 
         return null;
@@ -266,6 +337,7 @@ export default function TourWaitingListDialog({
         const requiredSeats = selection.pax_adult + selection.pax_child;
         const schedule = selectedSchedule(selection.schedule_id);
         const hasInvalidMinimumPartialSeats =
+            !isDirectCustomer &&
             selection.accepts_partial_fulfillment === true &&
             (selection.minimum_partial_seats === null ||
                 selection.minimum_partial_seats < 1 ||
@@ -273,16 +345,28 @@ export default function TourWaitingListDialog({
                 (!!schedule &&
                     selection.minimum_partial_seats <= schedule.available));
 
+        const hasInsufficientDemandForWaitingList =
+            !!schedule &&
+            schedule.available > 0 &&
+            requiredSeats <= schedule.available;
+
+        const hasUnsetPartialPreference =
+            !isDirectCustomer && selection.accepts_partial_fulfillment === null;
+
         return (
             !schedule ||
             requiredSeats < 1 ||
-            requiredSeats <= schedule.available ||
-            selection.accepts_partial_fulfillment === null ||
+            hasInsufficientDemandForWaitingList ||
+            hasUnsetPartialPreference ||
             hasInvalidMinimumPartialSeats
         );
     });
     const hasOnePriority =
         data.schedules.filter((schedule) => schedule.is_priority).length === 1;
+    const keepsExistingPriority =
+        isDirectCustomer &&
+        !!activePriorityWaitingListSchedule &&
+        priorityDecision === 'keep';
     const customerLimitReached =
         isDirectCustomer && customerRemainingSlots === 0;
     const cannotSubmit =
@@ -291,7 +375,7 @@ export default function TourWaitingListDialog({
         data.schedules.length === 0 ||
         hasDuplicateSchedules ||
         hasInvalidSchedule ||
-        !hasOnePriority;
+        (!hasOnePriority && !keepsExistingPriority);
     const serverError = Object.entries(errors).find(
         ([key, error]) =>
             key.startsWith('schedules') && typeof error === 'string',
@@ -300,7 +384,43 @@ export default function TourWaitingListDialog({
     const closeDialog = () => {
         reset();
         clearErrors();
+        setPriorityDecision(null);
+        setPriorityPromptIndex(null);
         onClose();
+    };
+
+    const selectedPriorityScheduleId =
+        priorityPromptIndex !== null
+            ? (data.schedules[priorityPromptIndex]?.schedule_id ?? 0)
+            : (data.schedules.find((schedule) => schedule.is_priority)
+                  ?.schedule_id ?? 0);
+    const hasPriorityConflict =
+        isDirectCustomer &&
+        !!activePriorityWaitingListSchedule &&
+        selectedPriorityScheduleId > 0 &&
+        activePriorityWaitingListSchedule.schedule_id !==
+            selectedPriorityScheduleId;
+    const priorityPromptDescription = activePriorityWaitingListSchedule
+        ? `You already have another priority waiting list for ${activePriorityWaitingListSchedule.tour_name}${activePriorityWaitingListSchedule.departure_date ? ` on ${format(parseISO(activePriorityWaitingListSchedule.departure_date), 'dd MMM yyyy')}` : ''}.`
+        : 'You already have another active priority waiting list.';
+
+    const submitWaitingList = (replaceExistingPriority: boolean) => {
+        const url =
+            isDashboardRoute && company?.username
+                ? storeDashboardWaitingList({
+                      company: company.username,
+                      tour: tour.id,
+                  }).url
+                : `/tours/${tour.id}/waiting-lists`;
+
+        transform((payload) => ({
+            ...payload,
+            replace_existing_priority: replaceExistingPriority,
+        }));
+        post(url, {
+            preserveScroll: true,
+            onSuccess: closeDialog,
+        });
     };
 
     const submit = (event: FormEvent<HTMLFormElement>) => {
@@ -310,18 +430,7 @@ export default function TourWaitingListDialog({
             return;
         }
 
-        const url =
-            isDashboardRoute && company?.username
-                ? storeDashboardWaitingList({
-                      company: company.username,
-                      tour: tour.id,
-                  }).url
-                : `/tours/${tour.id}/waiting-lists`;
-
-        post(url, {
-            preserveScroll: true,
-            onSuccess: closeDialog,
-        });
+        submitWaitingList(priorityDecision === 'replace');
     };
 
     return (
@@ -410,6 +519,9 @@ export default function TourWaitingListDialog({
                                     const warning = passengerWarning(selection);
                                     const minimumPartialSeatsWarning =
                                         minimumPartialSeatWarning(selection);
+                                    const showPriorityReplacementPrompt =
+                                        hasPriorityConflict &&
+                                        priorityPromptIndex === index;
 
                                     return (
                                         <div
@@ -596,152 +708,181 @@ export default function TourWaitingListDialog({
                                                 </div>
                                             )}
 
-                                            <div className="space-y-2">
-                                                <Label>
-                                                    Proceed if only some seats
-                                                    become available?{' '}
-                                                    <span className="text-destructive">
-                                                        *
-                                                    </span>
-                                                </Label>
-                                                <div className="grid grid-cols-2 gap-2">
-                                                    {[
-                                                        [true, 'Yes'],
-                                                        [false, 'No'],
-                                                    ].map(([value, label]) => (
-                                                        <Button
-                                                            key={String(value)}
-                                                            type="button"
-                                                            variant={
-                                                                selection.accepts_partial_fulfillment ===
-                                                                value
-                                                                    ? 'default'
-                                                                    : 'outline'
-                                                            }
-                                                            size="sm"
-                                                            onClick={() => {
-                                                                clearErrors();
-                                                                setData(
-                                                                    'schedules',
-                                                                    data.schedules.map(
-                                                                        (
-                                                                            schedule,
-                                                                            rowIndex,
-                                                                        ) =>
-                                                                            rowIndex ===
-                                                                            index
-                                                                                ? {
-                                                                                      ...schedule,
-                                                                                      accepts_partial_fulfillment:
-                                                                                          Boolean(
-                                                                                              value,
-                                                                                          ),
-                                                                                      minimum_partial_seats:
-                                                                                          value
-                                                                                              ? schedule.minimum_partial_seats
-                                                                                              : null,
-                                                                                  }
-                                                                                : schedule,
-                                                                    ),
-                                                                );
-                                                            }}
-                                                        >
-                                                            {label}
-                                                        </Button>
-                                                    ))}
-                                                </div>
-                                                {scheduleError(
-                                                    index,
-                                                    'accepts_partial_fulfillment',
-                                                ) && (
-                                                    <p className="text-xs text-destructive">
-                                                        {
-                                                            scheduleError(
-                                                                index,
-                                                                'accepts_partial_fulfillment',
-                                                            ) as string
-                                                        }
-                                                    </p>
-                                                )}
-                                            </div>
+                                            {!isDirectCustomer && (
+                                                <>
+                                                    <div className="space-y-2">
+                                                        <Label>
+                                                            Proceed if only some
+                                                            seats become
+                                                            available?{' '}
+                                                            <span className="text-destructive">
+                                                                *
+                                                            </span>
+                                                        </Label>
+                                                        <div className="grid grid-cols-2 gap-2">
+                                                            {[
+                                                                [true, 'Yes'],
+                                                                [false, 'No'],
+                                                            ].map(
+                                                                ([
+                                                                    value,
+                                                                    label,
+                                                                ]) => (
+                                                                    <Button
+                                                                        key={String(
+                                                                            value,
+                                                                        )}
+                                                                        type="button"
+                                                                        variant={
+                                                                            selection.accepts_partial_fulfillment ===
+                                                                            value
+                                                                                ? 'default'
+                                                                                : 'outline'
+                                                                        }
+                                                                        size="sm"
+                                                                        onClick={() => {
+                                                                            clearErrors();
+                                                                            setData(
+                                                                                'schedules',
+                                                                                data.schedules.map(
+                                                                                    (
+                                                                                        schedule,
+                                                                                        rowIndex,
+                                                                                    ) =>
+                                                                                        rowIndex ===
+                                                                                        index
+                                                                                            ? {
+                                                                                                  ...schedule,
+                                                                                                  accepts_partial_fulfillment:
+                                                                                                      Boolean(
+                                                                                                          value,
+                                                                                                      ),
+                                                                                                  minimum_partial_seats:
+                                                                                                      value
+                                                                                                          ? schedule.minimum_partial_seats
+                                                                                                          : null,
+                                                                                              }
+                                                                                            : schedule,
+                                                                                ),
+                                                                            );
+                                                                        }}
+                                                                    >
+                                                                        {label}
+                                                                    </Button>
+                                                                ),
+                                                            )}
+                                                        </div>
+                                                        {scheduleError(
+                                                            index,
+                                                            'accepts_partial_fulfillment',
+                                                        ) && (
+                                                            <p className="text-xs text-destructive">
+                                                                {
+                                                                    scheduleError(
+                                                                        index,
+                                                                        'accepts_partial_fulfillment',
+                                                                    ) as string
+                                                                }
+                                                            </p>
+                                                        )}
+                                                    </div>
 
-                                            {selection.accepts_partial_fulfillment ===
-                                                true && (
-                                                <div className="space-y-1.5">
-                                                    <Label
-                                                        htmlFor={`minimum-partial-seats-${index}`}
-                                                    >
-                                                        Minimum passengers who
-                                                        can still proceed{' '}
-                                                        <span className="text-destructive">
-                                                            *
-                                                        </span>
-                                                    </Label>
-                                                    <Input
-                                                        id={`minimum-partial-seats-${index}`}
-                                                        type="number"
-                                                        min={1}
-                                                        max={999}
-                                                        value={
-                                                            selection.minimum_partial_seats ??
-                                                            ''
-                                                        }
-                                                        onChange={(event) =>
-                                                            updateSchedule(
+                                                    {selection.accepts_partial_fulfillment ===
+                                                        true && (
+                                                        <div className="space-y-1.5">
+                                                            <Label
+                                                                htmlFor={`minimum-partial-seats-${index}`}
+                                                            >
+                                                                Minimum
+                                                                passengers who
+                                                                can still
+                                                                proceed{' '}
+                                                                <span className="text-destructive">
+                                                                    *
+                                                                </span>
+                                                            </Label>
+                                                            <Input
+                                                                id={`minimum-partial-seats-${index}`}
+                                                                type="number"
+                                                                min={1}
+                                                                max={999}
+                                                                value={
+                                                                    selection.minimum_partial_seats ??
+                                                                    ''
+                                                                }
+                                                                onChange={(
+                                                                    event,
+                                                                ) =>
+                                                                    updateSchedule(
+                                                                        index,
+                                                                        'minimum_partial_seats',
+                                                                        event
+                                                                            .target
+                                                                            .value ===
+                                                                            ''
+                                                                            ? null
+                                                                            : Math.max(
+                                                                                  1,
+                                                                                  Number(
+                                                                                      event
+                                                                                          .target
+                                                                                          .value,
+                                                                                  ) ||
+                                                                                      1,
+                                                                              ),
+                                                                    )
+                                                                }
+                                                            />
+                                                            <p className="text-xs text-muted-foreground">
+                                                                Count only adult
+                                                                and child
+                                                                passengers here.
+                                                                Infants are
+                                                                excluded.
+                                                            </p>
+                                                            {scheduleError(
                                                                 index,
                                                                 'minimum_partial_seats',
-                                                                event.target
-                                                                    .value ===
-                                                                    ''
-                                                                    ? null
-                                                                    : Math.max(
-                                                                          1,
-                                                                          Number(
-                                                                              event
-                                                                                  .target
-                                                                                  .value,
-                                                                          ) ||
-                                                                              1,
-                                                                      ),
-                                                            )
-                                                        }
-                                                    />
-                                                    <p className="text-xs text-muted-foreground">
-                                                        Count only adult and
-                                                        child passengers here.
-                                                        Infants are excluded.
-                                                    </p>
-                                                    {scheduleError(
-                                                        index,
-                                                        'minimum_partial_seats',
-                                                    ) && (
-                                                        <p className="text-xs text-destructive">
-                                                            {
-                                                                scheduleError(
-                                                                    index,
-                                                                    'minimum_partial_seats',
-                                                                ) as string
-                                                            }
-                                                        </p>
-                                                    )}
-                                                    {minimumPartialSeatsWarning && (
-                                                        <div className="flex gap-2 rounded-md border border-amber-300 bg-amber-50 p-2.5 text-xs text-amber-900 dark:border-amber-700 dark:bg-amber-950/30 dark:text-amber-100">
-                                                            <AlertCircleIcon className="size-4 shrink-0" />
-                                                            <span>
-                                                                {
-                                                                    minimumPartialSeatsWarning
-                                                                }
-                                                            </span>
+                                                            ) && (
+                                                                <p className="text-xs text-destructive">
+                                                                    {
+                                                                        scheduleError(
+                                                                            index,
+                                                                            'minimum_partial_seats',
+                                                                        ) as string
+                                                                    }
+                                                                </p>
+                                                            )}
+                                                            {minimumPartialSeatsWarning && (
+                                                                <div className="flex gap-2 rounded-md border border-amber-300 bg-amber-50 p-2.5 text-xs text-amber-900 dark:border-amber-700 dark:bg-amber-950/30 dark:text-amber-100">
+                                                                    <AlertCircleIcon className="size-4 shrink-0" />
+                                                                    <span>
+                                                                        {
+                                                                            minimumPartialSeatsWarning
+                                                                        }
+                                                                    </span>
+                                                                </div>
+                                                            )}
                                                         </div>
                                                     )}
-                                                </div>
+
+                                                    {selection.accepts_partial_fulfillment ===
+                                                        false && (
+                                                        <div className="rounded-md border border-dashed px-3 py-2 text-xs text-muted-foreground">
+                                                            Full requested adult
+                                                            and child passengers
+                                                            must be available
+                                                            before this schedule
+                                                            can proceed.
+                                                        </div>
+                                                    )}
+                                                </>
                                             )}
 
-                                            {selection.accepts_partial_fulfillment ===
-                                                false && (
+                                            {isDirectCustomer && (
                                                 <div className="rounded-md border border-dashed px-3 py-2 text-xs text-muted-foreground">
                                                     Full requested adult and
-                                                    child passengers must be
+                                                    child passengers must become
                                                     available before this
                                                     schedule can proceed.
                                                 </div>
@@ -765,6 +906,71 @@ export default function TourWaitingListDialog({
                                                     </span>
                                                 </span>
                                             </Label>
+                                            {showPriorityReplacementPrompt && (
+                                                <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-xs leading-relaxed text-amber-950 dark:border-amber-700 dark:bg-amber-950/30 dark:text-amber-100">
+                                                    <span>
+                                                        {
+                                                            priorityPromptDescription
+                                                        }{' '}
+                                                        If you choose Yes, this
+                                                        schedule will become
+                                                        your new priority. If
+                                                        you choose No, your
+                                                        previous priority
+                                                        schedule will stay
+                                                        active.
+                                                    </span>{' '}
+                                                    <RadioGroup
+                                                        value={
+                                                            priorityDecision ??
+                                                            ''
+                                                        }
+                                                        onValueChange={(
+                                                            value,
+                                                        ) => {
+                                                            if (
+                                                                value ===
+                                                                'replace'
+                                                            ) {
+                                                                replaceExistingPriority(
+                                                                    index,
+                                                                );
+                                                            }
+
+                                                            if (
+                                                                value === 'keep'
+                                                            ) {
+                                                                keepExistingPriority();
+                                                            }
+                                                        }}
+                                                        className="inline-flex items-center gap-3 align-middle"
+                                                        disabled={processing}
+                                                    >
+                                                        <Label
+                                                            htmlFor={`priority-replace-${index}`}
+                                                            className="inline-flex cursor-pointer items-center gap-1 font-normal"
+                                                        >
+                                                            <RadioGroupItem
+                                                                id={`priority-replace-${index}`}
+                                                                value="replace"
+                                                                className="size-3 [&_svg]:size-1"
+                                                            />
+                                                            Yes
+                                                        </Label>
+                                                        <Label
+                                                            htmlFor={`priority-keep-${index}`}
+                                                            className="inline-flex cursor-pointer items-center gap-1 font-normal"
+                                                        >
+                                                            <RadioGroupItem
+                                                                id={`priority-keep-${index}`}
+                                                                value="keep"
+                                                                className="size-3 [&_svg]:size-1"
+                                                            />
+                                                            No
+                                                        </Label>
+                                                    </RadioGroup>
+                                                </div>
+                                            )}
                                         </div>
                                     );
                                 })}
@@ -776,9 +982,11 @@ export default function TourWaitingListDialog({
                                     schedule.
                                 </p>
                             )}
-                            {serverError && (
+                            {(serverError ||
+                                errors.replace_existing_priority) && (
                                 <p className="text-sm text-destructive">
-                                    {serverError}
+                                    {serverError ??
+                                        errors.replace_existing_priority}
                                 </p>
                             )}
                         </section>

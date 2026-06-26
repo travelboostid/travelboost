@@ -95,7 +95,8 @@ test('vendor dashboard waiting list page shows only requests for the vendor inve
     $response->assertInertia(fn ($page) => $page
         ->component('companies/dashboard/waiting-lists/index')
         ->has('data.data', 1)
-        ->where('data.data.0.contact_name', 'Vendor Customer'));
+        ->where('data.data.0.contact_name', 'Vendor Customer')
+        ->where('permissions.can_manage_queues', true));
 });
 
 test('agent dashboard waiting list page shows team requests and customer-form requests from the same agent account', function () {
@@ -160,7 +161,8 @@ test('agent dashboard waiting list page shows team requests and customer-form re
     $response->assertInertia(fn ($page) => $page
         ->component('companies/dashboard/waiting-lists/index')
         ->has('data.data', 2)
-        ->where('data.data.0.vendor.name', $vendor->name));
+        ->where('data.data.0.vendor.name', $vendor->name)
+        ->where('permissions.can_manage_queues', false));
 });
 
 test('vendor dashboard waiting list page supports global search across waiting list fields', function () {

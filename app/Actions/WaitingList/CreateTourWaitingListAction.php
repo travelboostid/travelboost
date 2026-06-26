@@ -3,6 +3,7 @@
 namespace App\Actions\WaitingList;
 
 use App\Enums\CompanyType;
+use App\Enums\TourWaitingListScheduleStatus;
 use App\Enums\TourWaitingListStatus;
 use App\Models\AgentTour;
 use App\Models\Company;
@@ -13,6 +14,7 @@ use App\Models\TourWaitingList;
 use App\Models\TourWaitingListSchedule;
 use App\Models\User;
 use App\Services\TourScheduleDisplayPriceService;
+use App\Support\CustomerActiveWaitingListResolver;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -22,6 +24,7 @@ class CreateTourWaitingListAction
 {
     public function __construct(
         private readonly TourScheduleDisplayPriceService $displayPriceService,
+        private readonly CustomerActiveWaitingListResolver $activeWaitingListResolver,
     ) {}
 
     /**
@@ -51,6 +54,7 @@ class CreateTourWaitingListAction
         return DB::transaction(function () use ($creator, $tour, $data, $creatorCompany, $tenantAgent): TourWaitingList {
             $isCustomerSubmission = $tenantAgent !== null;
             $this->assertSubmissionContext($creator, $tour, $creatorCompany, $tenantAgent);
+            $activeCustomerSchedules = null;
 
             $scheduleSelections = collect($data['schedules'])->values();
             $scheduleIds = $scheduleSelections
@@ -69,7 +73,9 @@ class CreateTourWaitingListAction
                 ]);
             }
 
-            if ($scheduleSelections->where('is_priority', true)->count() !== 1) {
+            $priorityCount = $scheduleSelections->where('is_priority', true)->count();
+
+            if (! $isCustomerSubmission && $priorityCount !== 1) {
                 throw ValidationException::withMessages([
                     'schedules' => 'Select exactly one priority schedule.',
                 ]);
@@ -96,7 +102,21 @@ class CreateTourWaitingListAction
             );
 
             if ($isCustomerSubmission) {
-                $this->assertCustomerLimit($creator, $scheduleIds);
+                User::query()->whereKey($creator->id)->lockForUpdate()->firstOrFail();
+                $activeCustomerSchedules = $this->activeWaitingListResolver->activeSchedulesForCustomer($creator);
+                $replaceExistingPriority = (bool) ($data['replace_existing_priority'] ?? false);
+
+                $this->assertCustomerLimit($scheduleIds, $activeCustomerSchedules);
+                $this->assertCustomerPrioritySelection(
+                    $scheduleSelections,
+                    $activeCustomerSchedules,
+                    $replaceExistingPriority,
+                );
+                $this->assertCustomerPriorityCount(
+                    $priorityCount,
+                    $activeCustomerSchedules,
+                    $replaceExistingPriority,
+                );
             }
 
             $waitingList = TourWaitingList::query()->create([
@@ -105,6 +125,7 @@ class CreateTourWaitingListAction
                 'created_by_user_id' => $creator->id,
                 'created_by_company_id' => $creatorCompany?->id,
                 'customer_user_id' => $isCustomerSubmission ? $creator->id : null,
+                'agent_company_id' => $isCustomerSubmission ? $tenantAgent?->id : null,
                 'contact_name' => trim($data['contact_name']),
                 'contact_phone' => trim($data['contact_phone']),
                 'contact_email' => mb_strtolower(trim($data['contact_email'])),
@@ -114,21 +135,34 @@ class CreateTourWaitingListAction
                 'status' => TourWaitingListStatus::PENDING,
             ]);
 
+            if (
+                $isCustomerSubmission
+                && (bool) ($data['replace_existing_priority'] ?? false)
+                && $activeCustomerSchedules instanceof Collection
+            ) {
+                $this->clearExistingPriority($activeCustomerSchedules);
+            }
+
             foreach ($validatedSelections as $index => $validatedSelection) {
                 $schedule = $validatedSelection['schedule'];
                 $selection = $validatedSelection['selection'];
                 $availability = $availabilities->get($schedule->id);
 
+                $acceptsPartialFulfillment = $isCustomerSubmission
+                    ? false
+                    : (bool) $selection['accepts_partial_fulfillment'];
+
                 $waitingList->schedules()->create([
                     'tour_schedule_id' => $schedule->id,
+                    'status' => TourWaitingListScheduleStatus::QUEUED,
                     'preference_order' => $index + 1,
                     'available_seats_at_request' => (int) $availability->available,
                     'display_price_at_request' => $this->displayPriceService->resolve($schedule, $tour),
                     'pax_adult' => (int) $selection['pax_adult'],
                     'pax_child' => (int) $selection['pax_child'],
                     'pax_infant' => (int) $selection['pax_infant'],
-                    'accepts_partial_fulfillment' => (bool) $selection['accepts_partial_fulfillment'],
-                    'minimum_partial_seats' => (bool) $selection['accepts_partial_fulfillment']
+                    'accepts_partial_fulfillment' => $acceptsPartialFulfillment,
+                    'minimum_partial_seats' => $acceptsPartialFulfillment
                         ? (int) $selection['minimum_partial_seats']
                         : null,
                     'is_priority' => (bool) $selection['is_priority'],
@@ -292,34 +326,102 @@ class CreateTourWaitingListAction
     /**
      * @param  Collection<int, int>  $scheduleIds
      */
-    private function assertCustomerLimit(User $customer, Collection $scheduleIds): void
+    private function assertCustomerLimit(Collection $scheduleIds, Collection $activeCustomerSchedules): void
     {
-        User::query()->whereKey($customer->id)->lockForUpdate()->firstOrFail();
-
-        $activeStatuses = TourWaitingListStatus::activeValues();
-        $existingScheduleCount = TourWaitingListSchedule::query()
-            ->whereHas('waitingList', fn ($query) => $query
-                ->where('customer_user_id', $customer->id)
-                ->whereIn('status', $activeStatuses))
-            ->count();
+        $existingScheduleCount = $activeCustomerSchedules->count();
 
         if ($existingScheduleCount + $scheduleIds->count() > 2) {
             throw ValidationException::withMessages([
                 'schedules' => 'A customer may have a maximum of two active waiting-listed schedules across all tours.',
             ]);
         }
-
-        $hasDuplicateSchedule = TourWaitingListSchedule::query()
-            ->whereIn('tour_schedule_id', $scheduleIds)
-            ->whereHas('waitingList', fn ($query) => $query
-                ->where('customer_user_id', $customer->id)
-                ->whereIn('status', $activeStatuses))
-            ->exists();
+        $hasDuplicateSchedule = $activeCustomerSchedules
+            ->contains(fn (TourWaitingListSchedule $schedule): bool => $scheduleIds->contains((int) $schedule->tour_schedule_id));
 
         if ($hasDuplicateSchedule) {
             throw ValidationException::withMessages([
                 'schedules' => 'You already have an active waiting-list request for one of the selected schedules.',
             ]);
         }
+    }
+
+    /**
+     * @param  Collection<int, array{is_priority: bool, schedule_id: int}>  $scheduleSelections
+     * @param  Collection<int, TourWaitingListSchedule>  $activeCustomerSchedules
+     */
+    private function assertCustomerPrioritySelection(
+        Collection $scheduleSelections,
+        Collection $activeCustomerSchedules,
+        bool $replaceExistingPriority,
+    ): void {
+        $requestedPrioritySelection = $scheduleSelections->first(
+            fn (array $selection): bool => (bool) $selection['is_priority']
+        );
+
+        if (! is_array($requestedPrioritySelection)) {
+            return;
+        }
+
+        $existingPrioritySchedule = $activeCustomerSchedules
+            ->first(fn (TourWaitingListSchedule $schedule): bool => (bool) $schedule->is_priority);
+
+        if (! $existingPrioritySchedule) {
+            return;
+        }
+
+        if ((int) $existingPrioritySchedule->tour_schedule_id === (int) $requestedPrioritySelection['schedule_id']) {
+            return;
+        }
+
+        if ($replaceExistingPriority) {
+            return;
+        }
+
+        throw ValidationException::withMessages([
+            'replace_existing_priority' => 'You already have another active priority waiting list. Confirm whether you want to replace it with the newly selected schedule.',
+        ]);
+    }
+
+    /**
+     * @param  Collection<int, TourWaitingListSchedule>  $activeCustomerSchedules
+     */
+    private function assertCustomerPriorityCount(
+        int $priorityCount,
+        Collection $activeCustomerSchedules,
+        bool $replaceExistingPriority,
+    ): void {
+        $hasExistingPriority = $activeCustomerSchedules
+            ->contains(fn (TourWaitingListSchedule $schedule): bool => (bool) $schedule->is_priority);
+
+        $isValidCount = $replaceExistingPriority
+            ? $priorityCount === 1
+            : ($hasExistingPriority ? in_array($priorityCount, [0, 1], true) : $priorityCount === 1);
+
+        if ($isValidCount) {
+            return;
+        }
+
+        throw ValidationException::withMessages([
+            'schedules' => 'Select exactly one priority schedule.',
+        ]);
+    }
+
+    /**
+     * @param  Collection<int, TourWaitingListSchedule>  $activeCustomerSchedules
+     */
+    private function clearExistingPriority(Collection $activeCustomerSchedules): void
+    {
+        $priorityScheduleIds = $activeCustomerSchedules
+            ->filter(fn (TourWaitingListSchedule $schedule): bool => (bool) $schedule->is_priority)
+            ->pluck('id')
+            ->all();
+
+        if ($priorityScheduleIds === []) {
+            return;
+        }
+
+        TourWaitingListSchedule::query()
+            ->whereIn('id', $priorityScheduleIds)
+            ->update(['is_priority' => false]);
     }
 }

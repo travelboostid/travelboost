@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers\Me;
 
+use App\Actions\WaitingList\ResolveWaitingListQueuePositionAction;
 use App\Enums\BookingStatus;
+use App\Enums\TourWaitingListScheduleStatus;
 use App\Http\Controllers\Controller;
 use App\Models\BankAccount;
 use App\Models\Booking;
@@ -12,10 +14,12 @@ use App\Models\Tour;
 use App\Models\TourAvailability;
 use App\Models\TourPrice;
 use App\Models\TourSchedule;
+use App\Models\TourWaitingList;
+use App\Models\TourWaitingListSchedule;
 use App\Services\BookingPaymentReceiverService;
 use App\Services\BookingPaymentWorkflowService;
-use App\Services\BookingPricingService;
 use App\Services\BookingTravelDocumentService;
+use App\Support\WaitingListBookingCreateUrl;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -39,7 +43,7 @@ class HomeController extends Controller
     {
         $user = $request->user();
         $tab = $request->string('tab')->toString();
-        $activeTab = in_array($tab, ['favorites', 'current', 'history'], true)
+        $activeTab = in_array($tab, ['favorites', 'current', 'history', 'waiting_list'], true)
           ? $tab
           : 'current';
 
@@ -47,6 +51,7 @@ class HomeController extends Controller
             return Inertia::render('me/bookings', [
                 'bookings' => null,
                 'favorites' => null,
+                'waitingLists' => null,
                 'activeTab' => $activeTab,
                 'selectedBookingNumber' => $request->string('booking_number')->toString() ?: null,
             ]);
@@ -68,7 +73,7 @@ class HomeController extends Controller
             BookingStatus::WAITING_LIST->value,
         ];
 
-        $bookings = $activeTab !== 'favorites'
+        $bookings = in_array($activeTab, ['current', 'history'], true)
           ? $user->bookings()
               ->with([
                   'tour.image',
@@ -78,6 +83,7 @@ class HomeController extends Controller
                   'vendor',
                   'passengers',
                   'payments',
+                  'waitingListSchedules',
               ])
               ->when($activeTab === 'current', function ($query) use ($currentStatuses): void {
                   $query
@@ -116,9 +122,25 @@ class HomeController extends Controller
             $this->appendSchedulePayload($favorites->getCollection());
         }
 
+        $waitingLists = $activeTab === 'waiting_list'
+            ? $user->customerTourWaitingLists()
+                ->with([
+                    'tour.image',
+                    'tour.company',
+                    'vendor',
+                    'schedules.tourSchedule.availability',
+                    'schedules.booking.waitingListSchedules',
+                ])
+                ->latest()
+                ->paginate(10)
+                ->withQueryString()
+                ->through(fn (TourWaitingList $waitingList): array => $this->appendWaitingListPayload($waitingList))
+            : null;
+
         return Inertia::render('me/bookings', [
             'bookings' => $bookings,
             'favorites' => $favorites,
+            'waitingLists' => $waitingLists,
             'activeTab' => $activeTab,
             'selectedBookingNumber' => $request->string('booking_number')->toString() ?: null,
         ]);
@@ -209,13 +231,13 @@ class HomeController extends Controller
      */
     private function appendBookingPayload(Booking $booking): array
     {
-        $booking = app(BookingPricingService::class)->reconcileSnapshotTotals($booking);
         $paidAmount = app(BookingPaymentWorkflowService::class)->finalizablePaidAmount($booking);
         $grandTotal = (float) $booking->grand_total;
         $remainingBalance = max(0.0, $grandTotal - $paidAmount);
         $status = $booking->status instanceof BookingStatus
             ? $booking->status
             : BookingStatus::tryFrom((string) $booking->status);
+        $displayStatus = $this->resolveCustomerBookingStatus($booking, $status);
         $isDownPayment = $status === BookingStatus::DOWN_PAYMENT;
         $needsTravelDocuments = in_array($status, [
             BookingStatus::WAITING_PAYMENT_APPROVAL,
@@ -225,10 +247,11 @@ class HomeController extends Controller
 
         $company = $booking->tour?->company;
         $settings = $company?->companySetting ?? $company?->settings ?? $company?->settings()->first();
-        $actionEligibility = $this->resolveActionEligibility($booking, $status, $settings);
+        $actionEligibility = $this->resolveActionEligibility($booking, $displayStatus, $settings);
 
         return [
             ...$booking->toArray(),
+            'status' => $displayStatus?->value ?? (string) $booking->status,
             'paid_amount' => $paidAmount,
             'remaining_balance' => $remainingBalance,
             'display_amount_label' => $isDownPayment ? 'Remaining balance' : 'Grand total',
@@ -243,10 +266,19 @@ class HomeController extends Controller
 
     private function resolveActionEligibility(Booking $booking, ?BookingStatus $status, mixed $settings): array
     {
+        if ($this->hasClosedWaitingListOffer($booking)) {
+            return [
+                'can_continue_booking' => false,
+                'can_reorder' => false,
+                'booking_window_closed' => false,
+                'action_unavailable_reason' => null,
+            ];
+        }
+
         $canContinueBooking = in_array($status, [
             BookingStatus::AWAITING_PAYMENT,
             BookingStatus::BOOKING_RESERVED,
-        ], true);
+        ], true) && $this->bookingAllowsWaitingListCompletion($booking);
         $canReorder = $status === BookingStatus::EXPIRED;
 
         if (! $canContinueBooking && ! $canReorder) {
@@ -617,6 +649,187 @@ class HomeController extends Controller
                     ->values()
             );
         });
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function appendWaitingListPayload(TourWaitingList $waitingList): array
+    {
+        $positionResolver = app(ResolveWaitingListQueuePositionAction::class);
+        $queuedTourScheduleIds = $waitingList->schedules
+            ->filter(fn (TourWaitingListSchedule $schedule): bool => $schedule->status === TourWaitingListScheduleStatus::QUEUED)
+            ->pluck('tour_schedule_id')
+            ->map(fn ($id): int => (int) $id)
+            ->unique()
+            ->values()
+            ->all();
+        $queuePositionMaps = $positionResolver->mapsForScheduleIds($queuedTourScheduleIds);
+
+        $canManage = $this->customerCanManageWaitingList(request()->user(), $waitingList);
+
+        return [
+            'id' => $waitingList->id,
+            'status' => $waitingList->status?->value ?? (string) $waitingList->status,
+            'contact_name' => $waitingList->contact_name,
+            'contact_phone' => $waitingList->contact_phone,
+            'contact_email' => $waitingList->contact_email,
+            'contact_address' => $waitingList->contact_address,
+            'can_edit' => $canManage,
+            'can_cancel' => $canManage,
+            'created_at' => $waitingList->created_at?->toIso8601String(),
+            'fulfilled_at' => $waitingList->fulfilled_at?->toIso8601String(),
+            'tour' => $waitingList->tour ? [
+                'id' => $waitingList->tour->id,
+                'code' => $waitingList->tour->code,
+                'name' => $waitingList->tour->name,
+                'destination' => $waitingList->tour->destination,
+                'image' => $waitingList->tour->image,
+                'company' => $waitingList->tour->company ? [
+                    'id' => $waitingList->tour->company->id,
+                    'username' => $waitingList->tour->company->username,
+                    'name' => $waitingList->tour->company->name,
+                ] : null,
+            ] : null,
+            'vendor' => $waitingList->vendor ? [
+                'id' => $waitingList->vendor->id,
+                'name' => $waitingList->vendor->name,
+            ] : null,
+            'schedules' => $waitingList->schedules
+                ->sortBy('preference_order')
+                ->values()
+                ->map(function (TourWaitingListSchedule $schedule) use ($queuePositionMaps, $waitingList): array {
+                    $departureDate = $schedule->tourSchedule?->departure_date;
+                    $booking = $schedule->booking;
+                    $status = $schedule->status?->value ?? (string) $schedule->status;
+                    $bookingHref = null;
+
+                    if (
+                        $schedule->status === TourWaitingListScheduleStatus::OFFERED
+                        && $booking
+                        && $this->bookingAllowsWaitingListCompletion($booking)
+                        && $waitingList->tour
+                        && $departureDate
+                    ) {
+                        $bookingHref = WaitingListBookingCreateUrl::fromOffer($booking, $schedule);
+                    }
+
+                    $tourScheduleId = (int) $schedule->tour_schedule_id;
+
+                    return [
+                        'id' => $schedule->id,
+                        'status' => $status,
+                        'queue_position' => $schedule->status === TourWaitingListScheduleStatus::QUEUED
+                            ? ($queuePositionMaps[$tourScheduleId][$schedule->id] ?? null)
+                            : null,
+                        'pax_adult' => $schedule->pax_adult,
+                        'pax_child' => $schedule->pax_child,
+                        'pax_infant' => $schedule->pax_infant,
+                        'available_seats' => $schedule->tourSchedule?->availability?->available,
+                        'offered_at' => $schedule->offered_at?->toIso8601String(),
+                        'offer_expires_at' => $schedule->offer_expires_at?->toIso8601String(),
+                        'booking_number' => $booking?->booking_number,
+                        'complete_booking_href' => $bookingHref,
+                        'tour_schedule' => $schedule->tourSchedule ? [
+                            'id' => $schedule->tourSchedule->id,
+                            'departure_date' => $schedule->tourSchedule->departure_date,
+                            'return_date' => $schedule->tourSchedule->return_date,
+                        ] : null,
+                    ];
+                })
+                ->all(),
+        ];
+    }
+
+    private function customerCanManageWaitingList(mixed $user, TourWaitingList $waitingList): bool
+    {
+        if (! $user) {
+            return false;
+        }
+
+        return $user->can('updateAsCustomer', $waitingList);
+    }
+
+    private function bookingAllowsWaitingListCompletion(Booking $booking): bool
+    {
+        $status = $booking->status instanceof BookingStatus
+            ? $booking->status
+            : BookingStatus::tryFrom((string) $booking->status);
+
+        if (! in_array($status, [
+            BookingStatus::BOOKING_RESERVED,
+            BookingStatus::AWAITING_PAYMENT,
+        ], true)) {
+            return false;
+        }
+
+        if (! $this->bookingHasWaitingListSchedule($booking)) {
+            return true;
+        }
+
+        return $this->bookingHasOfferedWaitingListSchedule($booking);
+    }
+
+    private function resolveCustomerBookingStatus(Booking $booking, ?BookingStatus $status): ?BookingStatus
+    {
+        $closedWaitingListStatus = $this->closedWaitingListBookingStatus($booking);
+
+        return $closedWaitingListStatus ?? $status;
+    }
+
+    private function hasClosedWaitingListOffer(Booking $booking): bool
+    {
+        return $this->closedWaitingListBookingStatus($booking) !== null;
+    }
+
+    private function closedWaitingListBookingStatus(Booking $booking): ?BookingStatus
+    {
+        if (! $this->bookingHasWaitingListSchedule($booking)) {
+            return null;
+        }
+
+        $statuses = $booking->relationLoaded('waitingListSchedules')
+            ? $booking->waitingListSchedules->pluck('status')
+            : $booking->waitingListSchedules()->pluck('status');
+
+        $normalizedStatuses = $statuses
+            ->map(fn (mixed $scheduleStatus): ?TourWaitingListScheduleStatus => $scheduleStatus instanceof TourWaitingListScheduleStatus
+                ? $scheduleStatus
+                : TourWaitingListScheduleStatus::tryFrom((string) $scheduleStatus))
+            ->filter()
+            ->values();
+
+        if ($normalizedStatuses->contains(TourWaitingListScheduleStatus::CANCELLED)) {
+            return BookingStatus::CANCELLED;
+        }
+
+        if ($normalizedStatuses->contains(TourWaitingListScheduleStatus::EXPIRED)) {
+            return BookingStatus::EXPIRED;
+        }
+
+        return null;
+    }
+
+    private function bookingHasWaitingListSchedule(Booking $booking): bool
+    {
+        if ($booking->relationLoaded('waitingListSchedules')) {
+            return $booking->waitingListSchedules->isNotEmpty();
+        }
+
+        return $booking->waitingListSchedules()->exists();
+    }
+
+    private function bookingHasOfferedWaitingListSchedule(Booking $booking): bool
+    {
+        if ($booking->relationLoaded('waitingListSchedules')) {
+            return $booking->waitingListSchedules->contains(
+                fn (TourWaitingListSchedule $schedule): bool => $schedule->status === TourWaitingListScheduleStatus::OFFERED
+            );
+        }
+
+        return $booking->waitingListSchedules()
+            ->where('status', TourWaitingListScheduleStatus::OFFERED->value)
+            ->exists();
     }
 
     public function toggleTourLike(Request $request, Tour $tour): JsonResponse

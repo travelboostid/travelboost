@@ -7,6 +7,7 @@ import {
     TooltipContent,
     TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { CustomerWaitingListEditDialog } from '@/components/waiting-list/customer-waiting-list-edit-dialog';
 import { formatIDR } from '@/constants/booking';
 import { cn, extractImageSrc } from '@/lib/utils';
 import { Link, router } from '@inertiajs/react';
@@ -22,7 +23,11 @@ import {
     EyeIcon,
     FileTextIcon,
     HeartIcon,
+    ListOrderedIcon,
+    PencilIcon,
     RefreshCwIcon,
+    UsersIcon,
+    XIcon,
     type LucideIcon,
 } from 'lucide-react';
 import { useEffect, useState, type ReactNode } from 'react';
@@ -83,6 +88,52 @@ type TourItem = {
     schedules?: unknown[];
 };
 
+type WaitingListScheduleItem = {
+    id: number;
+    status: string;
+    queue_position: number | null;
+    pax_adult: number;
+    pax_child: number;
+    pax_infant: number;
+    available_seats?: number | null;
+    offered_at?: string | null;
+    offer_expires_at?: string | null;
+    booking_number?: string | null;
+    complete_booking_href?: string | null;
+    tour_schedule?: {
+        id: number;
+        departure_date: string;
+        return_date: string;
+    } | null;
+};
+
+type WaitingListItem = {
+    id: number;
+    status: string;
+    contact_name: string;
+    contact_phone: string;
+    contact_email: string;
+    contact_address?: string | null;
+    can_edit: boolean;
+    can_cancel: boolean;
+    created_at?: string | null;
+    fulfilled_at?: string | null;
+    tour: {
+        id: number;
+        code?: string | null;
+        name: string;
+        destination?: string | null;
+        image?: unknown;
+        company?: {
+            id: number;
+            username?: string | null;
+            name?: string | null;
+        };
+    } | null;
+    vendor: { id: number; name: string } | null;
+    schedules: WaitingListScheduleItem[];
+};
+
 type Paginated<T> = {
     data: T[];
 };
@@ -91,7 +142,8 @@ type PageProps = {
     auth: { user: { id: number; name: string } | null };
     bookings: Paginated<BookingItem> | null;
     favorites: Paginated<TourItem> | null;
-    activeTab: 'favorites' | 'current' | 'history';
+    waitingLists: Paginated<WaitingListItem> | null;
+    activeTab: 'favorites' | 'current' | 'history' | 'waiting_list';
     selectedBookingNumber?: string | null;
 };
 
@@ -112,8 +164,122 @@ type MetadataItem = {
 const TABS = [
     { key: 'favorites', label: 'Favorites', icon: HeartIcon },
     { key: 'current', label: 'Current Bookings', icon: CalendarIcon },
+    { key: 'waiting_list', label: 'Waiting List', icon: ListOrderedIcon },
     { key: 'history', label: 'History', icon: ClockIcon },
 ] as const;
+
+const WAITING_LIST_STATUS_STYLES: Record<string, string> = {
+    pending:
+        'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300',
+    contacted: 'bg-sky-100 text-sky-800 dark:bg-sky-900/40 dark:text-sky-300',
+    offered: 'bg-teal-100 text-teal-800 dark:bg-teal-900/40 dark:text-teal-300',
+    fulfilled:
+        'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300',
+    expired:
+        'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300',
+    cancelled: 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300',
+    queued: 'bg-violet-100 text-violet-800 dark:bg-violet-900/40 dark:text-violet-300',
+    skipped:
+        'bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-300',
+};
+
+const WAITING_LIST_STATUS_LABELS: Record<string, string> = {
+    pending: 'Pending',
+    contacted: 'Contacted',
+    offered: 'Seat Offered',
+    fulfilled: 'Fulfilled',
+    expired: 'Offer Expired',
+    cancelled: 'Cancelled',
+    queued: 'In Queue',
+    skipped: 'Skipped',
+};
+
+function formatWaitingListStatus(status: string) {
+    const normalized = status.toLowerCase().replaceAll('_', ' ').trim();
+    return WAITING_LIST_STATUS_LABELS[normalized] ?? status;
+}
+
+function deriveWaitingListCardStatus(waitingList: WaitingListItem): string {
+    const scheduleStatuses = waitingList.schedules.map((schedule) =>
+        schedule.status.toLowerCase(),
+    );
+
+    if (scheduleStatuses.includes('offered')) {
+        return 'offered';
+    }
+
+    if (
+        scheduleStatuses.every((status) => status === 'cancelled') ||
+        waitingList.status.toLowerCase() === 'cancelled'
+    ) {
+        return 'cancelled';
+    }
+
+    if (
+        scheduleStatuses.includes('fulfilled') ||
+        waitingList.status.toLowerCase() === 'fulfilled'
+    ) {
+        return 'fulfilled';
+    }
+
+    if (
+        scheduleStatuses.includes('queued') ||
+        ['pending', 'contacted'].includes(waitingList.status.toLowerCase())
+    ) {
+        return 'queued';
+    }
+
+    if (scheduleStatuses.includes('expired')) {
+        return 'expired';
+    }
+
+    return waitingList.status.toLowerCase();
+}
+
+function formatWaitingListPax(schedule: WaitingListScheduleItem) {
+    const parts = [
+        `${schedule.pax_adult} adult${schedule.pax_adult === 1 ? '' : 's'}`,
+    ];
+
+    if (schedule.pax_child > 0) {
+        parts.push(
+            `${schedule.pax_child} child${schedule.pax_child === 1 ? '' : 'ren'}`,
+        );
+    }
+
+    if (schedule.pax_infant > 0) {
+        parts.push(
+            `${schedule.pax_infant} infant${schedule.pax_infant === 1 ? '' : 's'}`,
+        );
+    }
+
+    return parts.join(' · ');
+}
+
+function offerCountdownLabel(offerExpiresAt?: string | null) {
+    if (!offerExpiresAt) {
+        return null;
+    }
+
+    const expires = dayjs(offerExpiresAt);
+    const now = dayjs();
+
+    if (!expires.isValid()) {
+        return null;
+    }
+
+    if (expires.isBefore(now)) {
+        return null;
+    }
+
+    const totalSeconds = expires.diff(now, 'second');
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+    const formatted = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+
+    return `Complete booking within ${formatted}`;
+}
 
 const STATUS_STYLES: Record<string, string> = {
     'awaiting payment':
@@ -347,6 +513,7 @@ export default function Page({
     auth,
     bookings,
     favorites,
+    waitingLists,
     activeTab: initialActiveTab,
     selectedBookingNumber: initialSelectedBookingNumber = null,
 }: PageProps) {
@@ -392,9 +559,14 @@ export default function Page({
     };
 
     const bookingCount = bookings?.data.length ?? 0;
+    const waitingListCount = waitingLists?.data.length ?? 0;
     const favoriteCount = favoriteTours.length;
     const visibleCount =
-        activeTab === 'favorites' ? favoriteCount : bookingCount;
+        activeTab === 'favorites'
+            ? favoriteCount
+            : activeTab === 'waiting_list'
+              ? waitingListCount
+              : bookingCount;
 
     const switchTab = (tab: PageProps['activeTab']) => {
         setActiveTab(tab);
@@ -523,6 +695,21 @@ export default function Page({
                                 <EmptyState
                                     title="No favorite tours yet"
                                     message="Tours you save from the catalog will appear here."
+                                />
+                            )}
+                        </div>
+                    ) : activeTab === 'waiting_list' ? (
+                        <div className="mx-auto grid w-full max-w-3xl gap-3">
+                            {(waitingLists?.data ?? []).map((waitingList) => (
+                                <WaitingListCard
+                                    key={waitingList.id}
+                                    waitingList={waitingList}
+                                />
+                            ))}
+                            {(waitingLists?.data ?? []).length === 0 && (
+                                <EmptyState
+                                    title="No waiting list requests yet"
+                                    message="When you join a tour waiting list, your queue status and seat offers will appear here."
                                 />
                             )}
                         </div>
@@ -1228,11 +1415,11 @@ function TourImage({
 }) {
     const frameClassName = landscape
         ? 'h-40 w-full overflow-hidden bg-muted md:h-full md:min-h-40'
-        : 'h-36 overflow-hidden bg-muted md:h-full md:min-h-40';
+        : 'h-36 w-full overflow-hidden bg-muted md:h-full md:min-h-40';
 
     const placeholderClassName = landscape
         ? 'flex h-40 w-full items-center justify-center overflow-hidden bg-primary/10 px-3 text-center text-2xl font-bold text-primary md:h-full md:min-h-40'
-        : 'flex h-36 items-center justify-center overflow-hidden bg-primary/10 px-3 text-center text-2xl font-bold text-primary md:h-full md:min-h-40';
+        : 'flex h-36 w-full items-center justify-center overflow-hidden bg-primary/10 px-3 text-center text-2xl font-bold text-primary md:h-full md:min-h-40';
 
     if (hasImage && src) {
         return (
@@ -1240,8 +1427,9 @@ function TourImage({
                 <img
                     src={src}
                     srcSet={srcSet || undefined}
+                    sizes="(max-width: 767px) 100vw, 160px"
                     alt={label}
-                    className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    className="h-full w-full object-cover object-center transition-transform duration-500 group-hover:scale-[1.03]"
                 />
             </div>
         );
@@ -1251,6 +1439,231 @@ function TourImage({
         <div className={placeholderClassName}>
             {label.charAt(0).toUpperCase()}
         </div>
+    );
+}
+
+function WaitingListCard({ waitingList }: { waitingList: WaitingListItem }) {
+    const [isEditOpen, setIsEditOpen] = useState(false);
+    const [isCancelling, setIsCancelling] = useState(false);
+    const imageMedia = waitingList.tour?.image as any;
+    const hasImage = Boolean(imageMedia?.data?.files?.length);
+    const { src, srcSet } = extractImageSrc(imageMedia);
+    const cardStatus = deriveWaitingListCardStatus(waitingList);
+    const showManageActions = waitingList.can_edit || waitingList.can_cancel;
+    const firstQueuedScheduleIndex = waitingList.schedules.findIndex(
+        (schedule) => schedule.status.toLowerCase() === 'queued',
+    );
+
+    const handleCancel = () => {
+        if (
+            !window.confirm(
+                'Cancel this waiting list request? This cannot be undone.',
+            )
+        ) {
+            return;
+        }
+
+        setIsCancelling(true);
+        router.patch(
+            `/waiting-lists/${waitingList.id}/cancel`,
+            {},
+            {
+                preserveScroll: true,
+                onFinish: () => setIsCancelling(false),
+            },
+        );
+    };
+
+    return (
+        <>
+            <article
+                className={cn(
+                    'group overflow-hidden rounded-2xl border bg-card shadow-sm transition-[border-color,box-shadow,transform] hover:-translate-y-px hover:border-primary/30 hover:shadow-md',
+                    cardStatus === 'offered' &&
+                        'border-amber-200/90 dark:border-amber-900/50',
+                    cardStatus === 'queued' &&
+                        'border-violet-200/60 dark:border-violet-900/40',
+                    cardStatus === 'cancelled' && 'opacity-75',
+                )}
+            >
+                <div className="grid gap-0 md:grid-cols-[160px_minmax(0,1fr)]">
+                    <TourImage
+                        src={src}
+                        srcSet={srcSet}
+                        label={waitingList.tour?.name ?? 'Tour'}
+                        hasImage={hasImage}
+                        landscape
+                    />
+
+                    <div className="flex min-w-0 flex-1 flex-col gap-3 p-4">
+                        <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0">
+                                <h2 className="line-clamp-2 text-balance text-base font-bold text-foreground">
+                                    {waitingList.tour?.name ??
+                                        'Tour waiting list'}
+                                </h2>
+                                {waitingList.tour?.destination ? (
+                                    <p className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">
+                                        {waitingList.tour.destination}
+                                    </p>
+                                ) : null}
+                            </div>
+                            <div className="mr-3.5 inline-block text-right">
+                                <Badge
+                                    className={cn(
+                                        'text-[11px] capitalize',
+                                        WAITING_LIST_STATUS_STYLES[
+                                            cardStatus
+                                        ] ?? 'bg-muted text-muted-foreground',
+                                    )}
+                                >
+                                    {formatWaitingListStatus(cardStatus)}
+                                </Badge>
+                                {waitingList.schedules.length === 1 ? (
+                                    <p className="mt-1 pr-2 text-[11px] leading-none text-muted-foreground">
+                                        <UsersIcon className="mr-1 inline size-3 shrink-0 align-[-2px] text-primary/70" />
+                                        {formatWaitingListPax(
+                                            waitingList.schedules[0],
+                                        )}
+                                    </p>
+                                ) : null}
+                            </div>
+                        </div>
+
+                        <div className="divide-y overflow-hidden rounded-xl border bg-muted/20">
+                            {waitingList.schedules.map((schedule, index) => {
+                                const scheduleStatus =
+                                    schedule.status.toLowerCase();
+                                const countdown =
+                                    scheduleStatus === 'offered'
+                                        ? offerCountdownLabel(
+                                              schedule.offer_expires_at,
+                                          )
+                                        : null;
+                                const departureDate = schedule.tour_schedule
+                                    ?.departure_date
+                                    ? dayjs(
+                                          schedule.tour_schedule.departure_date,
+                                      ).format('DD MMM YYYY')
+                                    : null;
+                                const isOffered = scheduleStatus === 'offered';
+                                const showRowActions =
+                                    showManageActions &&
+                                    index === firstQueuedScheduleIndex;
+
+                                return (
+                                    <div
+                                        key={schedule.id}
+                                        className={cn(
+                                            'px-3.5 py-3',
+                                            isOffered &&
+                                                'bg-amber-50/70 dark:bg-amber-950/25',
+                                        )}
+                                    >
+                                        {waitingList.schedules.length > 1 ? (
+                                            <p className="mb-2 inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+                                                <UsersIcon className="size-3.5 shrink-0 text-primary/70" />
+                                                {formatWaitingListPax(schedule)}
+                                            </p>
+                                        ) : null}
+                                        <div>
+                                            <p className="text-[10px] font-semibold tracking-[0.14em] text-muted-foreground uppercase">
+                                                Departure date
+                                            </p>
+                                            <div className="mt-0.5 flex items-center justify-between gap-2">
+                                                <p className="min-w-0 text-sm font-semibold text-foreground tabular-nums">
+                                                    {departureDate ?? '—'}
+                                                </p>
+
+                                                {(schedule.complete_booking_href ||
+                                                    showRowActions) && (
+                                                    <div className="flex shrink-0 items-center gap-1.5">
+                                                        {schedule.complete_booking_href ? (
+                                                            <Button
+                                                                asChild
+                                                                size="sm"
+                                                                className="h-8 rounded-lg px-3 text-xs"
+                                                            >
+                                                                <Link
+                                                                    href={
+                                                                        schedule.complete_booking_href
+                                                                    }
+                                                                >
+                                                                    Complete
+                                                                    Booking
+                                                                </Link>
+                                                            </Button>
+                                                        ) : null}
+
+                                                        {showRowActions ? (
+                                                            <>
+                                                                {waitingList.can_edit ? (
+                                                                    <Button
+                                                                        type="button"
+                                                                        variant="outline"
+                                                                        size="sm"
+                                                                        className="h-8 gap-1 rounded-lg px-2.5 text-xs sm:px-3"
+                                                                        onClick={() =>
+                                                                            setIsEditOpen(
+                                                                                true,
+                                                                            )
+                                                                        }
+                                                                    >
+                                                                        <PencilIcon className="size-3.5" />
+                                                                        <span className="hidden min-[380px]:inline">
+                                                                            Edit
+                                                                        </span>
+                                                                    </Button>
+                                                                ) : null}
+                                                                {waitingList.can_cancel ? (
+                                                                    <Button
+                                                                        type="button"
+                                                                        variant="ghost"
+                                                                        size="sm"
+                                                                        className="h-8 gap-1 rounded-lg px-2.5 text-xs text-destructive hover:bg-destructive/10 hover:text-destructive sm:px-3"
+                                                                        onClick={
+                                                                            handleCancel
+                                                                        }
+                                                                        disabled={
+                                                                            isCancelling
+                                                                        }
+                                                                    >
+                                                                        {isCancelling ? (
+                                                                            <Spinner className="size-3.5" />
+                                                                        ) : (
+                                                                            <XIcon className="size-3.5" />
+                                                                        )}
+                                                                        <span className="hidden min-[380px]:inline">
+                                                                            Cancel
+                                                                        </span>
+                                                                    </Button>
+                                                                ) : null}
+                                                            </>
+                                                        ) : null}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        {countdown ? (
+                                            <p className="mt-1.5 text-xs font-medium text-amber-700 tabular-nums dark:text-amber-300">
+                                                {countdown}
+                                            </p>
+                                        ) : null}
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                </div>
+            </article>
+
+            <CustomerWaitingListEditDialog
+                waitingList={waitingList}
+                isOpen={isEditOpen}
+                onClose={() => setIsEditOpen(false)}
+            />
+        </>
     );
 }
 

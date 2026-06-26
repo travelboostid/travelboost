@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Enums\TourWaitingListScheduleStatus;
 use App\Models\TourSchedule;
 use App\Models\TourWaitingList;
 use App\Models\TourWaitingListSchedule;
@@ -32,6 +33,7 @@ class TourWaitingListScheduleFactory extends Factory
                     'is_active' => true,
                 ])->id;
             },
+            'status' => TourWaitingListScheduleStatus::QUEUED,
             'preference_order' => 1,
             'available_seats_at_request' => 0,
             'display_price_at_request' => fake()->numberBetween(1_000_000, 20_000_000),

@@ -20,17 +20,24 @@ class TourWaitingList extends Model
         'created_by_user_id',
         'created_by_company_id',
         'customer_user_id',
+        'agent_company_id',
+        'booking_id',
         'contact_name',
         'contact_phone',
         'contact_email',
         'contact_address',
         'status',
+        'fulfilled_at',
+        'cancelled_at',
+        'status_note',
     ];
 
     protected function casts(): array
     {
         return [
             'status' => TourWaitingListStatus::class,
+            'fulfilled_at' => 'datetime',
+            'cancelled_at' => 'datetime',
         ];
     }
 
@@ -57,6 +64,16 @@ class TourWaitingList extends Model
     public function customerUser(): BelongsTo
     {
         return $this->belongsTo(User::class, 'customer_user_id');
+    }
+
+    public function agentCompany(): BelongsTo
+    {
+        return $this->belongsTo(Company::class, 'agent_company_id');
+    }
+
+    public function booking(): BelongsTo
+    {
+        return $this->belongsTo(Booking::class);
     }
 
     public function schedules(): HasMany

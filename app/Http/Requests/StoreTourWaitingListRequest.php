@@ -32,6 +32,7 @@ class StoreTourWaitingListRequest extends FormRequest
             'schedules.*.accepts_partial_fulfillment' => ['required', 'boolean'],
             'schedules.*.minimum_partial_seats' => ['nullable', 'integer', 'min:1', 'max:999'],
             'schedules.*.is_priority' => ['required', 'boolean'],
+            'replace_existing_priority' => ['sometimes', 'boolean'],
             'contact_name' => ['required', 'string', 'max:255'],
             'contact_phone' => ['required', 'string', 'max:50'],
             'contact_email' => ['required', 'email', 'max:255'],
@@ -43,8 +44,21 @@ class StoreTourWaitingListRequest extends FormRequest
     {
         $validator->after(function (Validator $validator): void {
             $schedules = collect($this->input('schedules', []));
+            $priorityCount = $schedules->where('is_priority', true)->count();
+            $isCustomerSubmission = $this->user()?->hasRole('user:customer') === true;
+            $replaceExistingPriority = filter_var(
+                $this->input('replace_existing_priority', false),
+                FILTER_VALIDATE_BOOLEAN,
+            );
 
-            if ($schedules->isNotEmpty() && $schedules->where('is_priority', true)->count() !== 1) {
+            if (
+                $schedules->isNotEmpty()
+                && (
+                    ($isCustomerSubmission && ! $replaceExistingPriority && ! in_array($priorityCount, [0, 1], true))
+                    || (! $isCustomerSubmission && $priorityCount !== 1)
+                    || ($isCustomerSubmission && $replaceExistingPriority && $priorityCount !== 1)
+                )
+            ) {
                 $validator->errors()->add('schedules', 'Select exactly one priority schedule.');
             }
 

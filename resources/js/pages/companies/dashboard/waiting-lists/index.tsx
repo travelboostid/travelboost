@@ -4,16 +4,25 @@ import { DataTableViewOptions } from '@/components/data-table/data-table-view-op
 import CompanyDashboardLayout from '@/components/layouts/company-dashboard';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import {
+    WaitingListScheduleCard,
+    type WaitingListScheduleCardData,
+} from '@/components/waiting-list/waiting-list-schedule-card';
+import { WaitingListStatusBadge } from '@/components/waiting-list/waiting-list-status-badge';
 import { useDataTable } from '@/hooks/use-data-table';
 import { useDebouncedCallback } from '@/hooks/use-debounced-callback';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
-import { cn } from '@/lib/utils';
+import {
+    resolveWaitingListDisplayStatus,
+    waitingListStatusLabel,
+} from '@/lib/waiting-list-status';
 import { Head, router } from '@inertiajs/react';
 import type { ColumnDef } from '@tanstack/react-table';
 import dayjs from 'dayjs';
 import {
     Building2Icon,
     CalendarIcon,
+    InfoIcon,
     ListIcon,
     MailIcon,
     PhoneIcon,
@@ -24,21 +33,6 @@ import {
 import { useMemo, useState } from 'react';
 import { FormattedMessage, useIntl } from 'react-intl';
 import { EmptyWaitingLists } from './components/empty-waiting-lists';
-
-type WaitingListScheduleRow = {
-    id: number;
-    pax_adult: number;
-    pax_child: number;
-    pax_infant: number;
-    accepts_partial_fulfillment: boolean;
-    minimum_partial_seats: number | null;
-    is_priority: boolean;
-    display_price_at_request: string | number;
-    tour_schedule?: {
-        departure_date: string;
-        return_date: string;
-    } | null;
-};
 
 type WaitingListRow = {
     id: number;
@@ -68,7 +62,7 @@ type WaitingListRow = {
             name: string;
         } | null;
     } | null;
-    schedules: WaitingListScheduleRow[];
+    schedules: WaitingListScheduleCardData[];
 };
 
 type WaitingListPageProps = {
@@ -78,6 +72,9 @@ type WaitingListPageProps = {
         current_page: number;
         last_page: number;
         per_page: number;
+    };
+    permissions: {
+        can_manage_queues: boolean;
     };
     filters?: {
         search?: string;
@@ -108,56 +105,34 @@ function resolveRequester(row: WaitingListRow): string {
     );
 }
 
-function statusBadgeClass(status?: string | null): string {
-    switch (status) {
-        case 'pending':
-            return 'border-amber-500/30 bg-amber-500/10 text-amber-800 dark:text-amber-300';
-        case 'contacted':
-            return 'border-sky-500/30 bg-sky-500/10 text-sky-800 dark:text-sky-300';
-        case 'fulfilled':
-            return 'border-emerald-500/30 bg-emerald-500/10 text-emerald-800 dark:text-emerald-300';
-        case 'cancelled':
-        case 'expired':
-            return 'border-destructive/30 bg-destructive/10 text-destructive';
-        default:
-            return 'border-border bg-muted text-muted-foreground';
-    }
-}
-
-function statusLabel(status: string): string {
-    switch (status) {
-        case 'pending':
-            return 'Pending';
-        case 'contacted':
-            return 'Contacted';
-        case 'fulfilled':
-            return 'Fulfilled';
-        case 'cancelled':
-            return 'Cancelled';
-        case 'expired':
-            return 'Expired';
-        default:
-            return status;
-    }
-}
-
 export default function WaitingListsPage({
     data,
+    permissions,
     filters,
 }: WaitingListPageProps) {
     const intl = useIntl();
     const { company } = usePageSharedDataProps();
     const companyType = String(company.type ?? '').toLowerCase();
+    const canManageQueues = permissions.can_manage_queues;
     const [searchValue, setSearchValue] = useState(filters?.search ?? '');
+    const waitingListMenuId =
+        companyType === 'agent'
+            ? 'agent-tours.waiting-lists'
+            : 'tours.waiting-lists';
 
     const statusOptions = useMemo(
         () =>
-            ['pending', 'contacted', 'fulfilled', 'cancelled', 'expired'].map(
-                (value) => ({
-                    value,
-                    label: statusLabel(value),
-                }),
-            ),
+            [
+                'pending',
+                'contacted',
+                'offered',
+                'fulfilled',
+                'cancelled',
+                'expired',
+            ].map((value) => ({
+                value,
+                label: waitingListStatusLabel(value),
+            })),
         [],
     );
 
@@ -231,7 +206,7 @@ export default function WaitingListsPage({
                             </span>
                             {companyType === 'agent' && row.original.vendor && (
                                 <>
-                                    <span>•</span>
+                                    <span>·</span>
                                     <span
                                         className="truncate"
                                         title={row.original.vendor.name}
@@ -419,15 +394,12 @@ export default function WaitingListsPage({
                     />
                 ),
                 cell: ({ row }) => (
-                    <Badge
-                        variant="outline"
-                        className={cn(
-                            'capitalize',
-                            statusBadgeClass(row.original.status),
+                    <WaitingListStatusBadge
+                        status={resolveWaitingListDisplayStatus(
+                            row.original.status,
+                            row.original.schedules,
                         )}
-                    >
-                        {row.original.status}
-                    </Badge>
+                    />
                 ),
                 meta: {
                     label: intl.formatMessage({
@@ -457,76 +429,19 @@ export default function WaitingListsPage({
                     />
                 ),
                 cell: ({ row }) => (
-                    <div className="min-w-[310px] space-y-2">
+                    <div className="min-w-[280px] space-y-2">
                         {row.original.schedules.map((schedule) => (
-                            <div
+                            <WaitingListScheduleCard
                                 key={schedule.id}
-                                className="rounded-lg border bg-background px-3 py-2"
-                            >
-                                <div className="flex flex-wrap items-center gap-2 text-xs">
-                                    <span className="font-semibold text-foreground">
-                                        {schedule.tour_schedule
-                                            ? `${dayjs(schedule.tour_schedule.departure_date).format('DD MMM YYYY')} - ${dayjs(schedule.tour_schedule.return_date).format('DD MMM YYYY')}`
-                                            : intl.formatMessage({
-                                                  defaultMessage:
-                                                      'Schedule unavailable',
-                                              })}
-                                    </span>
-                                    {schedule.is_priority && (
-                                        <Badge
-                                            variant="secondary"
-                                            className="h-5 rounded-md px-2 text-[10px] uppercase"
-                                        >
-                                            <FormattedMessage defaultMessage="Priority" />
-                                        </Badge>
-                                    )}
-                                </div>
-                                <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                                    <span>
-                                        <FormattedMessage
-                                            defaultMessage="Adult {count}"
-                                            values={{
-                                                count: schedule.pax_adult,
-                                            }}
-                                        />
-                                    </span>
-                                    <span>
-                                        <FormattedMessage
-                                            defaultMessage="Child {count}"
-                                            values={{
-                                                count: schedule.pax_child,
-                                            }}
-                                        />
-                                    </span>
-                                    <span>
-                                        <FormattedMessage
-                                            defaultMessage="Infant {count}"
-                                            values={{
-                                                count: schedule.pax_infant,
-                                            }}
-                                        />
-                                    </span>
-                                    <span>
-                                        {formatCurrency(
-                                            schedule.display_price_at_request,
-                                        )}
-                                    </span>
-                                </div>
-                                <div className="mt-1 text-xs text-muted-foreground">
-                                    {schedule.accepts_partial_fulfillment ? (
-                                        <FormattedMessage
-                                            defaultMessage="Partial allowed. Minimum to proceed: {count}"
-                                            values={{
-                                                count:
-                                                    schedule.minimum_partial_seats ??
-                                                    '-',
-                                            }}
-                                        />
-                                    ) : (
-                                        <FormattedMessage defaultMessage="Partial fulfillment not allowed" />
-                                    )}
-                                </div>
-                            </div>
+                                schedule={schedule}
+                                parentStatus={resolveWaitingListDisplayStatus(
+                                    row.original.status,
+                                    row.original.schedules,
+                                )}
+                                companyUsername={company.username}
+                                canManageQueues={canManageQueues}
+                                formatCurrency={formatCurrency}
+                            />
                         ))}
                     </div>
                 ),
@@ -619,7 +534,14 @@ export default function WaitingListsPage({
                 enableColumnFilter: true,
             },
         ],
-        [companyType, intl, sourceOptions, statusOptions],
+        [
+            canManageQueues,
+            company.username,
+            companyType,
+            intl,
+            sourceOptions,
+            statusOptions,
+        ],
     );
 
     const debouncedSearch = useDebouncedCallback((nextValue: string) => {
@@ -688,7 +610,7 @@ export default function WaitingListsPage({
                     }),
                 },
             ]}
-            activeMenuIds={['tours.waiting-lists']}
+            activeMenuIds={[waitingListMenuId]}
         >
             <Head
                 title={intl.formatMessage({
@@ -720,6 +642,15 @@ export default function WaitingListsPage({
                         </div>
                     </div>
                 </header>
+
+                {canManageQueues ? (
+                    <div className="flex items-start gap-3 rounded-xl border border-sky-500/20 bg-sky-500/5 px-4 py-3 text-sm text-sky-900 dark:text-sky-200">
+                        <InfoIcon className="mt-0.5 size-4 shrink-0" />
+                        <p className="text-pretty leading-6">
+                            <FormattedMessage defaultMessage="When seats become available, the next customer in queue is offered automatically. Open a schedule queue to reorder entries or send a manual offer override." />
+                        </p>
+                    </div>
+                ) : null}
 
                 <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
                     <DataTable

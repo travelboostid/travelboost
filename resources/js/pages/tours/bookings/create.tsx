@@ -121,12 +121,13 @@ type ActiveOnlinePayment = {
 };
 
 function formatCountdown(seconds: number) {
-    const minutes = Math.floor(seconds / 60);
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
     const remainingSeconds = seconds % 60;
 
-    return `${minutes.toString().padStart(2, '0')}:${remainingSeconds
+    return `${hours.toString().padStart(2, '0')}:${minutes
         .toString()
-        .padStart(2, '0')}`;
+        .padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
 }
 
 function parseTimestamp(value: unknown): number | null {
@@ -386,6 +387,7 @@ export default function Page() {
         vendorBankInfo,
         termConditions,
         isResumingExistingBooking,
+        isWaitingListBooking = false,
         serverNow,
         reservedExpiresAt,
         remainingHoldSeconds,
@@ -513,6 +515,8 @@ export default function Page() {
         isDashboardBooking && urlParams.get('step') === 'payment' && isResuming;
     const isReadOnlyBookingMode =
         isPaidBookingMode || isReviewMode || isDocumentUpdateMode;
+    const isWaitingListGuestCountLocked =
+        isWaitingListBooking && !isReadOnlyBookingMode;
     const isTravelDocumentsReadOnly =
         isReviewMode || (canUpdateTravelDocuments && !isDocumentUpdateMode);
     const requestedReturnTab = urlParams.get('return_tab') ?? '';
@@ -1313,7 +1317,8 @@ export default function Page() {
                 timerStarted &&
                 !paymentResult &&
                 !isPaidBookingMode &&
-                !isReviewMode;
+                !isReviewMode &&
+                !isWaitingListBooking;
 
             if (shouldReleaseHold) {
                 setPendingExitTarget(target);
@@ -1326,6 +1331,7 @@ export default function Page() {
             existingBooking?.id,
             isPaidBookingMode,
             isReviewMode,
+            isWaitingListBooking,
             navigateToExitTarget,
             paymentResult,
             timerStarted,
@@ -3025,6 +3031,10 @@ export default function Page() {
                                                         : 'No customer accounts available for this agent.'
                                                 }
                                                 readOnly={isReadOnlyBookingMode}
+                                                guestCountLocked={
+                                                    isWaitingListGuestCountLocked
+                                                }
+                                                infantCountLocked={false}
                                             />
                                         )}
                                         {currentStep === 2 && (
