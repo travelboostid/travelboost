@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Companies\Dashboard;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\CompanyResource;
+use App\Http\Resources\CompanySettingsResource;
 use App\Models\Company;
 use Inertia\Inertia;
 
@@ -20,7 +22,12 @@ class PageController extends Controller
         }
 
         return Inertia::render('companies/edit-landing-page', [
-            'company' => $company,
+            'company' => [
+                ...(new CompanyResource($company))->resolve(),
+                'settings' => $company->settings
+                    ? (new CompanySettingsResource($company->settings))->resolve()
+                    : null,
+            ],
         ]);
     }
 }

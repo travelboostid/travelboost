@@ -20,7 +20,7 @@ beforeEach(function () {
     ]);
 
     $this->company = Company::factory()->create([
-        'type' => CompanyType::VENDOR,
+        'type' => CompanyType::AGENT,
         'username' => 'analytics-connect-company',
     ]);
 
@@ -36,7 +36,7 @@ beforeEach(function () {
     ]);
 
     $this->owner->addRoles([
-        'user:vendor',
+        'user:agent',
         "company:{$this->company->id}:superadmin",
     ]);
 

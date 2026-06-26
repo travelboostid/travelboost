@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Companies\Dashboard;
 use App\Actions\WaitingList\CreateTourWaitingListAction;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreTourWaitingListRequest;
+use App\Models\AgentTour;
 use App\Models\Company;
 use App\Models\Tour;
 use App\Support\CompanyPermissionMap;
@@ -26,7 +27,11 @@ class TourWaitingListController extends Controller
 
         abort_unless(
             (int) $tour->company_id === (int) $company->id
-                || $tour->agentTours()->where('company_id', $company->id)->exists(),
+                || AgentTour::query()
+                    ->where('company_id', $company->id)
+                    ->where('tour_id', $tour->id)
+                    ->where('status', 'active')
+                    ->exists(),
             404,
         );
 

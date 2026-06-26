@@ -102,8 +102,14 @@ return Application::configure(basePath: dirname(__DIR__))
             if ($request->header('X-Inertia')) {
                 $previousUrl = url()->previous();
                 $currentUrl = $request->fullUrl();
+                $appUrl = rtrim((string) config('app.url'), '/');
+                $normalizedPreviousUrl = $previousUrl ? rtrim($previousUrl, '/') : null;
+                $normalizedCurrentUrl = rtrim($currentUrl, '/');
+                $hasMeaningfulPreviousUrl = $normalizedPreviousUrl
+                    && $normalizedPreviousUrl !== $normalizedCurrentUrl
+                    && $normalizedPreviousUrl !== $appUrl;
 
-                if ($previousUrl && $previousUrl !== $currentUrl) {
+                if ($hasMeaningfulPreviousUrl) {
                     return redirect()->to($previousUrl)
                         ->with('warning', 'Your role does not have permission to access this page.')
                         ->with('error', 'Your role does not have permission to access this page.');
