@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { Checkbox } from '@/components/ui/checkbox';
 import {
@@ -17,148 +17,196 @@ const PERMISSION_DETAILS_MAP: Record<
         description?: ReactNode;
     }
 > = {
-    'user.query': {
-        name: <FormattedMessage defaultMessage="View Users" />,
+    'agents.query': {
+        name: <FormattedMessage defaultMessage="View Agents" />,
         description: (
-            <FormattedMessage defaultMessage="Allows viewing users and their details." />
+            <FormattedMessage defaultMessage="Allows viewing agent registrations and access details." />
         ),
     },
-    'user.mutation': {
-        name: <FormattedMessage defaultMessage="Manage Users" />,
+    'agents.mutation': {
+        name: <FormattedMessage defaultMessage="Manage Agents" />,
         description: (
-            <FormattedMessage defaultMessage="Allows managing customers" />
+            <FormattedMessage defaultMessage="Allows managing agent registrations and access details." />
         ),
     },
-    'company.query': {
-        name: <FormattedMessage defaultMessage="View Company Details" />,
+    'customers.query': {
+        name: <FormattedMessage defaultMessage="View Customers" />,
         description: (
-            <FormattedMessage defaultMessage="Allows viewing company information and details." />
+            <FormattedMessage defaultMessage="Allows viewing customer pages and customer details." />
         ),
     },
-    'company.mutation': {
-        name: <FormattedMessage defaultMessage="Manage Company Details" />,
+    'customers.mutation': {
+        name: <FormattedMessage defaultMessage="Manage Customers" />,
         description: (
-            <FormattedMessage defaultMessage="Allows editing company information and details." />
+            <FormattedMessage defaultMessage="Allows managing customer pages and customer-related actions." />
         ),
     },
-    'company-settings.query': {
-        name: <FormattedMessage defaultMessage="View Company Settings" />,
+    'tour-management.query': {
+        name: <FormattedMessage defaultMessage="View Tour Management" />,
         description: (
-            <FormattedMessage defaultMessage="Allows viewing company settings and configuration." />
+            <FormattedMessage defaultMessage="Allows viewing products, catalogs, and tour category setup." />
         ),
     },
-    'company-settings.mutation': {
-        name: <FormattedMessage defaultMessage="Manage Company Settings" />,
+    'tour-management.mutation': {
+        name: <FormattedMessage defaultMessage="Manage Tour Management" />,
         description: (
-            <FormattedMessage defaultMessage="Allows editing company settings and configuration." />
+            <FormattedMessage defaultMessage="Allows managing products, catalogs, and tour category setup." />
         ),
     },
-    'company-team.query': {
-        name: <FormattedMessage defaultMessage="View Company Team" />,
+    'booking.query': {
+        name: <FormattedMessage defaultMessage="View Bookings" />,
         description: (
-            <FormattedMessage defaultMessage="Allows viewing company team members." />
+            <FormattedMessage defaultMessage="Allows viewing bookings, booking correction, and waiting lists." />
         ),
     },
-    'company-team.mutation': {
-        name: <FormattedMessage defaultMessage="Manage Company Team" />,
+    'booking.mutation': {
+        name: <FormattedMessage defaultMessage="Manage Bookings" />,
         description: (
-            <FormattedMessage defaultMessage="Allows managing company team members." />
+            <FormattedMessage defaultMessage="Allows managing bookings, booking correction, and waiting lists." />
         ),
     },
-    'wallet.query': {
-        name: <FormattedMessage defaultMessage="View Wallet" />,
+    'funds.query': {
+        name: <FormattedMessage defaultMessage="View Funds" />,
         description: (
-            <FormattedMessage defaultMessage="Allows viewing wallet information and balance." />
+            <FormattedMessage defaultMessage="Allows viewing wallet, payment, bank account, withdrawal, and fund pages." />
         ),
     },
-    'wallet.mutation': {
-        name: <FormattedMessage defaultMessage="Manage Wallet" />,
+    'funds.mutation': {
+        name: <FormattedMessage defaultMessage="Manage Funds" />,
         description: (
-            <FormattedMessage defaultMessage="Allows managing wallet settings and configuration." />
+            <FormattedMessage defaultMessage="Allows managing wallet, payment, bank account, withdrawal, and fund actions." />
         ),
     },
-    'wallet-transaction.query': {
-        name: <FormattedMessage defaultMessage="View Wallet Transactions" />,
+    'reports.query': {
+        name: <FormattedMessage defaultMessage="View Reports" />,
         description: (
-            <FormattedMessage defaultMessage="Allows viewing wallet transaction history." />
+            <FormattedMessage defaultMessage="Allows viewing sales and commission reports." />
         ),
     },
-    'wallet-transaction.mutation': {
-        name: <FormattedMessage defaultMessage="Manage Wallet Transactions" />,
+    'reports.mutation': {
+        name: <FormattedMessage defaultMessage="Manage Reports" />,
         description: (
-            <FormattedMessage defaultMessage="Allows managing wallet transactions." />
+            <FormattedMessage defaultMessage="Allows exporting and managing sales and commission reports." />
         ),
     },
-    'withdrawal.query': {
-        name: <FormattedMessage defaultMessage="View Withdrawals" />,
+    'booking-list.query': {
+        name: <FormattedMessage defaultMessage="View Booking List" />,
         description: (
-            <FormattedMessage defaultMessage="Allows viewing withdrawal requests and history." />
+            <FormattedMessage defaultMessage="Allows viewing booking list reports." />
         ),
     },
-    'withdrawal.mutation': {
-        name: <FormattedMessage defaultMessage="Manage Withdrawals" />,
+    'booking-list.mutation': {
+        name: <FormattedMessage defaultMessage="Manage Booking List" />,
         description: (
-            <FormattedMessage defaultMessage="Allows creating and managing withdrawal requests." />
+            <FormattedMessage defaultMessage="Allows exporting and managing booking list reports." />
         ),
     },
-    'payment.query': {
-        name: <FormattedMessage defaultMessage="View Payments" />,
+    'room-listings.query': {
+        name: <FormattedMessage defaultMessage="View Room Listings" />,
         description: (
-            <FormattedMessage defaultMessage="Allows viewing payment information and history." />
+            <FormattedMessage defaultMessage="Allows viewing room listing reports." />
         ),
     },
-    'payment.mutation': {
-        name: <FormattedMessage defaultMessage="Manage Payments" />,
+    'room-listings.mutation': {
+        name: <FormattedMessage defaultMessage="Manage Room Listings" />,
         description: (
-            <FormattedMessage defaultMessage="Allows managing payments." />
+            <FormattedMessage defaultMessage="Allows exporting and printing room listing reports." />
         ),
     },
-    'bank-account.query': {
-        name: <FormattedMessage defaultMessage="View Bank Accounts" />,
+    'seat-availability.query': {
+        name: <FormattedMessage defaultMessage="View Seat Availability" />,
         description: (
-            <FormattedMessage defaultMessage="Allows viewing bank account information." />
+            <FormattedMessage defaultMessage="Allows viewing seat availability reports." />
         ),
     },
-    'bank-account.mutation': {
-        name: <FormattedMessage defaultMessage="Manage Bank Accounts" />,
+    'seat-availability.mutation': {
+        name: <FormattedMessage defaultMessage="Manage Seat Availability" />,
         description: (
-            <FormattedMessage defaultMessage="Allows adding, editing, and deleting bank accounts." />
+            <FormattedMessage defaultMessage="Allows managing seat availability actions and exports." />
         ),
     },
-    'tour.query': {
-        name: <FormattedMessage defaultMessage="View Tours" />,
+    'settings.query': {
+        name: <FormattedMessage defaultMessage="View Settings" />,
         description: (
-            <FormattedMessage defaultMessage="Allows viewing tour information and details." />
+            <FormattedMessage defaultMessage="Allows viewing profile, linked accounts, user management, and access roles." />
         ),
     },
-    'tour.mutation': {
-        name: <FormattedMessage defaultMessage="Manage Tours" />,
+    'settings.mutation': {
+        name: <FormattedMessage defaultMessage="Manage Settings" />,
         description: (
-            <FormattedMessage defaultMessage="Allows creating, editing, and deleting tours." />
+            <FormattedMessage defaultMessage="Allows managing profile, linked accounts, user management, and access roles." />
         ),
     },
-    'tour-category.query': {
-        name: <FormattedMessage defaultMessage="View Tour Categories" />,
+    'parameter.query': {
+        name: <FormattedMessage defaultMessage="View Parameters" />,
         description: (
-            <FormattedMessage defaultMessage="Allows viewing tour categories." />
+            <FormattedMessage defaultMessage="Allows viewing vendor or agent parameters." />
         ),
     },
-    'tour-category.mutation': {
-        name: <FormattedMessage defaultMessage="Manage Tour Categories" />,
+    'parameter.mutation': {
+        name: <FormattedMessage defaultMessage="Manage Parameters" />,
         description: (
-            <FormattedMessage defaultMessage="Allows managing tour categories." />
+            <FormattedMessage defaultMessage="Allows managing vendor or agent parameters." />
         ),
     },
-    'role.query': {
-        name: <FormattedMessage defaultMessage="View Roles" />,
+    'chat-ai.query': {
+        name: <FormattedMessage defaultMessage="View Chat AI" />,
         description: (
-            <FormattedMessage defaultMessage="Allows viewing roles and their permissions." />
+            <FormattedMessage defaultMessage="Allows viewing Chat AI and vendor AI credit pages." />
         ),
     },
-    'role.mutation': {
-        name: <FormattedMessage defaultMessage="Manage Roles" />,
+    'chat-ai.mutation': {
+        name: <FormattedMessage defaultMessage="Manage Chat AI" />,
         description: (
-            <FormattedMessage defaultMessage="Allows creating, editing, and deleting roles." />
+            <FormattedMessage defaultMessage="Allows managing Chat AI and vendor AI credit actions." />
+        ),
+    },
+    'commission.query': {
+        name: <FormattedMessage defaultMessage="View Commission Setup" />,
+        description: (
+            <FormattedMessage defaultMessage="Allows viewing commission setup pages." />
+        ),
+    },
+    'commission.mutation': {
+        name: <FormattedMessage defaultMessage="Manage Commission Setup" />,
+        description: (
+            <FormattedMessage defaultMessage="Allows managing commission setup pages and rules." />
+        ),
+    },
+    'vendor-config.query': {
+        name: <FormattedMessage defaultMessage="View Vendor Config" />,
+        description: (
+            <FormattedMessage defaultMessage="Allows viewing vendor catalogs and vendor registration pages." />
+        ),
+    },
+    'vendor-config.mutation': {
+        name: <FormattedMessage defaultMessage="Manage Vendor Config" />,
+        description: (
+            <FormattedMessage defaultMessage="Allows managing vendor registrations and vendor catalog actions." />
+        ),
+    },
+    'marketings.query': {
+        name: <FormattedMessage defaultMessage="View Marketings" />,
+        description: (
+            <FormattedMessage defaultMessage="Allows viewing landing page and marketing analytics pages." />
+        ),
+    },
+    'marketings.mutation': {
+        name: <FormattedMessage defaultMessage="Manage Marketings" />,
+        description: (
+            <FormattedMessage defaultMessage="Allows managing landing page and marketing analytics configuration." />
+        ),
+    },
+    'subscription-ai.query': {
+        name: <FormattedMessage defaultMessage="View Subscription & AI" />,
+        description: (
+            <FormattedMessage defaultMessage="Allows viewing agent subscription and AI pages." />
+        ),
+    },
+    'subscription-ai.mutation': {
+        name: <FormattedMessage defaultMessage="Manage Subscription & AI" />,
+        description: (
+            <FormattedMessage defaultMessage="Allows managing agent subscription and AI pages." />
         ),
     },
 };
@@ -179,10 +227,52 @@ export default function PermissionsSelector({
     const [internalValue, setInternalValue] = useState<Record<string, boolean>>(
         value || defaultValue || {},
     );
-    const handleChange = (v: Record<string, boolean>) => {
-        const newValue = { ...internalValue, ...v };
-        setInternalValue(newValue);
-        onChange?.(newValue);
+
+    useEffect(() => {
+        if (value) {
+            // eslint-disable-next-line react-hooks/set-state-in-effect
+            setInternalValue(value);
+        }
+    }, [value]);
+
+    const syncPermissionDependencies = (
+        currentValue: Record<string, boolean>,
+        permissionName: string,
+        checked: boolean,
+    ) => {
+        const nextValue = {
+            ...currentValue,
+            [permissionName]: checked,
+        };
+
+        if (permissionName.endsWith('.mutation') && checked) {
+            const queryPermissionName = permissionName.replace(
+                /\.mutation$/,
+                '.query',
+            );
+            nextValue[queryPermissionName] = true;
+        }
+
+        if (permissionName.endsWith('.query') && !checked) {
+            const mutationPermissionName = permissionName.replace(
+                /\.query$/,
+                '.mutation',
+            );
+            nextValue[mutationPermissionName] = false;
+        }
+
+        return nextValue;
+    };
+
+    const handleCheckedChange = (permissionName: string, checked: boolean) => {
+        const nextValue = syncPermissionDependencies(
+            internalValue,
+            permissionName,
+            checked,
+        );
+
+        setInternalValue(nextValue);
+        onChange?.(nextValue);
     };
 
     return (
@@ -207,9 +297,10 @@ export default function PermissionsSelector({
                             name={`permission-${permission.id}`}
                             checked={internalValue[permission.name] || false}
                             onCheckedChange={(checked) =>
-                                handleChange({
-                                    [permission.name]: Boolean(checked),
-                                })
+                                handleCheckedChange(
+                                    permission.name,
+                                    Boolean(checked),
+                                )
                             }
                             disabled={disabled}
                         />

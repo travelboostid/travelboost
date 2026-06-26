@@ -144,7 +144,9 @@ function RoleUsers({ role }: { role: RoleRow }) {
 export default function Roles({ data, permissions }: RolesPageProps) {
     const intl = useIntl();
     const { company, auth } = usePageSharedDataProps();
-    const canManageRoles = auth.permissions.includes('role.mutation');
+    const canManageRoles =
+        auth.permissions.includes('settings.mutation') ||
+        auth.permissions.includes('role.mutation');
 
     const columns = useMemo<ColumnDef<RoleRow>[]>(
         () => [

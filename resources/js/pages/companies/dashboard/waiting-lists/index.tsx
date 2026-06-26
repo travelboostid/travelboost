@@ -1,12 +1,14 @@
 import { DataTable } from '@/components/data-table/data-table';
 import { DataTableColumnHeader } from '@/components/data-table/data-table-column-header';
-import { DataTableToolbar } from '@/components/data-table/data-table-toolbar';
+import { DataTableViewOptions } from '@/components/data-table/data-table-view-options';
 import CompanyDashboardLayout from '@/components/layouts/company-dashboard';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import { useDataTable } from '@/hooks/use-data-table';
+import { useDebouncedCallback } from '@/hooks/use-debounced-callback';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
 import { cn } from '@/lib/utils';
-import { Head } from '@inertiajs/react';
+import { Head, router } from '@inertiajs/react';
 import type { ColumnDef } from '@tanstack/react-table';
 import dayjs from 'dayjs';
 import {
@@ -15,11 +17,11 @@ import {
     ListIcon,
     MailIcon,
     PhoneIcon,
+    SearchIcon,
     TextIcon,
-    UserCircleIcon,
     UsersIcon,
 } from 'lucide-react';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { FormattedMessage, useIntl } from 'react-intl';
 import { EmptyWaitingLists } from './components/empty-waiting-lists';
 
@@ -76,6 +78,9 @@ type WaitingListPageProps = {
         current_page: number;
         last_page: number;
         per_page: number;
+    };
+    filters?: {
+        search?: string;
     };
 };
 
@@ -136,10 +141,14 @@ function statusLabel(status: string): string {
     }
 }
 
-export default function WaitingListsPage({ data }: WaitingListPageProps) {
+export default function WaitingListsPage({
+    data,
+    filters,
+}: WaitingListPageProps) {
     const intl = useIntl();
     const { company } = usePageSharedDataProps();
     const companyType = String(company.type ?? '').toLowerCase();
+    const [searchValue, setSearchValue] = useState(filters?.search ?? '');
 
     const statusOptions = useMemo(
         () =>
@@ -217,7 +226,9 @@ export default function WaitingListsPage({ data }: WaitingListPageProps) {
                             {row.original.tour?.name ?? '-'}
                         </p>
                         <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                            <span>{row.original.tour?.code ?? '-'}</span>
+                            <span className="font-mono text-sm text-muted-foreground">
+                                {row.original.tour?.code ?? '-'}
+                            </span>
                             {companyType === 'agent' && row.original.vendor && (
                                 <>
                                     <span>•</span>
@@ -245,34 +256,6 @@ export default function WaitingListsPage({ data }: WaitingListPageProps) {
                 enableColumnFilter: true,
             },
             {
-                id: 'tour_code',
-                accessorFn: (row) => row.tour?.code ?? '',
-                header: ({ column }) => (
-                    <DataTableColumnHeader
-                        column={column}
-                        label={intl.formatMessage({
-                            defaultMessage: 'Tour Code',
-                        })}
-                    />
-                ),
-                cell: ({ row }) => (
-                    <span className="font-mono text-sm text-muted-foreground">
-                        {row.original.tour?.code ?? '-'}
-                    </span>
-                ),
-                meta: {
-                    label: intl.formatMessage({
-                        defaultMessage: 'Tour code',
-                    }),
-                    placeholder: intl.formatMessage({
-                        defaultMessage: 'Search code...',
-                    }),
-                    variant: 'text',
-                    icon: TextIcon,
-                },
-                enableColumnFilter: true,
-            },
-            {
                 id: 'contact_name',
                 accessorKey: 'contact_name',
                 header: ({ column }) => (
@@ -284,24 +267,19 @@ export default function WaitingListsPage({ data }: WaitingListPageProps) {
                     />
                 ),
                 cell: ({ row }) => (
-                    <div className="flex min-w-[220px] items-center gap-3">
-                        <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-                            <UserCircleIcon className="size-5" />
-                        </div>
-                        <div className="min-w-0">
-                            <p
-                                className="truncate font-semibold text-foreground"
-                                title={row.original.contact_name}
-                            >
-                                {row.original.contact_name}
-                            </p>
-                            <p
-                                className="truncate text-xs text-muted-foreground"
-                                title={row.original.contact_email}
-                            >
-                                {row.original.contact_email}
-                            </p>
-                        </div>
+                    <div className="min-w-[220px]">
+                        <p
+                            className="truncate font-semibold text-foreground"
+                            title={row.original.contact_name}
+                        >
+                            {row.original.contact_name}
+                        </p>
+                        <p
+                            className="truncate text-xs text-muted-foreground"
+                            title={row.original.contact_email}
+                        >
+                            {row.original.contact_email}
+                        </p>
                     </div>
                 ),
                 meta: {
@@ -644,6 +622,44 @@ export default function WaitingListsPage({ data }: WaitingListPageProps) {
         [companyType, intl, sourceOptions, statusOptions],
     );
 
+    const debouncedSearch = useDebouncedCallback((nextValue: string) => {
+        const params = new URLSearchParams(window.location.search);
+        const legacyFilterKeys = [
+            'tour_name',
+            'tour_code',
+            'contact_name',
+            'contact_email',
+            'contact_phone',
+            'vendor_name',
+            'requester_name',
+            'status',
+            'source',
+            'created_at',
+        ];
+
+        legacyFilterKeys.forEach((key) => {
+            params.delete(key);
+        });
+
+        if (nextValue.trim()) {
+            params.set('search', nextValue.trim());
+        } else {
+            params.delete('search');
+        }
+
+        params.set('page', '1');
+
+        router.get(
+            window.location.pathname,
+            Object.fromEntries(params.entries()),
+            {
+                preserveState: true,
+                preserveScroll: true,
+                replace: true,
+            },
+        );
+    }, 300);
+
     const { table } = useDataTable({
         queryKeys: { perPage: 'per_page', page: 'page' },
         data: data.data,
@@ -655,7 +671,7 @@ export default function WaitingListsPage({ data }: WaitingListPageProps) {
             sorting: [{ id: 'created_at', desc: true }],
             columnVisibility: {
                 contact_email: false,
-                tour_code: false,
+                source: false,
                 vendor_name: companyType === 'vendor' ? false : true,
             },
         },
@@ -713,10 +729,30 @@ export default function WaitingListsPage({ data }: WaitingListPageProps) {
                         paginationClassName="border-t px-4 py-3"
                         renderEmptyState={<EmptyWaitingLists />}
                     >
-                        <DataTableToolbar
-                            table={table}
-                            className="border-b px-4 py-3"
-                        />
+                        <div className="flex flex-col gap-3 border-b px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+                            <div className="relative w-full max-w-xl">
+                                <SearchIcon className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+                                <Input
+                                    value={searchValue}
+                                    onChange={(event) => {
+                                        const nextValue = event.target.value;
+                                        setSearchValue(nextValue);
+                                        debouncedSearch(nextValue);
+                                    }}
+                                    placeholder={intl.formatMessage({
+                                        defaultMessage:
+                                            'Search waiting lists...',
+                                    })}
+                                    className="h-10 pl-9"
+                                />
+                            </div>
+                            <div className="flex justify-end">
+                                <DataTableViewOptions
+                                    table={table}
+                                    align="end"
+                                />
+                            </div>
+                        </div>
                     </DataTable>
                 </div>
             </div>

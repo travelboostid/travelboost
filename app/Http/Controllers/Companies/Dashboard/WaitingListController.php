@@ -7,16 +7,20 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Companies\WaitingListIndexRequest;
 use App\Models\Company;
 use App\Models\TourWaitingList;
+use App\Support\CompanyPermissionMap;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
 
 class WaitingListController extends Controller
 {
     public function index(Company $company, WaitingListIndexRequest $request)
     {
-        Gate::authorize('view', $company);
+        abort_unless(
+            $request->user()
+                && CompanyPermissionMap::userHasScopedPermission($request->user(), $company, 'booking.query'),
+            403,
+        );
 
         $validated = $request->validated();
         $waitingLists = $this->applySorting(
@@ -28,6 +32,9 @@ class WaitingListController extends Controller
 
         return Inertia::render('companies/dashboard/waiting-lists/index', [
             'data' => $waitingLists,
+            'filters' => [
+                'search' => $validated['search'] ?? '',
+            ],
         ]);
     }
 
@@ -60,6 +67,36 @@ class WaitingListController extends Controller
                         ->where('created_by_company_id', $company->id)
                         ->orWhereHas('customerUser', function (Builder $customerQuery) use ($company): void {
                             $customerQuery->where('company_id', $company->id);
+                        });
+                });
+            })
+            ->when($validated['search'] ?? null, function (Builder $query, string $search): void {
+                $like = '%'.$search.'%';
+
+                $query->where(function (Builder $innerQuery) use ($like): void {
+                    $innerQuery
+                        ->where('contact_name', 'ilike', $like)
+                        ->orWhere('contact_email', 'ilike', $like)
+                        ->orWhere('contact_phone', 'ilike', $like)
+                        ->orWhereHas('tour', function (Builder $tourQuery) use ($like): void {
+                            $tourQuery
+                                ->where('name', 'ilike', $like)
+                                ->orWhere('code', 'ilike', $like);
+                        })
+                        ->orWhereHas('vendor', function (Builder $vendorQuery) use ($like): void {
+                            $vendorQuery->where('name', 'ilike', $like);
+                        })
+                        ->orWhereHas('createdByCompany', function (Builder $companyQuery) use ($like): void {
+                            $companyQuery->where('name', 'ilike', $like);
+                        })
+                        ->orWhereHas('customerUser', function (Builder $customerQuery) use ($like): void {
+                            $customerQuery
+                                ->where('name', 'ilike', $like)
+                                ->orWhere('email', 'ilike', $like)
+                                ->orWhere('phone', 'ilike', $like);
+                        })
+                        ->orWhereHas('createdByUser', function (Builder $userQuery) use ($like): void {
+                            $userQuery->where('name', 'ilike', $like);
                         });
                 });
             })

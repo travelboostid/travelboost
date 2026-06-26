@@ -41,6 +41,12 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from '@/components/ui/tooltip';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
 import { extractDocumentUrl } from '@/lib/utils';
 import { router, usePage } from '@inertiajs/react';
@@ -500,6 +506,20 @@ function AgentDocumentCell({ row }: { row: any }) {
     const hasVendorDocument = Boolean(
         vendorDocument && extractDocumentUrl(vendorDocument),
     );
+    const isAgentUploadEnabled =
+        agentTour.agent_itinerary_upload_enabled ?? false;
+    const uploadBlockedReason = !hasVendorDocument
+        ? intl.formatMessage({
+              defaultMessage:
+                  'Vendor PDF must be uploaded first before you can upload your own itinerary PDF.',
+          })
+        : !isAgentUploadEnabled
+          ? intl.formatMessage({
+                defaultMessage:
+                    'This vendor has not allowed your account to upload an itinerary PDF for this product.',
+            })
+          : null;
+    const isUploadDisabled = uploadBlockedReason !== null;
 
     const updateDocument = (media: any) => {
         router.put(
@@ -578,31 +598,36 @@ function AgentDocumentCell({ row }: { row: any }) {
                     }}
                 >
                     {(_, change) => (
-                        <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            className="h-9 rounded-xl border-slate-200 bg-white text-xs font-semibold shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
-                            onClick={change}
-                            disabled={!hasVendorDocument}
-                            title={
-                                hasVendorDocument
-                                    ? intl.formatMessage({
-                                          defaultMessage: 'Upload Agent PDF',
-                                      })
-                                    : intl.formatMessage({
-                                          defaultMessage:
-                                              'Vendor PDF is required before uploading Agent PDF',
-                                      })
-                            }
-                        >
-                            <UploadCloudIcon className="mr-1.5 h-3.5 w-3.5" />
-                            {hasVendorDocument ? (
-                                <FormattedMessage defaultMessage="Upload Agent PDF" />
-                            ) : (
-                                <FormattedMessage defaultMessage="Vendor PDF Required" />
-                            )}
-                        </Button>
+                        <TooltipProvider>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <span className="inline-flex">
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            className="h-9 rounded-xl border-slate-200 bg-white text-xs font-semibold shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                                            onClick={change}
+                                            disabled={isUploadDisabled}
+                                        >
+                                            <UploadCloudIcon className="mr-1.5 h-3.5 w-3.5" />
+                                            {!hasVendorDocument ? (
+                                                <FormattedMessage defaultMessage="Vendor PDF Required" />
+                                            ) : isAgentUploadEnabled ? (
+                                                <FormattedMessage defaultMessage="Upload Agent PDF" />
+                                            ) : (
+                                                <FormattedMessage defaultMessage="Upload Locked" />
+                                            )}
+                                        </Button>
+                                    </span>
+                                </TooltipTrigger>
+                                {uploadBlockedReason ? (
+                                    <TooltipContent side="top">
+                                        {uploadBlockedReason}
+                                    </TooltipContent>
+                                ) : null}
+                            </Tooltip>
+                        </TooltipProvider>
                     )}
                 </MediaPicker>
             )}

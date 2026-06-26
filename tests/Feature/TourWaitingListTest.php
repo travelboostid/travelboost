@@ -88,7 +88,7 @@ function waitingListRequestPayload(
                 'pax_child' => $child,
                 'pax_infant' => $infant,
                 'accepts_partial_fulfillment' => true,
-                'minimum_partial_seats' => max(1, $adult + $child - 1),
+                'minimum_partial_seats' => max(1, $adult + $child),
                 'is_priority' => $index === 0,
             ])
             ->all(),
@@ -130,7 +130,7 @@ test('vendor can submit two waiting list schedules without changing availability
         ->and($waitingList->schedules)->toHaveCount(2)
         ->and($waitingList->schedules->first()->is_priority)->toBeTrue()
         ->and($waitingList->schedules->first()->pax_adult)->toBe(3)
-        ->and($waitingList->schedules->first()->minimum_partial_seats)->toBe(2)
+        ->and($waitingList->schedules->first()->minimum_partial_seats)->toBe(3)
         ->and($waitingList->schedules->last()->pax_child)->toBe(2)
         ->and($waitingList->schedules->last()->pax_infant)->toBe(1)
         ->and($waitingList->schedules->last()->accepts_partial_fulfillment)->toBeFalse()

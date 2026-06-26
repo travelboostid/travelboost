@@ -126,12 +126,34 @@ const TourAutocomplete = ({
 
 export default function RoomListing() {
     const intl = useIntl();
-    const { tours, availableDates, roomData, agentGroups, filters } =
+    const { tours, availableDates, roomData, agentGroups, roomRecap, filters } =
         usePage<any>().props;
     const { company } = usePageSharedDataProps();
+    const normalizedTours = useMemo(() => {
+        return Array.isArray(tours) ? tours : [];
+    }, [tours]);
+    const normalizedFilters = useMemo(() => {
+        return filters && typeof filters === 'object'
+            ? filters
+            : { tour_id: '', departure_date: '' };
+    }, [filters]);
+    const normalizedAvailableDates = useMemo(() => {
+        if (Array.isArray(availableDates)) {
+            return availableDates;
+        }
 
-    const hasTourSelected = Boolean(filters.tour_id);
-    const hasDepartureSelected = Boolean(filters.departure_date);
+        if (availableDates && typeof availableDates === 'object') {
+            return Object.values(availableDates);
+        }
+
+        return [];
+    }, [availableDates]);
+    const normalizedRoomRecap = useMemo(() => {
+        return Array.isArray(roomRecap) ? roomRecap : [];
+    }, [roomRecap]);
+
+    const hasTourSelected = Boolean(normalizedFilters.tour_id);
+    const hasDepartureSelected = Boolean(normalizedFilters.departure_date);
     const hasCompleteFilters = hasTourSelected && hasDepartureSelected;
 
     const calculateAge = (dateOfBirth: string | null) => {
@@ -143,41 +165,28 @@ export default function RoomListing() {
     };
 
     const calculateValidity = (expiryDate: string | null) => {
-        if (!expiryDate || !filters.departure_date) {
+        if (!expiryDate || !normalizedFilters.departure_date) {
             return null;
         }
 
         return Math.round(
-            dayjs(expiryDate).diff(dayjs(filters.departure_date), 'month'),
+            dayjs(expiryDate).diff(
+                dayjs(normalizedFilters.departure_date),
+                'month',
+            ),
         );
     };
 
     const selectedTour = useMemo(() => {
-        return tours.find(
-            (tour: any) => tour.id.toString() === filters.tour_id?.toString(),
+        return normalizedTours.find(
+            (tour: any) =>
+                tour.id.toString() === normalizedFilters.tour_id?.toString(),
         );
-    }, [tours, filters.tour_id]);
+    }, [normalizedTours, normalizedFilters.tour_id]);
 
     const groupedData = useMemo(() => {
         return Array.isArray(agentGroups) ? agentGroups : [];
     }, [agentGroups]);
-
-    const roomRecap = useMemo(() => {
-        const recap: Record<string, number> = {};
-
-        groupedData.forEach((agentGroup: any) => {
-            (agentGroup.bookings || []).forEach((booking: any) => {
-                (booking.rooms || []).forEach((room: any) => {
-                    const roomType = cleanRoomType(room.room_type);
-                    recap[roomType] = (recap[roomType] || 0) + 1;
-                });
-            });
-        });
-
-        return Object.entries(recap)
-            .sort(([first], [second]) => first.localeCompare(second))
-            .map(([roomType, count]) => ({ roomType, count }));
-    }, [groupedData]);
 
     const handlePrintNative = (event: React.MouseEvent) => {
         event.preventDefault();
@@ -189,12 +198,12 @@ export default function RoomListing() {
     const buildExportQuery = () => {
         const params = new URLSearchParams();
 
-        if (filters.tour_id) {
-            params.append('tour_id', filters.tour_id);
+        if (normalizedFilters.tour_id) {
+            params.append('tour_id', normalizedFilters.tour_id);
         }
 
-        if (filters.departure_date) {
-            params.append('departure_date', filters.departure_date);
+        if (normalizedFilters.departure_date) {
+            params.append('departure_date', normalizedFilters.departure_date);
         }
 
         return params.toString();
@@ -259,8 +268,8 @@ export default function RoomListing() {
                                 <FormattedMessage defaultMessage="Tour Product" />
                             </label>
                             <TourAutocomplete
-                                tours={tours}
-                                value={filters.tour_id || ''}
+                                tours={normalizedTours}
+                                value={normalizedFilters.tour_id || ''}
                                 onChange={(value) =>
                                     router.get(
                                         window.location.pathname,
@@ -281,12 +290,14 @@ export default function RoomListing() {
                             </label>
                             <div className="flex flex-col gap-2 sm:flex-row">
                                 <Select
-                                    value={filters.departure_date || undefined}
+                                    value={String(
+                                        normalizedFilters.departure_date ?? '',
+                                    )}
                                     onValueChange={(value) =>
                                         router.get(
                                             window.location.pathname,
                                             {
-                                                ...filters,
+                                                ...normalizedFilters,
                                                 departure_date: value,
                                             },
                                             { preserveState: true },
@@ -310,17 +321,19 @@ export default function RoomListing() {
                                         />
                                     </SelectTrigger>
                                     <SelectContent className="dark:border-slate-700 dark:bg-slate-900">
-                                        {availableDates.map((date: string) => (
-                                            <SelectItem
-                                                key={date}
-                                                value={date}
-                                                className="dark:focus:bg-slate-800"
-                                            >
-                                                {dayjs(date).format(
-                                                    'DD MMM YYYY',
-                                                )}
-                                            </SelectItem>
-                                        ))}
+                                        {normalizedAvailableDates.map(
+                                            (date: string) => (
+                                                <SelectItem
+                                                    key={date}
+                                                    value={date}
+                                                    className="dark:focus:bg-slate-800"
+                                                >
+                                                    {dayjs(date).format(
+                                                        'DD MMM YYYY',
+                                                    )}
+                                                </SelectItem>
+                                            ),
+                                        )}
                                     </SelectContent>
                                 </Select>
                                 <Button
@@ -413,12 +426,12 @@ export default function RoomListing() {
                             )}
                         </div>
                         <div className="mt-1 text-[10px] font-semibold">
-                            {filters.departure_date ? (
+                            {normalizedFilters.departure_date ? (
                                 <FormattedMessage
                                     defaultMessage="Departure Date: {date}"
                                     values={{
                                         date: dayjs(
-                                            filters.departure_date,
+                                            normalizedFilters.departure_date,
                                         ).format('DD MMMM YYYY'),
                                     }}
                                 />
@@ -486,7 +499,9 @@ export default function RoomListing() {
                                         <TableHead className="border-r border-slate-200 px-2 py-3 text-center text-[11px] font-bold uppercase text-slate-900 dark:border-slate-800 dark:text-slate-200 print:w-[4%]">
                                             <FormattedMessage defaultMessage="Age" />
                                         </TableHead>
-
+                                        <TableHead className="border-r border-slate-200 px-2 py-3 text-center text-[11px] font-bold uppercase text-slate-900 dark:border-slate-800 dark:text-slate-200 print:w-[9%]">
+                                            <FormattedMessage defaultMessage="Agent" />
+                                        </TableHead>
                                         <TableHead className="px-2 py-3 text-center text-[11px] font-bold uppercase text-slate-900 dark:text-slate-200 print:w-[4%]">
                                             <FormattedMessage defaultMessage="Val" />
                                         </TableHead>
@@ -494,8 +509,11 @@ export default function RoomListing() {
                                 </TableHeader>
                                 <TableBody>
                                     {groupedData.map((agentGroup: any) => {
-                                        const bookings =
-                                            agentGroup.bookings || [];
+                                        const bookings = Array.isArray(
+                                            agentGroup.bookings,
+                                        )
+                                            ? agentGroup.bookings
+                                            : [];
 
                                         return [
                                             ...bookings.flatMap(
@@ -507,7 +525,11 @@ export default function RoomListing() {
                                                             : 'bg-white dark:bg-slate-950';
 
                                                     const roomGroups =
-                                                        bookingData.rooms || [];
+                                                        Array.isArray(
+                                                            bookingData.rooms,
+                                                        )
+                                                            ? bookingData.rooms
+                                                            : [];
                                                     const totalPaxInBooking =
                                                         Number(
                                                             bookingData.total_pax ||
@@ -520,12 +542,20 @@ export default function RoomListing() {
                                                             roomIndex: number,
                                                         ) => {
                                                             const passengerList =
-                                                                roomGroup.passengers ||
-                                                                [];
+                                                                Array.isArray(
+                                                                    roomGroup.passengers,
+                                                                )
+                                                                    ? roomGroup.passengers
+                                                                    : [];
                                                             const roomType =
                                                                 cleanRoomType(
                                                                     roomGroup.room_type,
                                                                 );
+                                                            const roomTypeNote =
+                                                                typeof roomGroup.room_type_note ===
+                                                                'string'
+                                                                    ? roomGroup.room_type_note
+                                                                    : null;
                                                             const roomNumber =
                                                                 roomGroup.room_number ||
                                                                 ++roomCounter;
@@ -606,11 +636,20 @@ export default function RoomListing() {
                                                                                         rowSpan={
                                                                                             totalPaxInRoom
                                                                                         }
-                                                                                        className="border-r border-slate-200 p-2 text-center align-middle text-[11px] font-medium uppercase dark:border-slate-800"
+                                                                                        className="border-r border-slate-200 p-2 text-center align-middle dark:border-slate-800"
                                                                                     >
-                                                                                        {
-                                                                                            roomType
-                                                                                        }
+                                                                                        <div className="text-[11px] font-medium uppercase">
+                                                                                            {
+                                                                                                roomType
+                                                                                            }
+                                                                                        </div>
+                                                                                        {roomTypeNote && (
+                                                                                            <div className="mt-1 text-[10px] font-normal normal-case leading-snug text-slate-500 dark:text-slate-400">
+                                                                                                {
+                                                                                                    roomTypeNote
+                                                                                                }
+                                                                                            </div>
+                                                                                        )}
                                                                                     </TableCell>
                                                                                     <TableCell
                                                                                         rowSpan={
@@ -691,7 +730,17 @@ export default function RoomListing() {
                                                                                 ) ||
                                                                                     '-'}
                                                                             </TableCell>
-
+                                                                            {isFirstInBooking && (
+                                                                                <TableCell
+                                                                                    rowSpan={
+                                                                                        totalPaxInBooking
+                                                                                    }
+                                                                                    className="border-r border-slate-200 p-2 text-center align-middle text-[11px] font-semibold dark:border-slate-800 dark:text-slate-200"
+                                                                                >
+                                                                                    {agentGroup.agent_name ||
+                                                                                        '-'}
+                                                                                </TableCell>
+                                                                            )}
                                                                             <TableCell
                                                                                 className={`p-2 text-center text-[12px] font-black ${
                                                                                     isPassportWarning
@@ -715,13 +764,13 @@ export default function RoomListing() {
                                 </TableBody>
                             </Table>
                         </div>
-                        {roomRecap.length > 0 && (
+                        {normalizedRoomRecap.length > 0 && (
                             <div className="border-t border-slate-200 p-4 dark:border-slate-800 print:border-t print:border-black print:p-3">
                                 <h3 className="mb-3 text-xs font-black uppercase tracking-[0.18em] text-slate-600 dark:text-slate-300 print:text-black">
                                     <FormattedMessage defaultMessage="Room Recap" />
                                 </h3>
                                 <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 print:grid-cols-3">
-                                    {roomRecap.map((item) => (
+                                    {normalizedRoomRecap.map((item: any) => (
                                         <div
                                             key={item.roomType}
                                             className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm dark:border-slate-800 dark:bg-slate-900 print:border-none print:bg-transparent print:px-0 print:py-1"
@@ -731,9 +780,10 @@ export default function RoomListing() {
                                             </span>
                                             <span className="font-bold text-slate-950 dark:text-white print:text-black">
                                                 <FormattedMessage
-                                                    defaultMessage="{count, plural, one {# room} other {# rooms}}"
+                                                    defaultMessage="{count} {unit}"
                                                     values={{
                                                         count: item.count,
+                                                        unit: item.unit,
                                                     }}
                                                 />
                                             </span>

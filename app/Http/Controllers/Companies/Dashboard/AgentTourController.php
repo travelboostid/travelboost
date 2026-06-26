@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Companies\Dashboard;
 use App\Http\Controllers\Controller;
 use App\Models\AgentTour;
 use App\Models\Company;
+use App\Models\VendorAgentPartner;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
@@ -31,13 +32,32 @@ class AgentTourController extends Controller
                 return $query->where('status', $status);
             })
             ->orderBy('id', 'desc')
-            ->get()
-            ->each(function (AgentTour $agentTour): void {
+            ->get();
+
+        $vendorIds = $tours
+            ->pluck('tour.company_id')
+            ->filter()
+            ->unique()
+            ->values();
+
+        $partnershipPermissions = VendorAgentPartner::query()
+            ->where('agent_id', $company->id)
+            ->whereIn('vendor_id', $vendorIds)
+            ->pluck('agent_itinerary_upload_enabled', 'vendor_id');
+
+        $tours = $tours
+            ->each(function (AgentTour $agentTour) use ($partnershipPermissions): void {
                 $bookingDeadlineDays = (int) ($agentTour->tour?->company?->companySetting?->booking_deadline ?? 0);
                 $agentTour->tour?->schedules?->each(function ($schedule) use ($bookingDeadlineDays): void {
                     $schedule->setAttribute('price', $this->lowestDiscountedSchedulePrice($schedule->prices));
                     $schedule->setAttribute('booking_deadline_days', $bookingDeadlineDays);
                 });
+
+                $vendorId = $agentTour->tour?->company_id;
+                $agentTour->setAttribute(
+                    'agent_itinerary_upload_enabled',
+                    (bool) ($partnershipPermissions->get($vendorId) ?? false),
+                );
             });
 
         return Inertia::render('companies/dashboard/agent-tours/index', [

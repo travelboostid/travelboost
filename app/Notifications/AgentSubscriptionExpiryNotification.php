@@ -5,10 +5,11 @@ namespace App\Notifications;
 use App\Models\AgentSubscription;
 use App\Models\Company;
 use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
-class AgentSubscriptionExpiryNotification extends Notification
+class AgentSubscriptionExpiryNotification extends Notification implements ShouldQueue
 {
     use Queueable;
 

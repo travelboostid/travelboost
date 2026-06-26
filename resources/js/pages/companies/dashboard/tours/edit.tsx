@@ -1628,30 +1628,6 @@ export default function Page({ tour }: Props) {
 
             setSchedules(updatedSchedules);
 
-            const manualReservedSummary = createdSchedules.map((schedule) => {
-                const startDate =
-                    source.availability?.manual_reserved_start_date ??
-                    schedule.departure_date;
-                const startTime =
-                    source.availability?.manual_reserved_start_time ?? '00:00';
-                const startAt = `${startDate} ${startTime}`;
-                const expiresAt = getManualReservedExpiresAt(
-                    startDate,
-                    startTime,
-                );
-
-                return {
-                    scheduleId: schedule.id ?? null,
-                    departureDate: schedule.departure_date,
-                    startAt,
-                    expiresAt,
-                    originalAvailable: Number(
-                        source.availability?.available ?? 0,
-                    ),
-                    limitLabel: manualReservedLimitLabel,
-                };
-            });
-
             // AVAILABILITY
             await axios.post(
                 `/companies/${company.username}/dashboard/tour-availabilities`,
@@ -1683,9 +1659,6 @@ export default function Page({ tour }: Props) {
                     })),
                 },
             );
-
-            setManualReservedSummaryRows(manualReservedSummary);
-            setManualReservedSummaryOpen(true);
 
             // ADD ONS
             await axios.post(
@@ -1726,9 +1699,13 @@ export default function Page({ tour }: Props) {
             setCopyOpen(false);
             setSelectedDates([]);
             toast.success(
-                intl.formatMessage({
-                    defaultMessage: 'Schedule copied successfully',
-                }),
+                intl.formatMessage(
+                    {
+                        defaultMessage:
+                            'Schedule copied successfully to {dates}',
+                    },
+                    { dates: filteredDates.join(', ') },
+                ),
             );
         } catch (_err) {
             toast.error(

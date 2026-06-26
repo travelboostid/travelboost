@@ -6,10 +6,11 @@ use App\Models\Booking;
 use App\Models\Company;
 use App\Models\Payment;
 use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
-class BookingPaymentReviewStatusNotification extends Notification
+class BookingPaymentReviewStatusNotification extends Notification implements ShouldQueue
 {
     use Queueable;
 

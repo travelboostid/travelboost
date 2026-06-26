@@ -162,3 +162,55 @@ test('agent dashboard waiting list page shows team requests and customer-form re
         ->has('data.data', 2)
         ->where('data.data.0.vendor.name', $vendor->name));
 });
+
+test('vendor dashboard waiting list page supports global search across waiting list fields', function () {
+    $vendor = Company::factory()->create(['type' => 'vendor']);
+    $vendorUser = User::factory()->create();
+    attachWaitingListDashboardUser($vendorUser, $vendor);
+
+    $matchingTour = Tour::factory()->create([
+        'company_id' => $vendor->id,
+        'status' => 'active',
+        'code' => 'GCT-SEARCH-001',
+        'name' => 'Matchable Tour Name',
+    ]);
+
+    $matchingWaitingList = TourWaitingList::factory()->create([
+        'tour_id' => $matchingTour->id,
+        'vendor_id' => $vendor->id,
+        'created_by_company_id' => $vendor->id,
+        'contact_name' => 'Matched Customer',
+        'contact_email' => 'matched@example.com',
+        'contact_phone' => '08123450001',
+        'status' => TourWaitingListStatus::PENDING,
+    ]);
+    createWaitingListSchedule($matchingWaitingList, 1, true);
+
+    $otherTour = Tour::factory()->create([
+        'company_id' => $vendor->id,
+        'status' => 'active',
+        'code' => 'GCT-OTHER-001',
+        'name' => 'Other Tour Name',
+    ]);
+
+    $otherWaitingList = TourWaitingList::factory()->create([
+        'tour_id' => $otherTour->id,
+        'vendor_id' => $vendor->id,
+        'created_by_company_id' => $vendor->id,
+        'contact_name' => 'Other Customer',
+        'contact_email' => 'other@example.com',
+        'contact_phone' => '08123450002',
+        'status' => TourWaitingListStatus::PENDING,
+    ]);
+    createWaitingListSchedule($otherWaitingList, 1, false);
+
+    $response = $this->actingAs($vendorUser)
+        ->get("/companies/{$vendor->username}/dashboard/waiting-lists?search=SEARCH-001");
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->component('companies/dashboard/waiting-lists/index')
+        ->has('data.data', 1)
+        ->where('data.data.0.tour.code', 'GCT-SEARCH-001')
+        ->where('filters.search', 'SEARCH-001'));
+});

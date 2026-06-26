@@ -78,10 +78,17 @@ class HomeController extends Controller
             ->whereYear('created_at', now()->year)
             ->whereMonth('created_at', now()->month)
             ->sum($salesAmountExpression);
+        $monthlyPax = (int) (clone $baseQuery)
+            ->whereYear('created_at', now()->year)
+            ->whereMonth('created_at', now()->month)
+            ->sum(DB::raw('pax_adult + pax_child + pax_infant'));
 
         $yearlyRevenue = (float) (clone $baseQuery)
             ->whereYear('created_at', now()->year)
             ->sum($salesAmountExpression);
+        $yearlyPax = (int) (clone $baseQuery)
+            ->whereYear('created_at', now()->year)
+            ->sum(DB::raw('pax_adult + pax_child + pax_infant'));
 
         $monthlyProfit = $isVendor ? max(0, $monthlyRevenue - $monthlyCommission) : $monthlyCommission;
 
@@ -102,9 +109,11 @@ class HomeController extends Controller
                 ],
                 'monthly' => [
                     'idr' => $monthlyRevenue,
+                    'pax' => $monthlyPax,
                 ],
                 'yearly' => [
                     'idr' => $yearlyRevenue,
+                    'pax' => $yearlyPax,
                 ],
             ],
             'commission' => [

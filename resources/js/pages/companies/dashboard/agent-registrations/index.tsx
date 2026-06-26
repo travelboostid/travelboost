@@ -38,6 +38,12 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import { Textarea } from '@/components/ui/textarea';
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { DEFAULT_PHOTO } from '@/config';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
 import { update } from '@/routes/companies/dashboard/agent-registrations';
@@ -86,6 +92,7 @@ type RegistrationRow = {
     payment_mode: 'vendor' | 'agent' | null;
     manual_payment_enabled?: boolean | null;
     online_payment_enabled?: boolean | null;
+    agent_itinerary_upload_enabled?: boolean | null;
     applied_at: string | null;
     accepted_at: string | null;
     agent: {
@@ -756,6 +763,63 @@ export default function Page({ data, agentTiers }: PageProps) {
                                 )}
                             </span>
                         </div>
+                    );
+                },
+            },
+            {
+                id: 'agent_itinerary_upload_enabled',
+                accessorFn: (row) =>
+                    row.agent_itinerary_upload_enabled ?? false,
+                header: ({ column }) => (
+                    <SortableHeader
+                        column={column}
+                        title={
+                            <FormattedMessage defaultMessage="Agent Itinerary Upload" />
+                        }
+                        className="justify-start"
+                    />
+                ),
+                cell: ({ row }) => {
+                    const registration = row.original;
+
+                    const handleUpdate = (checked: boolean) => {
+                        router.put(
+                            update({
+                                company: company.username,
+                                agent_registration: registration.id,
+                            }).url,
+                            { agent_itinerary_upload_enabled: checked },
+                            { preserveScroll: true, preserveState: true },
+                        );
+                    };
+
+                    return (
+                        <TooltipProvider>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <div className="flex min-w-[180px] items-center gap-3">
+                                        <Switch
+                                            checked={
+                                                registration.agent_itinerary_upload_enabled ??
+                                                false
+                                            }
+                                            onCheckedChange={handleUpdate}
+                                        />
+                                        <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                                            {(registration.agent_itinerary_upload_enabled ??
+                                            false) ? (
+                                                <FormattedMessage defaultMessage="Enabled" />
+                                            ) : (
+                                                <FormattedMessage defaultMessage="Disabled" />
+                                            )}
+                                        </span>
+                                    </div>
+                                </TooltipTrigger>
+                                <TooltipContent side="top">
+                                    <FormattedMessage defaultMessage="Controls whether this agent can upload its own itinerary PDF for your tour products." />
+                                </TooltipContent>
+                            </Tooltip>
+                        </TooltipProvider>
                     );
                 },
             },

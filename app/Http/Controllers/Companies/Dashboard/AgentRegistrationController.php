@@ -121,6 +121,7 @@ class AgentRegistrationController extends Controller
             'payment_mode' => ['nullable', 'in:vendor,agent'],
             'manual_payment_enabled' => ['nullable', 'boolean'],
             'online_payment_enabled' => ['nullable', 'boolean'],
+            'agent_itinerary_upload_enabled' => ['nullable', 'boolean'],
         ]);
 
         if (isset($data['status']) && $data['status'] === 'active' && is_null($agent_registration->accepted_at)) {
@@ -155,6 +156,7 @@ class AgentRegistrationController extends Controller
                 'Payment Mode' => $row['payment_mode'],
                 'Manual Payment' => $row['manual_payment_enabled'],
                 'Online Payment' => $row['online_payment_enabled'],
+                'Agent Itinerary Upload' => $row['agent_itinerary_upload_enabled'],
                 'Show Vendor Name' => $row['show_vendor_name'],
                 'Applied At' => $row['applied_at'],
                 'Accepted At' => $row['accepted_at'],
@@ -197,6 +199,7 @@ class AgentRegistrationController extends Controller
                     'payment_mode' => $registration->payment_mode ?? 'vendor',
                     'manual_payment_enabled' => ($registration->manual_payment_enabled ?? true) ? 'Enabled' : 'Disabled',
                     'online_payment_enabled' => ($registration->online_payment_enabled ?? true) ? 'Enabled' : 'Disabled',
+                    'agent_itinerary_upload_enabled' => ($registration->agent_itinerary_upload_enabled ?? false) ? 'Enabled' : 'Disabled',
                     'show_vendor_name' => ($registration->show_vendor_name ?? false) ? 'Yes' : 'No',
                     'applied_at' => optional($registration->created_at)->format('Y-m-d H:i:s'),
                     'accepted_at' => optional($registration->accepted_at)->format('Y-m-d H:i:s') ?: '-',

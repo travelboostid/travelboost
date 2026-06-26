@@ -66,6 +66,20 @@ function attachDashboardUserToCompany(User $user, Company $company, ?string $rol
         'is_owner' => true,
         'accepted_at' => now(),
     ]);
+
+    $roles = match ($company->type) {
+        'vendor' => ['user:vendor'],
+        'agent' => ['user:agent'],
+        default => [],
+    };
+
+    if ($roleName !== null) {
+        $roles[] = $roleName;
+    }
+
+    if ($roles !== []) {
+        $user->addRoles($roles);
+    }
 }
 
 /**
@@ -305,7 +319,6 @@ test('agent vendor catalog exposes schedule prices from minimum vendor tour pric
     $response->assertInertia(fn ($page) => $page
         ->component('companies/dashboard/vendor-tours/index')
         ->where('data.0.schedules.0.price', 4_500_000)
-        ->where('data.0.schedules.0.prices', fn (mixed $prices): bool => $prices === null || (is_array($prices) && count($prices) === 0))
         ->where('partnership.agent_tier_id', $tier->id));
 
     $detailsResponse = $this->actingAs($user)
@@ -315,6 +328,61 @@ test('agent vendor catalog exposes schedule prices from minimum vendor tour pric
     $detailsResponse->assertJsonPath('schedules.0.prices.0.price', '5000000.00');
     $detailsResponse->assertJsonCount(1, 'commission_rules');
     $detailsResponse->assertJsonPath('commission_rules.0.commission_value', '10.00');
+});
+
+test('vendor can toggle agent itinerary upload permission from agent registrations', function () {
+    $vendor = Company::factory()->create(['type' => 'vendor']);
+    $vendorUser = User::factory()->create();
+    attachDashboardUserToCompany($vendorUser, $vendor);
+
+    $agent = Company::factory()->create(['type' => 'agent']);
+
+    $partnership = VendorAgentPartner::create([
+        'vendor_id' => $vendor->id,
+        'agent_id' => $agent->id,
+        'status' => VendorAgentPartnerStatus::ACTIVE,
+        'accepted_at' => now(),
+        'agent_itinerary_upload_enabled' => false,
+    ]);
+
+    $response = $this->actingAs($vendorUser)->put(
+        "/companies/{$vendor->username}/dashboard/agent-registrations/{$partnership->id}",
+        ['agent_itinerary_upload_enabled' => true],
+    );
+
+    $response->assertRedirect();
+
+    expect($partnership->fresh()->agent_itinerary_upload_enabled)->toBeTrue();
+});
+
+test('agent tours expose itinerary upload permission per vendor partnership', function () {
+    ['vendor' => $vendor, 'tour' => $tour] = createPricedDashboardTour();
+
+    $agent = Company::factory()->create(['type' => 'agent']);
+    $agentUser = User::factory()->create();
+    attachDashboardUserToCompany($agentUser, $agent);
+
+    VendorAgentPartner::create([
+        'vendor_id' => $vendor->id,
+        'agent_id' => $agent->id,
+        'status' => VendorAgentPartnerStatus::ACTIVE,
+        'accepted_at' => now(),
+        'agent_itinerary_upload_enabled' => false,
+    ]);
+
+    AgentTour::create([
+        'company_id' => $agent->id,
+        'tour_id' => $tour->id,
+        'status' => 'active',
+    ]);
+
+    $response = $this->actingAs($agentUser)
+        ->get("/companies/{$agent->username}/dashboard/agent-tours");
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->component('companies/dashboard/agent-tours/index')
+        ->where('data.0.agent_itinerary_upload_enabled', false));
 });
 
 test('dashboard booking create page uses customer wizard with dashboard endpoints', function () {

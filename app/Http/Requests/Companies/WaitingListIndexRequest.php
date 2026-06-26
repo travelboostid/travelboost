@@ -33,6 +33,7 @@ class WaitingListIndexRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'search' => ['nullable', 'string', 'max:255'],
             'tour_name' => ['nullable', 'string', 'max:255'],
             'tour_code' => ['nullable', 'string', 'max:255'],
             'contact_name' => ['nullable', 'string', 'max:255'],

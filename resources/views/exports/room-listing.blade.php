@@ -159,10 +159,10 @@
                 <td style="width: 65%">
                     <table cellpadding="0" cellspacing="0" style="width: 100%">
                         <tr>
-                            @if ($company->photo_url)
+                            @if (!empty($companyLogoPath))
                                 <td style="width: 68px; vertical-align: middle">
                                     <img
-                                        src="{{ public_path($company->photo_url) }}"
+                                        src="{{ $companyLogoPath }}"
                                         class="logo"
                                         alt="Company logo"
                                     />
@@ -284,7 +284,11 @@
                     {!! !$isExcel ? 'width="4%"' : '' !!}
                     >Age
                 </th>
-
+                <th
+                    style="{{ $headerStyle }}"
+                    {!! !$isExcel ? 'width="9%"' : '' !!}
+                    >Agent
+                </th>
                 <th
                     style="{{ $headerStyle }}"
                     {!! !$isExcel ? 'width="4%"' : '' !!}
@@ -316,6 +320,7 @@
                     @foreach ($bookingRooms as $roomGroup)
                         @php
               $roomType = $roomGroup['room_type'];
+              $roomTypeNote = $roomGroup['room_type_note'] ?? null;
               $passengers = $roomGroup['passengers'];
               $isFirstInRoom = true;
               $roomPassengerCount = count($passengers);
@@ -366,7 +371,20 @@
                                         rowspan="{{ $roomPassengerCount }}"
                                         style="{{ $cellStyle }} text-align: center; text-transform: uppercase; font-size: 7pt;"
                                     >
-                                        {{ $roomType }}
+                                        <div>{{ $roomType }}</div>
+                                        @if ($roomTypeNote)
+                                            <div
+                                                style="
+                                                    margin-top: 2px;
+                                                    font-size: 6pt;
+                                                    font-weight: 400;
+                                                    text-transform: none;
+                                                    color: #64748b;
+                                                "
+                                            >
+                                                {{ $roomTypeNote }}
+                                            </div>
+                                        @endif
                                     </td>
                                     <td
                                         rowspan="{{ $roomPassengerCount }}"
@@ -433,7 +451,14 @@
                                 >
                                     {{ $age }}
                                 </td>
-
+                                @if ($isFirstInBooking)
+                                    <td
+                                        rowspan="{{ $totalPaxInBooking }}"
+                                        style="{{ $cellStyle }} text-align: center; font-weight: 700;"
+                                    >
+                                        {{ $agentName ?: '-' }}
+                                    </td>
+                                @endif
                                 <td
                                     style="{{ $cellStyle }} text-align: center; font-weight: 700; {{ $isWarning ? 'background-color: #fee2e2; color: #dc2626;' : '' }}"
                                 >
@@ -480,7 +505,7 @@
                             border: 1px solid #cbd5e1;
                         "
                     >
-                        {{ $item['room_type'] }}
+                        {{ $item['roomType'] ?? $item['room_type'] ?? '-' }}
                     </td>
                     <td
                         style="
@@ -489,7 +514,7 @@
                             font-weight: 700;
                         "
                     >
-                        {{ $item['count'] }} {{ $item['count'] === 1 ? 'room' : 'rooms' }}
+                        {{ $item['count'] }} {{ $item['unit'] ?? ($item['count'] === 1 ? 'room' : 'rooms') }}
                     </td>
                 </tr>
             @endforeach
