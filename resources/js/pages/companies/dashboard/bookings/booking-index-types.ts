@@ -171,6 +171,10 @@ type PageProps = {
         links: { url: string | null; label: string; active: boolean }[];
     };
     followupSummary?: FollowupSummary;
+    filters?: {
+        search: string;
+        status: string;
+    };
 };
 
 export type {

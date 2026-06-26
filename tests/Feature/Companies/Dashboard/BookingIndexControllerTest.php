@@ -324,6 +324,14 @@ test('booking index supports unified search across booking fields', function () 
         ->assertOk()
         ->assertInertia(fn ($page) => $page
             ->has('data.data', 1)
+            ->where('data.data.0.booking_number', 'BKG-SEARCH-001')
+            ->where('filters.search', 'Mountain'));
+
+    $this->actingAs($this->user)
+        ->get("/companies/{$vendor->username}/dashboard/bookings?search=SEARCH-001")
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->has('data.data', 1)
             ->where('data.data.0.booking_number', 'BKG-SEARCH-001'));
 
     $this->actingAs($this->user)
@@ -331,7 +339,8 @@ test('booking index supports unified search across booking fields', function () 
         ->assertOk()
         ->assertInertia(fn ($page) => $page
             ->has('data.data', 1)
-            ->where('data.data.0.contact_name', 'Search Customer'));
+            ->where('data.data.0.contact_name', 'Search Customer')
+            ->where('filters.search', 'Search'));
 });
 
 test('booking index includes paid amount and remaining balance', function () {

@@ -12,9 +12,52 @@ class BookingReschedulePayment
 
     private const MONEY_EPSILON = 0.01;
 
+    /**
+     * @var array<int, array<string, mixed>|null>
+     */
+    private array $approvedReschedulePayloadCache = [];
+
     public function normalizeMoney(float $amount): float
     {
         return (float) round(max(0.0, $amount), self::MONEY_SCALE);
+    }
+
+    /**
+     * @param  list<int>  $bookingIds
+     */
+    public function preloadApprovedReschedulePayloads(array $bookingIds): void
+    {
+        $missingIds = array_values(array_filter(
+            $bookingIds,
+            fn (int $bookingId): bool => ! array_key_exists($bookingId, $this->approvedReschedulePayloadCache),
+        ));
+
+        if ($missingIds === []) {
+            return;
+        }
+
+        foreach ($missingIds as $bookingId) {
+            $this->approvedReschedulePayloadCache[$bookingId] = null;
+        }
+
+        $requests = BookingActionRequest::query()
+            ->select(['id', 'booking_id', 'payload', 'reviewed_at'])
+            ->whereIn('booking_id', $missingIds)
+            ->where('target_action', 'reschedule')
+            ->where('status', 'approved')
+            ->orderBy('booking_id')
+            ->orderByDesc('reviewed_at')
+            ->orderByDesc('id')
+            ->get()
+            ->unique('booking_id');
+
+        foreach ($requests as $request) {
+            $payload = $request->payload;
+
+            $this->approvedReschedulePayloadCache[(int) $request->booking_id] = is_array($payload)
+                ? $payload
+                : null;
+        }
     }
 
     /**
@@ -22,6 +65,10 @@ class BookingReschedulePayment
      */
     public function latestApprovedPayload(Booking $booking): ?array
     {
+        if (array_key_exists($booking->id, $this->approvedReschedulePayloadCache)) {
+            return $this->approvedReschedulePayloadCache[$booking->id];
+        }
+
         $payload = BookingActionRequest::query()
             ->where('booking_id', $booking->id)
             ->where('target_action', 'reschedule')
@@ -30,7 +77,10 @@ class BookingReschedulePayment
             ->orderByDesc('id')
             ->value('payload');
 
-        return is_array($payload) ? $payload : null;
+        $resolved = is_array($payload) ? $payload : null;
+        $this->approvedReschedulePayloadCache[$booking->id] = $resolved;
+
+        return $resolved;
     }
 
     public function isPriceAdjustmentWaived(?array $payload): bool

@@ -83,6 +83,15 @@ function readSearchFromUrl(): string {
     );
 }
 
+function buildBookingsIndexUrl(
+    companyUsername: string,
+    params: URLSearchParams,
+): string {
+    const query = params.toString();
+
+    return `/companies/${companyUsername}/dashboard/bookings${query ? `?${query}` : ''}`;
+}
+
 function paginationLabel(label: string, intl: IntlShape): string {
     return label
         .replace(
@@ -716,7 +725,7 @@ function buildColumns(
 // Page
 // ---------------------------------------------------------------------------
 
-export default function Page({ data }: PageProps) {
+export default function Page({ data, filters }: PageProps) {
     const intl = useIntl();
     const { company } = usePageSharedDataProps();
     const statusTabs = React.useMemo(() => getStatusTabs(intl), [intl]);
@@ -759,9 +768,16 @@ export default function Page({ data }: PageProps) {
     );
 
     const [sorting, setSorting] = React.useState<SortingState>([]);
-    const [searchInput, setSearchInput] = React.useState(readSearchFromUrl);
+    const [searchInput, setSearchInput] = React.useState(
+        () => filters?.search ?? readSearchFromUrl(),
+    );
     const [columnVisibility, setColumnVisibility] =
         React.useState<VisibilityState>({});
+
+    React.useEffect(() => {
+        setSearchInput(filters?.search ?? '');
+    }, [filters?.search]);
+
     const debouncedServerSearch = useDebouncedCallback((value: string) => {
         const params = new URLSearchParams(window.location.search);
         const trimmed = value.trim();
@@ -776,13 +792,16 @@ export default function Page({ data }: PageProps) {
             params.set('search', trimmed);
         }
 
-        const query = params.toString();
-
-        router.visit(`${window.location.pathname}${query ? `?${query}` : ''}`, {
-            preserveState: true,
-            preserveScroll: true,
-            only: ['data', 'followupSummary'],
-        });
+        router.get(
+            buildBookingsIndexUrl(company.username, params),
+            {},
+            {
+                preserveState: false,
+                preserveScroll: true,
+                replace: true,
+                only: ['data', 'filters'],
+            },
+        );
     }, 300);
 
     React.useEffect(() => {
