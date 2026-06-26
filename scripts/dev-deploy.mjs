@@ -48,7 +48,7 @@ async function deploy() {
         )
         .option(
             '--skip-optimize',
-            'skip remote php artisan optimize:clear',
+            'skip remote php artisan optimize:clear && optimize',
         )
         .option(
             '--skip-local-branch',
@@ -139,7 +139,9 @@ async function deploy() {
             steps.push('php artisan migrate --force');
         }
         if (!opts.skipOptimize) {
-            steps.push('php artisan optimize:clear');
+            steps.push(
+                'php artisan optimize:clear && php artisan optimize',
+            );
         }
         steps.push(
             'sudo chown -R travelboost:www-data storage bootstrap/cache',
