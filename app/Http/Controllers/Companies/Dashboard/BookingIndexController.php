@@ -187,6 +187,10 @@ class BookingIndexController extends Controller
         );
 
         $bookings->getCollection()->transform(function ($booking) use ($company, $paymentReceiverService, $pricingService, $travelDocumentService) {
+            if (in_array($this->bookingStatusValue($booking), self::PAID_STATUS_RECONCILABLE_STATUSES, true)) {
+                $booking = $this->reconcilePaidBookingStatusIfStale($booking);
+            }
+
             $booking = $pricingService->reconcileSnapshotTotals($booking);
             $commissionAmount = (float) ($booking->commission_amount ?? 0);
             $booking->commission_amount = $commissionAmount > 0
@@ -194,6 +198,8 @@ class BookingIndexController extends Controller
                 : $this->resolveCommissionAmount($booking);
 
             $this->attachFollowupPayloads($company, $booking);
+            $paymentReceiver = $paymentReceiverService->resolveForBooking($booking);
+            $booking->payment_receiver_type = $paymentReceiver['receiver_type'];
             $booking->input_by = $this->inputByPayload($booking);
             $booking->down_payment_detail = $this->paymentDetailPayload($booking, 'down_payment', $paymentReceiverService);
             $booking->full_payment_detail = $this->paymentDetailPayload($booking, 'full_payment', $paymentReceiverService);
@@ -324,16 +330,27 @@ class BookingIndexController extends Controller
 
     private function bookingIndexBaseQuery(Company $company, Request $request): Builder
     {
-        return $this->bookingIndexCompanyScope($company)
-            ->when($request->filled('search'), function (Builder $query) use ($request): void {
-                $this->applyBookingIndexSearch($query, (string) $request->input('search'));
-            })
-            ->when(! $request->filled('search') && $request->input('booking_number'), function (Builder $query, string $search): void {
-                $query->where('booking_number', 'ilike', "{$search}%");
-            })
-            ->when(! $request->filled('search') && $request->input('contact_name'), function (Builder $query, string $search): void {
-                $query->where('contact_name', 'ilike', "{$search}%");
-            });
+        $query = $this->bookingIndexCompanyScope($company);
+
+        if ($request->filled('search')) {
+            $this->applyBookingIndexSearch($query, (string) $request->input('search'));
+        } else {
+            $bookingNumber = trim((string) $request->input('booking_number', ''));
+
+            if ($bookingNumber !== '') {
+                $escaped = str_replace(['%', '_'], ['\\%', '\\_'], $bookingNumber);
+                $query->where('booking_number', 'ilike', "{$escaped}%");
+            }
+
+            $contactName = trim((string) $request->input('contact_name', ''));
+
+            if ($contactName !== '') {
+                $escaped = str_replace(['%', '_'], ['\\%', '\\_'], $contactName);
+                $query->where('contact_name', 'ilike', "{$escaped}%");
+            }
+        }
+
+        return $query;
     }
 
     private function applyBookingIndexSearch(Builder $query, string $search): void

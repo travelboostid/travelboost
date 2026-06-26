@@ -312,9 +312,14 @@ test('booking index supports unified search across booking fields', function () 
         'contact_name' => 'Search Customer',
     ]);
 
+    $otherTour = Tour::factory()->create([
+        'company_id' => $vendor->id,
+        'name' => 'Beach Holiday',
+    ]);
+
     Booking::factory()->create([
         'vendor_id' => $vendor->id,
-        'tour_id' => $tour->id,
+        'tour_id' => $otherTour->id,
         'booking_number' => 'BKG-OTHER-002',
         'contact_name' => 'Other Customer',
     ]);

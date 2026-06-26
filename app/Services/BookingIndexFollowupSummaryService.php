@@ -25,9 +25,10 @@ class BookingIndexFollowupSummaryService
     /**
      * @return array<string, int|float>
      */
-    public function summarize(Builder $companyScope): array
+    public function summarize(Builder $companyScope, ?string $asOfDate = null): array
     {
-        $metrics = $this->followupMetricsSubquery($companyScope);
+        $asOfDate ??= now()->toDateString();
+        $metrics = $this->followupMetricsSubquery($companyScope, $asOfDate);
 
         $row = DB::query()
             ->fromSub($metrics, 'followup_metrics')
@@ -55,7 +56,7 @@ class BookingIndexFollowupSummaryService
         ];
     }
 
-    private function followupMetricsSubquery(Builder $companyScope): Builder
+    private function followupMetricsSubquery(Builder $companyScope, string $asOfDate): Builder
     {
         $bookingMorph = Booking::class;
         $paidStatus = PaymentStatus::PAID->value;
@@ -65,12 +66,25 @@ class BookingIndexFollowupSummaryService
             ->select('payable_id', DB::raw('COALESCE(SUM(amount), 0) as paid_total'))
             ->where('payable_type', $bookingMorph)
             ->where('status', $paidStatus)
+            ->whereRaw("
+                COALESCE(payload->>'payment_flow_stage', '') != 'agent_to_vendor'
+                AND (
+                    COALESCE(payload->>'payment_flow_stage', '') != 'customer_to_agent'
+                    OR (
+                        payload->>'vendor_review_status' = 'approved'
+                        AND COALESCE(payload->>'counts_toward_booking_total', 'false') = 'true'
+                    )
+                )
+                AND (
+                    COALESCE(payload->>'payment_flow_stage', '') = 'customer_to_agent'
+                    OR COALESCE(payload->>'counts_toward_booking_total', 'true') != 'false'
+                )
+            ")
             ->groupBy('payable_id');
 
         return (clone $companyScope)
             ->whereIn('bookings.status', self::FOLLOW_UP_STATUSES)
             ->leftJoinSub($paidTotals, 'paid_totals', 'paid_totals.payable_id', '=', 'bookings.id')
-            ->leftJoin('company_settings as cs', 'cs.company_id', '=', 'bookings.vendor_id')
             ->leftJoinSub($this->missingDocumentsSubquery(), 'doc_missing', 'doc_missing.booking_id', '=', 'bookings.id')
             ->selectRaw("
                 bookings.id,
@@ -89,18 +103,48 @@ class BookingIndexFollowupSummaryService
                               AND pending_manual.status = ?
                         )
                         THEN CASE
-                            WHEN (DATE(bookings.departure_date) - (COALESCE(cs.full_payment_deadline, 0) * INTERVAL '1 day'))::date < CURRENT_DATE
+                            WHEN (
+                                DATE(bookings.departure_date)
+                                - (
+                                    COALESCE((
+                                        SELECT full_payment_deadline
+                                        FROM company_settings
+                                        WHERE company_id = bookings.vendor_id
+                                        LIMIT 1
+                                    ), 0) * INTERVAL '1 day'
+                                )
+                            )::date < ?::date
                                 THEN 'overdue'
                             ELSE 'due'
                         END
                     WHEN bookings.status = 'waiting payment approval' THEN 'pending_approval'
-                    WHEN (DATE(bookings.departure_date) - (COALESCE(cs.full_payment_deadline, 0) * INTERVAL '1 day'))::date < CURRENT_DATE
+                    WHEN (
+                        DATE(bookings.departure_date)
+                        - (
+                            COALESCE((
+                                SELECT full_payment_deadline
+                                FROM company_settings
+                                WHERE company_id = bookings.vendor_id
+                                LIMIT 1
+                            ), 0) * INTERVAL '1 day'
+                        )
+                    )::date < ?::date
                         THEN 'overdue'
                     ELSE 'due'
                 END AS payment_state,
                 CASE
                     WHEN bookings.departure_date IS NULL THEN NULL
-                    ELSE (DATE(bookings.departure_date) - (COALESCE(cs.full_payment_deadline, 0) * INTERVAL '1 day'))::date - CURRENT_DATE
+                    ELSE (
+                        DATE(bookings.departure_date)
+                        - (
+                            COALESCE((
+                                SELECT full_payment_deadline
+                                FROM company_settings
+                                WHERE company_id = bookings.vendor_id
+                                LIMIT 1
+                            ), 0) * INTERVAL '1 day'
+                        )
+                    )::date - ?::date
                 END AS payment_days_remaining,
                 CASE
                     WHEN COALESCE(doc_missing.missing_count, 0) > 0 THEN 'incomplete'
@@ -108,9 +152,19 @@ class BookingIndexFollowupSummaryService
                 END AS document_state,
                 CASE
                     WHEN bookings.departure_date IS NULL THEN NULL
-                    ELSE (DATE(bookings.departure_date) - (COALESCE(cs.document_completed_deadline, 0) * INTERVAL '1 day'))::date - CURRENT_DATE
+                    ELSE (
+                        DATE(bookings.departure_date)
+                        - (
+                            COALESCE((
+                                SELECT document_completed_deadline
+                                FROM company_settings
+                                WHERE company_id = bookings.vendor_id
+                                LIMIT 1
+                            ), 0) * INTERVAL '1 day'
+                        )
+                    )::date - ?::date
                 END AS document_days_remaining
-            ", [$bookingMorph, $pendingStatus]);
+            ", [$bookingMorph, $pendingStatus, $asOfDate, $asOfDate, $asOfDate, $asOfDate]);
     }
 
     private function missingDocumentsSubquery(): QueryBuilder
