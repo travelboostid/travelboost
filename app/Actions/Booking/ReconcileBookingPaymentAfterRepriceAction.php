@@ -39,7 +39,6 @@ class ReconcileBookingPaymentAfterRepriceAction
 
     public function reconcileStaleStatusIfBalanceDue(Booking $booking): Booking
     {
-        $booking = $booking->fresh();
         $currentStatus = $booking->status instanceof BookingStatus
             ? $booking->status
             : BookingStatus::tryFrom((string) $booking->status);
@@ -59,8 +58,7 @@ class ReconcileBookingPaymentAfterRepriceAction
 
         if ($targetStatus !== $currentStatus) {
             $booking->update(['status' => $targetStatus]);
-
-            return $booking->fresh();
+            $booking->status = $targetStatus;
         }
 
         return $booking;
