@@ -43,6 +43,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
@@ -248,12 +249,23 @@ class BookingIndexController extends Controller
      */
     private function resolveFollowupSummary(Company $company, Request $request): array
     {
-        $followupBookings = $this->followupBookingsForQuery(
-            clone $this->bookingIndexBaseQuery($company, $request),
-            $company
+        $cacheKey = sprintf(
+            'bookings.followup-summary.%d.%s',
+            $company->id,
+            sha1(json_encode([
+                $request->input('booking_number'),
+                $request->input('contact_name'),
+            ], JSON_THROW_ON_ERROR)),
         );
 
-        return $this->followupSummaryFromCollection($followupBookings);
+        return Cache::remember($cacheKey, now()->addMinutes(2), function () use ($company, $request): array {
+            $followupBookings = $this->followupBookingsForQuery(
+                clone $this->bookingIndexBaseQuery($company, $request),
+                $company
+            );
+
+            return $this->followupSummaryFromCollection($followupBookings);
+        });
     }
 
     private function bookingIndexBaseQuery(Company $company, Request $request): Builder
@@ -337,7 +349,7 @@ class BookingIndexController extends Controller
             'agent:id,name',
             'agent.companySetting',
             'passengers:id,booking_id,price_category,passport_number,passport_issue_date,passport_expiry_date,passport_file_path,visa_number,visa_file_path',
-            'payments:id,booking_id,amount,status,provider,payment_method,created_at,payload',
+            'payments:id,payable_id,payable_type,amount,status,provider,payment_method,created_at,payload',
         ];
     }
 
