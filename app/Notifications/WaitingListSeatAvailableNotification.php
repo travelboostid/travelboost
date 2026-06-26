@@ -4,6 +4,7 @@ namespace App\Notifications;
 
 use App\Models\Booking;
 use App\Models\TourWaitingListSchedule;
+use App\Support\WaitingListBookingCreateUrl;
 use Carbon\CarbonInterface;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -68,6 +69,18 @@ class WaitingListSeatAvailableNotification extends Notification
 
     private function bookingActionUrl(): string
     {
+        $this->schedule->loadMissing([
+            'tourSchedule:id,departure_date',
+            'waitingList.tour.company:id,username',
+        ]);
+        $this->booking->loadMissing(['agent:id,username', 'vendor:id,username', 'tour:id']);
+
+        $url = WaitingListBookingCreateUrl::fromOffer($this->booking, $this->schedule);
+
+        if ($url !== null) {
+            return $url;
+        }
+
         $departureDate = $this->schedule->tourSchedule?->departure_date;
         $date = $departureDate instanceof \DateTimeInterface
             ? $departureDate->format('Y-m-d')

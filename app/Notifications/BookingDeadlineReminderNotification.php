@@ -5,10 +5,11 @@ namespace App\Notifications;
 use App\Models\Booking;
 use Carbon\CarbonInterface;
 use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
-class BookingDeadlineReminderNotification extends Notification
+class BookingDeadlineReminderNotification extends Notification implements ShouldQueue
 {
     use Queueable;
 

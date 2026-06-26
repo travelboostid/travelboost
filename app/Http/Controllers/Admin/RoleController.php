@@ -75,10 +75,21 @@ class RoleController extends Controller
      */
     public function update(UpdateRoleRequest $request, Role $role)
     {
+        if ($role->name === 'admin:superadmin') {
+            return back()->withErrors(['role' => 'The superadmin role cannot be modified.']);
+        }
+
         $validated = $request->validated();
 
         // Filter out empty permissions
         $permissions = Arr::where($validated['permissions'] ?? [], fn ($v) => $v);
+
+        if (isset($validated['permissions']) && $request->user()->roles->contains('id', $role->id)) {
+            $assignedPermissionKeys = array_keys($permissions);
+            if (! in_array('role.query', $assignedPermissionKeys) || ! in_array('role.mutation', $assignedPermissionKeys)) {
+                return back()->withErrors(['permissions' => 'You cannot remove role.query or role.mutation permissions from your own role.']);
+            }
+        }
 
         $role->update($validated);
         if (isset($validated['permissions'])) {
@@ -93,6 +104,13 @@ class RoleController extends Controller
      */
     public function destroy(Role $role)
     {
+        if ($role->name === 'admin:superadmin') {
+            return back()->withErrors(['role' => 'The superadmin role cannot be deleted.']);
+        }
+        if (request()->user()->roles->contains('id', $role->id)) {
+            return back()->withErrors(['role' => 'You cannot delete a role assigned to yourself.']);
+        }
+
         $role->delete();
 
         return redirect()->back()->with('success', 'Role deleted successfully');

@@ -343,6 +343,8 @@ test('vendor schedule date updates sync active booking departure dates shown in 
         'user_id' => $vendorUser->id,
         'role' => 'owner',
         'status' => CompanyTeamStatus::ACTIVE,
+        'accepted_at' => now(),
+        'is_owner' => true,
     ]);
     $tour = Tour::factory()->create([
         'company_id' => $vendor->id,

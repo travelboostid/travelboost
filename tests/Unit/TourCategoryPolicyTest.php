@@ -63,7 +63,9 @@ test('platform admin can manage any tour category', function () {
     $admin = User::factory()->create();
     $admin->addRole('user:admin');
 
-    $category = TourCategory::factory()->create();
+    $category = TourCategory::factory()->create([
+        'company_id' => Company::factory()->create()->id,
+    ]);
 
     expect($this->policy->view($admin, $category))->toBeTrue()
         ->and($this->policy->update($admin, $category))->toBeTrue();

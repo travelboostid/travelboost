@@ -20,6 +20,7 @@ class VendorAgentPartner extends Model
         'payment_mode',
         'manual_payment_enabled',
         'online_payment_enabled',
+        'agent_itinerary_upload_enabled',
     ];
 
     protected function casts(): array
@@ -31,6 +32,7 @@ class VendorAgentPartner extends Model
             'show_vendor_name' => 'boolean',
             'manual_payment_enabled' => 'boolean',
             'online_payment_enabled' => 'boolean',
+            'agent_itinerary_upload_enabled' => 'boolean',
         ];
     }
 

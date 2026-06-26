@@ -42,6 +42,7 @@ class HandleInertiaRequests extends Middleware
             'flash' => [
                 'tab' => $request->session()->get('tab'),
                 'account_inactive' => $request->session()->get('account_inactive'),
+                'error' => $request->session()->get('error'),
                 'warning' => $request->session()->get('warning'),
                 'success' => $request->session()->get('success'),
                 'bookingPaymentResult' => $request->session()->get('bookingPaymentResult'),

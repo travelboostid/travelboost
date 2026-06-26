@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\AiCreditTopupPayment;
 use App\Models\Company;
 use App\Models\Payment;
+use App\Support\CompanyPermissionMap;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -14,7 +15,7 @@ class ChatbotPaymentHistoryController extends Controller
     public function index(Request $request, Company $company)
     {
         abort_unless(
-            $request->user()->isAbleTo('company-settings.query', "company:{$company->id}"),
+            CompanyPermissionMap::userHasScopedPermission($request->user(), $company, 'chat-ai.query'),
             403
         );
 

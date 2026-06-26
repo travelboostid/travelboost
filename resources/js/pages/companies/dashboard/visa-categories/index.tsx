@@ -57,6 +57,16 @@ type VisaCategory = {
 
 const currencyFormatter = new Intl.NumberFormat('id-ID');
 
+const formatThousands = (value: string | number): string => {
+    const numericValue = Number(value || 0);
+
+    if (!Number.isFinite(numericValue) || numericValue <= 0) {
+        return '0';
+    }
+
+    return currencyFormatter.format(numericValue);
+};
+
 const buildVisaCategoryFormState = (
     category?: VisaCategory,
 ): { name: string; items: VisaCategoryItem[] } => ({
@@ -227,15 +237,20 @@ function VisaCategoryFormDialog({
                                         <div className="grid gap-2">
                                             <Label>Price</Label>
                                             <Input
-                                                type="number"
-                                                min="0"
-                                                value={item.price}
+                                                type="text"
+                                                inputMode="numeric"
+                                                value={formatThousands(
+                                                    item.price,
+                                                )}
                                                 onChange={(event) =>
                                                     updateItem(
                                                         index,
                                                         'price',
                                                         Number(
-                                                            event.target.value,
+                                                            event.target.value.replace(
+                                                                /\D/g,
+                                                                '',
+                                                            ) || 0,
                                                         ),
                                                     )
                                                 }

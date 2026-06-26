@@ -4,6 +4,54 @@ return [
     'scheduler_timezone' => env('SCHEDULER_TIMEZONE', 'Asia/Jakarta'),
     'agent_subscription_expiry_check_time' => env('AGENT_SUBSCRIPTION_EXPIRY_CHECK_TIME', '00:00'),
     'permissions' => [
+        ['name' => 'agents.query', 'display_name' => 'View Agents', 'description' => 'Allows viewing agent registrations and access details'],
+        ['name' => 'agents.mutation', 'display_name' => 'Manage Agents', 'description' => 'Allows managing agent registrations and access details'],
+
+        ['name' => 'customers.query', 'display_name' => 'View Customers', 'description' => 'Allows viewing customer pages and customer details'],
+        ['name' => 'customers.mutation', 'display_name' => 'Manage Customers', 'description' => 'Allows managing customer pages and customer-related actions'],
+
+        ['name' => 'tour-management.query', 'display_name' => 'View Tour Management', 'description' => 'Allows viewing products, catalogs, and tour category setup'],
+        ['name' => 'tour-management.mutation', 'display_name' => 'Manage Tour Management', 'description' => 'Allows managing products, catalogs, and tour category setup'],
+
+        ['name' => 'booking.query', 'display_name' => 'View Bookings', 'description' => 'Allows viewing bookings, booking correction, and waiting lists'],
+        ['name' => 'booking.mutation', 'display_name' => 'Manage Bookings', 'description' => 'Allows managing bookings, booking correction, and waiting lists'],
+
+        ['name' => 'funds.query', 'display_name' => 'View Funds', 'description' => 'Allows viewing wallet, payment, bank account, withdrawal, and related fund pages'],
+        ['name' => 'funds.mutation', 'display_name' => 'Manage Funds', 'description' => 'Allows managing wallet, payment, bank account, withdrawal, and related fund actions'],
+
+        ['name' => 'reports.query', 'display_name' => 'View Reports', 'description' => 'Allows viewing sales and commission reports'],
+        ['name' => 'reports.mutation', 'display_name' => 'Manage Reports', 'description' => 'Allows exporting and managing sales and commission reports'],
+
+        ['name' => 'booking-list.query', 'display_name' => 'View Booking List', 'description' => 'Allows viewing booking list reports'],
+        ['name' => 'booking-list.mutation', 'display_name' => 'Manage Booking List', 'description' => 'Allows exporting and managing booking list reports'],
+
+        ['name' => 'room-listings.query', 'display_name' => 'View Room Listings', 'description' => 'Allows viewing room listing reports'],
+        ['name' => 'room-listings.mutation', 'display_name' => 'Manage Room Listings', 'description' => 'Allows exporting and printing room listing reports'],
+
+        ['name' => 'seat-availability.query', 'display_name' => 'View Seat Availability', 'description' => 'Allows viewing seat availability reports'],
+        ['name' => 'seat-availability.mutation', 'display_name' => 'Manage Seat Availability', 'description' => 'Allows exporting and managing seat availability actions'],
+
+        ['name' => 'settings.query', 'display_name' => 'View Settings', 'description' => 'Allows viewing profile, linked accounts, user management, and access roles'],
+        ['name' => 'settings.mutation', 'display_name' => 'Manage Settings', 'description' => 'Allows managing profile, linked accounts, user management, and access roles'],
+
+        ['name' => 'parameter.query', 'display_name' => 'View Parameters', 'description' => 'Allows viewing vendor or agent parameters'],
+        ['name' => 'parameter.mutation', 'display_name' => 'Manage Parameters', 'description' => 'Allows managing vendor or agent parameters'],
+
+        ['name' => 'chat-ai.query', 'display_name' => 'View Chat AI', 'description' => 'Allows viewing Chat AI and vendor AI credit pages'],
+        ['name' => 'chat-ai.mutation', 'display_name' => 'Manage Chat AI', 'description' => 'Allows managing Chat AI and vendor AI credit actions'],
+
+        ['name' => 'commission.query', 'display_name' => 'View Commission Setup', 'description' => 'Allows viewing commission setup pages'],
+        ['name' => 'commission.mutation', 'display_name' => 'Manage Commission Setup', 'description' => 'Allows managing commission setup pages and rules'],
+
+        ['name' => 'vendor-config.query', 'display_name' => 'View Vendor Config', 'description' => 'Allows viewing vendor catalogs and vendor registration pages'],
+        ['name' => 'vendor-config.mutation', 'display_name' => 'Manage Vendor Config', 'description' => 'Allows managing vendor registrations and vendor catalog actions'],
+
+        ['name' => 'marketings.query', 'display_name' => 'View Marketings', 'description' => 'Allows viewing landing page and marketing analytics pages'],
+        ['name' => 'marketings.mutation', 'display_name' => 'Manage Marketings', 'description' => 'Allows managing landing page and marketing analytics configuration'],
+
+        ['name' => 'subscription-ai.query', 'display_name' => 'View Subscription & AI', 'description' => 'Allows viewing agent subscription and AI pages'],
+        ['name' => 'subscription-ai.mutation', 'display_name' => 'Manage Subscription & AI', 'description' => 'Allows managing agent subscription and AI pages'],
+
         ['name' => 'user.query', 'display_name' => 'Query User', 'description' => 'Allow viewing users'],
         ['name' => 'user.mutation', 'display_name' => 'Mutate User', 'description' => 'Allow creating, editing, or deleting users'],
 
@@ -47,7 +95,6 @@ return [
         ['name' => 'app-configuration.mutation', 'display_name' => 'Mutate App Configuration', 'description' => 'Allow creating, editing, or deleting app configuration'],
     ],
     'roles' => [
-        // identity roles for identifying user types, these roles are not meant to be assigned permissions
         [
             'name' => 'user:admin',
             'display_name' => 'admin',
@@ -78,50 +125,40 @@ return [
             'description' => 'Affiliate role with permissions to view tours and manage their referrals',
             'permissions' => [],
         ],
-        // admin roles
         [
             'name' => 'admin:superadmin',
             'display_name' => 'Superadmin',
             'description' => 'Main role with all permissions',
             'permissions' => [
-                'user.query',
-                'user.mutation',
-
-                'company.query',
-                'company.mutation',
-
-                'company-team.query',
-                'company-team.mutation',
-
-                'wallet.query',
-                'wallet.mutation',
-
-                'wallet-transaction.query',
-                'wallet-transaction.mutation',
-
-                'withdrawal.query',
-                'withdrawal.mutation',
-
-                'payment.query',
-                'payment.mutation',
-
-                'bank-account.query',
-                'bank-account.mutation',
-
-                'tour.query',
-                'tour.mutation',
-
-                'tour-category.query',
-                'tour-category.mutation',
-
-                'media.query',
-                'media.mutation',
-
-                'role.query',
-                'role.mutation',
-
-                'app-configuration.query',
-                'app-configuration.mutation',
+                'agents.query', 'agents.mutation',
+                'customers.query', 'customers.mutation',
+                'tour-management.query', 'tour-management.mutation',
+                'booking.query', 'booking.mutation',
+                'funds.query', 'funds.mutation',
+                'reports.query', 'reports.mutation',
+                'room-listings.query', 'room-listings.mutation',
+                'seat-availability.query', 'seat-availability.mutation',
+                'settings.query', 'settings.mutation',
+                'parameter.query', 'parameter.mutation',
+                'chat-ai.query', 'chat-ai.mutation',
+                'commission.query', 'commission.mutation',
+                'vendor-config.query', 'vendor-config.mutation',
+                'marketings.query', 'marketings.mutation',
+                'subscription-ai.query', 'subscription-ai.mutation',
+                'user.query', 'user.mutation',
+                'company.query', 'company.mutation',
+                'company-team.query', 'company-team.mutation',
+                'company-settings.query', 'company-settings.mutation',
+                'wallet.query', 'wallet.mutation',
+                'wallet-transaction.query', 'wallet-transaction.mutation',
+                'withdrawal.query', 'withdrawal.mutation',
+                'payment.query', 'payment.mutation',
+                'bank-account.query', 'bank-account.mutation',
+                'tour.query', 'tour.mutation',
+                'tour-category.query', 'tour-category.mutation',
+                'media.query', 'media.mutation',
+                'role.query', 'role.mutation',
+                'app-configuration.query', 'app-configuration.mutation',
             ],
         ],
         [
@@ -129,96 +166,116 @@ return [
             'display_name' => 'Finance',
             'description' => 'Finance role with permissions to manage company and tours',
             'permissions' => [
+                'funds.query',
+                'funds.mutation',
                 'wallet.query',
                 'wallet.mutation',
             ],
         ],
     ],
     'company_usable_permissions' => [
-        'user.query',
-        'user.mutation',
-
-        'company.query',
-        'company.mutation',
-
-        'company-settings.query',
-        'company-settings.mutation',
-
-        'company-team.query',
-        'company-team.mutation',
-
-        'wallet.query',
-        'wallet.mutation',
-
-        'wallet-transaction.query',
-        'wallet-transaction.mutation',
-
-        'withdrawal.query',
-        'withdrawal.mutation',
-
-        'payment.query',
-        'payment.mutation',
-
-        'bank-account.query',
-        'bank-account.mutation',
-
-        'tour.query',
-        'tour.mutation',
-
-        'tour-category.query',
-        'tour-category.mutation',
-
-        'media.query',
-        'media.mutation',
-
-        'role.query',
-        'role.mutation',
+        'agents.query',
+        'agents.mutation',
+        'customers.query',
+        'customers.mutation',
+        'tour-management.query',
+        'tour-management.mutation',
+        'booking.query',
+        'booking.mutation',
+        'funds.query',
+        'funds.mutation',
+        'reports.query',
+        'reports.mutation',
+        'booking-list.query',
+        'booking-list.mutation',
+        'room-listings.query',
+        'room-listings.mutation',
+        'seat-availability.query',
+        'seat-availability.mutation',
+        'settings.query',
+        'settings.mutation',
+        'parameter.query',
+        'parameter.mutation',
+        'chat-ai.query',
+        'chat-ai.mutation',
+        'commission.query',
+        'commission.mutation',
+        'vendor-config.query',
+        'vendor-config.mutation',
+        'marketings.query',
+        'marketings.mutation',
+        'subscription-ai.query',
+        'subscription-ai.mutation',
+    ],
+    'company_permission_grants' => [
+        'agents.query' => ['company.query'],
+        'agents.mutation' => ['agents.query', 'company.mutation'],
+        'customers.query' => ['user.query'],
+        'customers.mutation' => ['customers.query', 'user.mutation'],
+        'tour-management.query' => ['tour.query', 'tour-category.query', 'media.query'],
+        'tour-management.mutation' => ['tour-management.query', 'tour.mutation', 'tour-category.mutation', 'media.mutation'],
+        'booking.query' => ['tour.query'],
+        'booking.mutation' => ['booking.query', 'tour.mutation'],
+        'funds.query' => ['wallet.query', 'wallet-transaction.query', 'withdrawal.query', 'payment.query', 'bank-account.query'],
+        'funds.mutation' => ['funds.query', 'wallet.mutation', 'wallet-transaction.mutation', 'withdrawal.mutation', 'payment.mutation', 'bank-account.mutation'],
+        'reports.query' => [],
+        'reports.mutation' => ['reports.query'],
+        'booking-list.query' => [],
+        'booking-list.mutation' => ['booking-list.query'],
+        'room-listings.query' => ['tour.query'],
+        'room-listings.mutation' => ['room-listings.query'],
+        'seat-availability.query' => ['tour.query'],
+        'seat-availability.mutation' => ['seat-availability.query'],
+        'settings.query' => ['company.query', 'company-settings.query', 'company-team.query', 'role.query'],
+        'settings.mutation' => ['settings.query', 'company.mutation', 'company-settings.mutation', 'company-team.mutation', 'role.mutation'],
+        'parameter.query' => ['company-settings.query'],
+        'parameter.mutation' => ['parameter.query', 'company-settings.mutation'],
+        'chat-ai.query' => ['company-settings.query'],
+        'chat-ai.mutation' => ['chat-ai.query', 'company-settings.mutation'],
+        'commission.query' => ['tour.query'],
+        'commission.mutation' => ['commission.query', 'tour.mutation'],
+        'vendor-config.query' => ['company.query'],
+        'vendor-config.mutation' => ['vendor-config.query', 'company.mutation', 'tour.mutation'],
+        'marketings.query' => ['company-settings.query'],
+        'marketings.mutation' => ['marketings.query', 'company-settings.mutation'],
+        'subscription-ai.query' => ['company-settings.query'],
+        'subscription-ai.mutation' => ['subscription-ai.query', 'company-settings.mutation'],
     ],
     'company_default_roles' => [
-        // these roles will be created as company:<id>:<role_name> for each company and can be assigned to users
         [
             'name' => 'superadmin',
             'display_name' => 'Superadmin',
             'description' => 'Main role with all permissions',
             'permissions' => [
-                'user.query',
-                'user.mutation',
-
-                'company.query',
-                'company.mutation',
-
-                'company-settings.query',
-                'company-settings.mutation',
-
-                'company-team.query',
-                'company-team.mutation',
-
-                'wallet.query',
-                'wallet.mutation',
-
-                'wallet-transaction.query',
-                'wallet-transaction.mutation',
-
-                'withdrawal.query',
-                'withdrawal.mutation',
-
-                'payment.query',
-                'payment.mutation',
-
-                'bank-account.query',
-                'bank-account.mutation',
-
-                'tour.query',
-                'tour.mutation',
-
-                'tour-category.query',
-                'tour-category.mutation',
-
-                'media.query',
-                'media.mutation',
-
-                'role.query',
-                'role.mutation',
+                'agents.query', 'agents.mutation',
+                'customers.query', 'customers.mutation',
+                'tour-management.query', 'tour-management.mutation',
+                'booking.query', 'booking.mutation',
+                'funds.query', 'funds.mutation',
+                'reports.query', 'reports.mutation',
+                'booking-list.query', 'booking-list.mutation',
+                'room-listings.query', 'room-listings.mutation',
+                'seat-availability.query', 'seat-availability.mutation',
+                'settings.query', 'settings.mutation',
+                'parameter.query', 'parameter.mutation',
+                'chat-ai.query', 'chat-ai.mutation',
+                'commission.query', 'commission.mutation',
+                'vendor-config.query', 'vendor-config.mutation',
+                'marketings.query', 'marketings.mutation',
+                'subscription-ai.query', 'subscription-ai.mutation',
+                'user.query', 'user.mutation',
+                'company.query', 'company.mutation',
+                'company-settings.query', 'company-settings.mutation',
+                'company-team.query', 'company-team.mutation',
+                'wallet.query', 'wallet.mutation',
+                'wallet-transaction.query', 'wallet-transaction.mutation',
+                'withdrawal.query', 'withdrawal.mutation',
+                'payment.query', 'payment.mutation',
+                'bank-account.query', 'bank-account.mutation',
+                'tour.query', 'tour.mutation',
+                'tour-category.query', 'tour-category.mutation',
+                'media.query', 'media.mutation',
+                'role.query', 'role.mutation',
             ],
         ],
         [
@@ -226,19 +283,46 @@ return [
             'display_name' => 'Admin',
             'description' => 'Admin role with permissions to manage company and tours',
             'permissions' => [
+                'agents.query',
+                'customers.query',
+                'tour-management.query',
+                'tour-management.mutation',
+                'booking.query',
+                'booking.mutation',
+                'funds.query',
+                'reports.query',
+                'booking-list.query',
+                'room-listings.query',
+                'seat-availability.query',
+                'settings.query',
+                'settings.mutation',
+                'parameter.query',
+                'parameter.mutation',
+                'chat-ai.query',
+                'chat-ai.mutation',
+                'commission.query',
+                'commission.mutation',
+                'vendor-config.query',
+                'vendor-config.mutation',
+                'marketings.query',
+                'marketings.mutation',
+                'subscription-ai.query',
+                'subscription-ai.mutation',
                 'user.query',
-
                 'company.query',
                 'company.mutation',
-
+                'company-settings.query',
+                'company-settings.mutation',
+                'company-team.query',
+                'company-team.mutation',
                 'tour.query',
                 'tour.mutation',
-
                 'tour-category.query',
                 'tour-category.mutation',
-
                 'media.query',
                 'media.mutation',
+                'role.query',
+                'role.mutation',
             ],
         ],
     ],
@@ -248,25 +332,10 @@ return [
         'chatbot_default_language' => 'auto',
     ],
     'bank_account_providers' => [
-        [
-            'code' => 'bca',
-            'name' => 'BCA',
-        ],
-        [
-            'code' => 'bni',
-            'name' => 'BNI',
-        ],
-        [
-            'code' => 'mandiri',
-            'name' => 'Mandiri',
-        ],
-        [
-            'code' => 'ovo',
-            'name' => 'OVO',
-        ],
-        [
-            'code' => 'gopay',
-            'name' => 'GoPay',
-        ],
+        ['code' => 'bca', 'name' => 'BCA'],
+        ['code' => 'bni', 'name' => 'BNI'],
+        ['code' => 'mandiri', 'name' => 'Mandiri'],
+        ['code' => 'ovo', 'name' => 'OVO'],
+        ['code' => 'gopay', 'name' => 'GoPay'],
     ],
 ];

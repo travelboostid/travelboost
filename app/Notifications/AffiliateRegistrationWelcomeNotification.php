@@ -5,10 +5,11 @@ namespace App\Notifications;
 use App\Models\AffiliateProfile;
 use App\Models\User;
 use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
-class AffiliateRegistrationWelcomeNotification extends Notification
+class AffiliateRegistrationWelcomeNotification extends Notification implements ShouldQueue
 {
     use Queueable;
 

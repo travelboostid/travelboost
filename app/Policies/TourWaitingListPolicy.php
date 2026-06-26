@@ -9,6 +9,7 @@ use App\Models\Company;
 use App\Models\TourWaitingList;
 use App\Models\TourWaitingListSchedule;
 use App\Models\User;
+use App\Support\CompanyPermissionMap;
 
 class TourWaitingListPolicy
 {
@@ -31,7 +32,8 @@ class TourWaitingListPolicy
 
         $companyType = strtolower($company->type->value ?? $company->type);
 
-        return $companyType === CompanyType::VENDOR->value;
+        return $companyType === CompanyType::VENDOR->value
+            && CompanyPermissionMap::userHasScopedPermission($user, $company, 'booking.mutation');
     }
 
     public function viewWaitingList(User $user, TourWaitingList $waitingList, Company $company): bool
@@ -110,8 +112,6 @@ class TourWaitingListPolicy
             return true;
         }
 
-        return $user->hasRole("company:{$company->id}:superadmin")
-            || $user->hasRole("company:{$company->id}:admin")
-            || $user->isAbleTo('tour.query', "company:{$company->id}");
+        return CompanyPermissionMap::userHasScopedPermission($user, $company, 'booking.query');
     }
 }

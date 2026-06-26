@@ -78,6 +78,11 @@ export default function Page({ schedule, queue, permissions }: PageProps) {
     const intl = useIntl();
     const { company } = usePageSharedDataProps();
     const canManageQueues = permissions.can_manage_queues;
+    const companyType = String(company.type ?? '').toLowerCase();
+    const waitingListMenuId =
+        companyType === 'agent'
+            ? 'agent-tours.waiting-lists'
+            : 'tours.waiting-lists';
     const isPastDeadline = schedule.is_past_booking_deadline;
     const queuedEntries = queue.filter((entry) => entry.status === 'queued');
 
@@ -126,7 +131,7 @@ export default function Page({ schedule, queue, permissions }: PageProps) {
                     }),
                 },
             ]}
-            activeMenuIds={['tours.waiting-lists']}
+            activeMenuIds={[waitingListMenuId]}
         >
             <Head
                 title={intl.formatMessage({

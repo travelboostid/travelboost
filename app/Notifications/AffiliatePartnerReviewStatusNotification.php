@@ -4,10 +4,11 @@ namespace App\Notifications;
 
 use App\Models\AffiliateProfile;
 use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
-class AffiliatePartnerReviewStatusNotification extends Notification
+class AffiliatePartnerReviewStatusNotification extends Notification implements ShouldQueue
 {
     use Queueable;
 

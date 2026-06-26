@@ -11,7 +11,8 @@ import {
 } from '@/components/ui/sidebar';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
 import { Link } from '@inertiajs/react';
-import { type ReactNode } from 'react';
+import { type ReactNode, useEffect } from 'react';
+import { toast } from 'sonner';
 import type { BreadcrumbItemInfo } from '../components/breadcrumb-renderer';
 import BreadcrumbRenderer from '../components/breadcrumb-renderer';
 import { SidebarSection } from './sidebar-section';
@@ -29,8 +30,15 @@ export type CompanyDashboardLayoutProps = {
 export default function CompanyDashboardLayout(
     props: CompanyDashboardLayoutProps,
 ) {
-    const { company, subscriptionRules } = usePageSharedDataProps() as any;
+    const { company, subscriptionRules, flash } =
+        usePageSharedDataProps() as any;
     const { children, breadcrumb, applet, containerClassName } = props;
+
+    useEffect(() => {
+        if (flash?.warning) {
+            toast.warning(flash.warning);
+        }
+    }, [flash?.warning]);
 
     const isExpired = subscriptionRules?.isExpired;
     const walletBalance = company?.wallet?.balance || 0;
