@@ -6,6 +6,7 @@ type FollowupPayload = {
         | 'due'
         | 'overdue'
         | 'pending_approval'
+        | 'credit'
         | 'incomplete'
         | 'not_applicable';
     label: string;

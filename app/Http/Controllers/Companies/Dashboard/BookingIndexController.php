@@ -34,6 +34,7 @@ use App\Services\BookingPaymentWorkflowService;
 use App\Services\BookingPricingService;
 use App\Services\BookingService;
 use App\Services\BookingTravelDocumentService;
+use App\Support\BookingIndexFollowupSummaryCache;
 use App\Support\BookingReschedulePayment;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Database\Eloquent\Builder;
@@ -250,11 +251,14 @@ class BookingIndexController extends Controller
     private function resolveFollowupSummary(Company $company, Request $request): array
     {
         $cacheKey = sprintf(
-            'bookings.followup-summary.%d.%s',
+            'bookings.followup-summary.%d.%d.%s',
             $company->id,
+            BookingIndexFollowupSummaryCache::versionForCompany($company),
             sha1(json_encode([
+                $request->input('search'),
                 $request->input('booking_number'),
                 $request->input('contact_name'),
+                $request->input('status'),
             ], JSON_THROW_ON_ERROR)),
         );
 
@@ -277,12 +281,36 @@ class BookingIndexController extends Controller
             ->when(($company->type->value ?? $company->type) === 'agent', function (Builder $query) use ($company): void {
                 $query->where('agent_id', $company->id);
             })
-            ->when($request->input('booking_number'), function (Builder $query, string $search): void {
+            ->when($request->filled('search'), function (Builder $query) use ($request): void {
+                $this->applyBookingIndexSearch($query, (string) $request->input('search'));
+            })
+            ->when(! $request->filled('search') && $request->input('booking_number'), function (Builder $query, string $search): void {
                 $query->where('booking_number', 'ilike', "{$search}%");
             })
-            ->when($request->input('contact_name'), function (Builder $query, string $search): void {
+            ->when(! $request->filled('search') && $request->input('contact_name'), function (Builder $query, string $search): void {
                 $query->where('contact_name', 'ilike', "{$search}%");
             });
+    }
+
+    private function applyBookingIndexSearch(Builder $query, string $search): void
+    {
+        $term = trim($search);
+
+        if ($term === '') {
+            return;
+        }
+
+        $escaped = str_replace(['%', '_'], ['\\%', '\\_'], $term);
+        $prefixLike = "{$escaped}%";
+        $containsLike = "%{$escaped}%";
+
+        $query->where(function (Builder $nested) use ($prefixLike, $containsLike): void {
+            $nested->where('booking_number', 'ilike', $prefixLike)
+                ->orWhere('contact_name', 'ilike', $containsLike)
+                ->orWhereHas('tour', fn (Builder $tourQuery) => $tourQuery->where('name', 'ilike', $containsLike))
+                ->orWhereHas('vendor', fn (Builder $vendorQuery) => $vendorQuery->where('name', 'ilike', $containsLike))
+                ->orWhereHas('agent', fn (Builder $agentQuery) => $agentQuery->where('name', 'ilike', $containsLike));
+        });
     }
 
     private function applyStatusFilter(Builder $query, mixed $status): void

@@ -289,6 +289,51 @@ test('bookings can be filtered by booking number', function () {
         ->has('data.data', 1));
 });
 
+test('booking index supports unified search across booking fields', function () {
+    $vendor = Company::factory()->create(['type' => 'vendor']);
+
+    CompanyTeam::create([
+        'company_id' => $vendor->id,
+        'user_id' => $this->user->id,
+        'status' => CompanyTeamStatus::ACTIVE,
+        'is_owner' => true,
+        'accepted_at' => now(),
+    ]);
+
+    $tour = Tour::factory()->create([
+        'company_id' => $vendor->id,
+        'name' => 'Mountain Explorer',
+    ]);
+
+    Booking::factory()->create([
+        'vendor_id' => $vendor->id,
+        'tour_id' => $tour->id,
+        'booking_number' => 'BKG-SEARCH-001',
+        'contact_name' => 'Search Customer',
+    ]);
+
+    Booking::factory()->create([
+        'vendor_id' => $vendor->id,
+        'tour_id' => $tour->id,
+        'booking_number' => 'BKG-OTHER-002',
+        'contact_name' => 'Other Customer',
+    ]);
+
+    $this->actingAs($this->user)
+        ->get("/companies/{$vendor->username}/dashboard/bookings?search=Mountain")
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->has('data.data', 1)
+            ->where('data.data.0.booking_number', 'BKG-SEARCH-001'));
+
+    $this->actingAs($this->user)
+        ->get("/companies/{$vendor->username}/dashboard/bookings?search=Search")
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->has('data.data', 1)
+            ->where('data.data.0.contact_name', 'Search Customer'));
+});
+
 test('booking index includes paid amount and remaining balance', function () {
     $vendor = Company::factory()->create(['type' => 'vendor']);
 

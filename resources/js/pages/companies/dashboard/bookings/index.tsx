@@ -31,11 +31,9 @@ import { Deferred, Head, router } from '@inertiajs/react';
 import {
     flexRender,
     getCoreRowModel,
-    getFilteredRowModel,
     getSortedRowModel,
     useReactTable,
     type ColumnDef,
-    type ColumnFiltersState,
     type SortingState,
     type VisibilityState,
 } from '@tanstack/react-table';
@@ -56,6 +54,7 @@ import {
     BookingIndexFollowupSummary,
     FollowupSummarySkeleton,
 } from './components/booking-index-followup-summary';
+import { BookingIndexPaxCell } from './components/booking-index-pax-cell';
 
 const BookingIndexRowActions = lazy(() =>
     import('./components/booking-index-row-actions').then((module) => ({
@@ -68,10 +67,21 @@ const BookingIndexReceiptDialog = lazy(() =>
     })),
 );
 const BookingIndexDocumentsDialog = lazy(() =>
-    import('./components/booking-index-row-actions').then((module) => ({
+    import('./components/booking-index-documents-dialog').then((module) => ({
         default: module.BookingIndexDocumentsDialog,
     })),
 );
+
+function readSearchFromUrl(): string {
+    const params = new URLSearchParams(window.location.search);
+
+    return (
+        params.get('search') ??
+        params.get('booking_number') ??
+        params.get('contact_name') ??
+        ''
+    );
+}
 
 function paginationLabel(label: string, intl: IntlShape): string {
     return label
@@ -316,7 +326,7 @@ function followupDeadlineText(
     );
 }
 
-function FollowupCell({
+const FollowupCell = React.memo(function FollowupCell({
     followup,
     details,
 }: {
@@ -352,13 +362,13 @@ function FollowupCell({
             </Badge>
         </div>
     );
-}
+});
 
 function NotApplicableCell() {
     return <span className="text-slate-400">—</span>;
 }
 
-function PaymentDetailCell({
+const PaymentDetailCell = React.memo(function PaymentDetailCell({
     detail,
     onViewReceipt,
 }: {
@@ -412,7 +422,7 @@ function PaymentDetailCell({
             </Badge>
         </div>
     );
-}
+});
 
 // ---------------------------------------------------------------------------
 // Column factory
@@ -568,7 +578,7 @@ function buildColumns(
             id: 'pax',
             header: intl.formatMessage({ defaultMessage: 'Pax' }),
             cell: ({ row }) => (
-                <PaxCell
+                <BookingIndexPaxCell
                     adult={row.original.pax_adult ?? 0}
                     child={row.original.pax_child ?? 0}
                     infant={row.original.pax_infant ?? 0}
@@ -749,64 +759,45 @@ export default function Page({ data }: PageProps) {
     );
 
     const [sorting, setSorting] = React.useState<SortingState>([]);
-    const [columnFilters, setColumnFilters] =
-        React.useState<ColumnFiltersState>([]);
-    const [searchInput, setSearchInput] = React.useState('');
-    const [globalFilter, setGlobalFilter] = React.useState('');
-    const debouncedSetGlobalFilter = useDebouncedCallback((value: string) => {
-        setGlobalFilter(value);
-    }, 200);
+    const [searchInput, setSearchInput] = React.useState(readSearchFromUrl);
     const [columnVisibility, setColumnVisibility] =
         React.useState<VisibilityState>({});
+    const debouncedServerSearch = useDebouncedCallback((value: string) => {
+        const params = new URLSearchParams(window.location.search);
+        const trimmed = value.trim();
 
-    const fuzzyFilter = React.useCallback(
-        (row: any, _columnId: string, value: string) => {
-            const searchVal = String(value).toLowerCase();
-            if (searchVal === '') {
-                return true;
-            }
+        params.delete('page');
+        params.delete('booking_number');
+        params.delete('contact_name');
 
-            const booking = row.original as BookingResource;
+        if (trimmed === '') {
+            params.delete('search');
+        } else {
+            params.set('search', trimmed);
+        }
 
-            return [
-                booking.booking_number,
-                booking.contact_name,
-                booking.tour?.name,
-                booking.vendor?.name,
-                booking.agent?.name,
-                booking.status,
-                booking.created_at
-                    ? dayjs(booking.created_at).format('DD MMM YYYY')
-                    : null,
-                booking.departure_date
-                    ? dayjs(booking.departure_date).format('DD MMM YYYY')
-                    : null,
-            ].some((candidate) =>
-                candidate == null
-                    ? false
-                    : String(candidate).toLowerCase().includes(searchVal),
-            );
-        },
-        [],
-    );
+        const query = params.toString();
 
-    // eslint-disable-next-line react-hooks/incompatible-library
+        router.visit(`${window.location.pathname}${query ? `?${query}` : ''}`, {
+            preserveState: true,
+            preserveScroll: true,
+            only: ['data', 'followupSummary'],
+        });
+    }, 300);
+
+    React.useEffect(() => {
+        void import('./components/booking-index-row-actions');
+    }, []);
+
     const table = useReactTable({
         data: data?.data ?? [],
         columns,
-        filterFns: { fuzzy: fuzzyFilter },
         onSortingChange: setSorting,
-        onColumnFiltersChange: setColumnFilters,
-        onGlobalFilterChange: setGlobalFilter,
-        globalFilterFn: 'fuzzy' as any,
         getCoreRowModel: getCoreRowModel(),
         getSortedRowModel: getSortedRowModel(),
-        getFilteredRowModel: getFilteredRowModel(),
         onColumnVisibilityChange: setColumnVisibility,
         state: {
             sorting,
-            columnFilters,
-            globalFilter,
             columnVisibility,
         },
     });
@@ -929,7 +920,7 @@ export default function Page({ data }: PageProps) {
                                     onChange={(event) => {
                                         const nextValue = event.target.value;
                                         setSearchInput(nextValue);
-                                        debouncedSetGlobalFilter(nextValue);
+                                        debouncedServerSearch(nextValue);
                                     }}
                                     className="h-9 w-full rounded-lg border-slate-200 bg-background pl-9 pr-9 text-xs font-medium shadow-inner shadow-slate-100/70 transition-all placeholder:text-[13px] placeholder:font-normal placeholder:text-muted-foreground/70 focus-visible:border-primary/50 focus-visible:ring-2 focus-visible:ring-primary/20 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:shadow-black/20 dark:placeholder:text-slate-500"
                                 />
@@ -941,7 +932,7 @@ export default function Page({ data }: PageProps) {
                                         })}
                                         onClick={() => {
                                             setSearchInput('');
-                                            setGlobalFilter('');
+                                            debouncedServerSearch('');
                                         }}
                                         className="absolute right-2 top-1/2 flex size-6 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                                     >
