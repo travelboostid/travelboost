@@ -8,6 +8,8 @@ use App\Services\BookingPaymentWorkflowService;
 
 class ReconcileBookingPaymentAfterRepriceAction
 {
+    private const MONEY_EPSILON = 0.01;
+
     public function execute(
         Booking $booking,
         float $priceBefore,
@@ -17,11 +19,8 @@ class ReconcileBookingPaymentAfterRepriceAction
         $paidAmount = app(BookingPaymentWorkflowService::class)->finalizablePaidAmount($booking);
         $newTotal = (float) $booking->grand_total;
 
-        if ($applyCustomerPriceAdjustment && $paidAmount > 0) {
-            $targetStatus = $paidAmount >= $newTotal
-                ? BookingStatus::FULL_PAYMENT
-                : BookingStatus::DOWN_PAYMENT;
-
+        if ($applyCustomerPriceAdjustment) {
+            $targetStatus = $this->resolveTargetStatus($paidAmount, $newTotal);
             $booking->update(['status' => $targetStatus]);
             $booking = $booking->fresh();
         }
@@ -35,6 +34,15 @@ class ReconcileBookingPaymentAfterRepriceAction
         );
 
         return $booking;
+    }
+
+    public function resolveTargetStatus(float $paidAmount, float $newTotal): BookingStatus
+    {
+        $amountDue = max(0.0, $newTotal - $paidAmount);
+
+        return $amountDue > self::MONEY_EPSILON
+            ? BookingStatus::DOWN_PAYMENT
+            : BookingStatus::FULL_PAYMENT;
     }
 
     private function notifyCustomer(
@@ -53,13 +61,13 @@ class ReconcileBookingPaymentAfterRepriceAction
         $creditAmount = max(0.0, $paidAmount - $newTotal);
         $amountDue = max(0.0, $newTotal - $paidAmount);
 
-        if ($creditAmount > 0.01 && $paidAmount > 0) {
+        if ($creditAmount > self::MONEY_EPSILON) {
             app(NotifyBookingPaymentEventAction::class)->execute($booking, 'booking_rescheduled_credit');
 
             return;
         }
 
-        if ($amountDue > 0.01 && $newTotal > $priceBefore && $paidAmount > 0) {
+        if ($amountDue > self::MONEY_EPSILON) {
             app(NotifyBookingPaymentEventAction::class)->execute($booking, 'booking_rescheduled_balance_due');
 
             return;

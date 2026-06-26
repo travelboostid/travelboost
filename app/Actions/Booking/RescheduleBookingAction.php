@@ -16,7 +16,13 @@ class RescheduleBookingAction
         TourSchedule $targetSchedule,
         bool $applyCustomerPriceAdjustment = true,
     ): Booking {
-        $booking->loadMissing(['vendor.companySetting', 'tour.company.companySetting']);
+        $booking->loadMissing([
+            'passengers',
+            'addons',
+            'vendor.companySetting',
+            'tour.company.companySetting',
+            'tour',
+        ]);
 
         $currentStatus = $this->bookingStatusValue($booking);
 
@@ -128,6 +134,12 @@ class RescheduleBookingAction
         $quote = $this->buildScheduleQuote($booking, $targetSchedule);
 
         if ($quote === null) {
+            if ($booking->passengers->isNotEmpty()) {
+                throw ValidationException::withMessages([
+                    'schedule_id' => 'Unable to calculate pricing for the selected departure.',
+                ]);
+            }
+
             return $booking;
         }
 

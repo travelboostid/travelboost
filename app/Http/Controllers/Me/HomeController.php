@@ -19,6 +19,7 @@ use App\Models\TourWaitingListSchedule;
 use App\Services\BookingPaymentReceiverService;
 use App\Services\BookingPaymentWorkflowService;
 use App\Services\BookingTravelDocumentService;
+use App\Support\BookingReschedulePayment;
 use App\Support\WaitingListBookingCreateUrl;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\JsonResponse;
@@ -232,8 +233,9 @@ class HomeController extends Controller
     private function appendBookingPayload(Booking $booking): array
     {
         $paidAmount = app(BookingPaymentWorkflowService::class)->finalizablePaidAmount($booking);
-        $grandTotal = (float) $booking->grand_total;
-        $remainingBalance = max(0.0, $grandTotal - $paidAmount);
+        $reschedulePayment = app(BookingReschedulePayment::class);
+        $grandTotalForPayment = $reschedulePayment->effectiveGrandTotalForPayment($booking, $paidAmount);
+        $remainingBalance = $reschedulePayment->remainingBalance($booking, $paidAmount);
         $status = $booking->status instanceof BookingStatus
             ? $booking->status
             : BookingStatus::tryFrom((string) $booking->status);
@@ -255,7 +257,7 @@ class HomeController extends Controller
             'paid_amount' => $paidAmount,
             'remaining_balance' => $remainingBalance,
             'display_amount_label' => $isDownPayment ? 'Remaining balance' : 'Grand total',
-            'display_amount' => $isDownPayment ? $remainingBalance : $grandTotal,
+            'display_amount' => $isDownPayment ? $remainingBalance : $grandTotalForPayment,
             'needs_travel_documents' => $needsTravelDocuments,
             'payment_deadline' => $this->buildDeadlinePayload($booking->departure_date, $settings?->full_payment_deadline),
             'document_deadline' => $this->buildDeadlinePayload($booking->departure_date, $settings?->document_completed_deadline),

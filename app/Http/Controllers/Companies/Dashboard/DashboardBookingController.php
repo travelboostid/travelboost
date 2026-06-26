@@ -43,6 +43,7 @@ use App\Services\PaymentGatewayStatusSyncService;
 use App\Services\PrismaLinkException;
 use App\Services\PrismaLinkService;
 use App\Services\ReusableMidtransBookingPaymentAttemptService;
+use App\Support\BookingReschedulePayment;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -148,11 +149,12 @@ class DashboardBookingController extends Controller
                 ->first();
         }
 
+        $reschedulePayment = app(BookingReschedulePayment::class);
         $paidAmount = $existingBooking
             ? app(BookingPaymentWorkflowService::class)->finalizablePaidAmount($existingBooking)
             : 0.0;
         $remainingBalance = $existingBooking
-            ? max(0.0, (float) $existingBooking->grand_total - $paidAmount)
+            ? $reschedulePayment->remainingBalance($existingBooking, $paidAmount)
             : 0.0;
         [$fullPaymentAvailable, $paymentUnavailableReason] = $this->fullPaymentAvailabilityForBooking($existingBooking, $remainingBalance);
         $bookingSeatLimit = $availableSeats + $this->heldSeatCountForBooking(
@@ -1659,7 +1661,7 @@ class DashboardBookingController extends Controller
 
         $freshBooking = $booking->fresh();
         $paidAmount = app(BookingPaymentWorkflowService::class)->finalizablePaidAmount($freshBooking);
-        $remainingBalance = max(0.0, (float) $freshBooking->grand_total - $paidAmount);
+        $remainingBalance = app(BookingReschedulePayment::class)->remainingBalance($freshBooking, $paidAmount);
 
         if ($incomingAmount + 0.01 >= $remainingBalance) {
             return;
@@ -1799,7 +1801,8 @@ class DashboardBookingController extends Controller
         $booking->loadMissing(['tour.image', 'payments']);
 
         $paidAmount = app(BookingPaymentWorkflowService::class)->finalizablePaidAmount($booking);
-        $grandTotal = (float) $booking->grand_total;
+        $reschedulePayment = app(BookingReschedulePayment::class);
+        $grandTotal = $reschedulePayment->effectiveGrandTotalForPayment($booking, $paidAmount);
         $latestPayment = $payment ?? $booking->payments()->latest()->first();
         $schedule = $this->resolvePaymentResultSchedule($booking);
 
@@ -1819,7 +1822,7 @@ class DashboardBookingController extends Controller
             'paxSummary' => $this->buildPaxSummary($booking),
             'grandTotal' => $grandTotal,
             'paidAmount' => $paidAmount,
-            'remainingBalance' => max(0.0, $grandTotal - $paidAmount),
+            'remainingBalance' => $reschedulePayment->remainingBalance($booking, $paidAmount),
             'image' => $booking->tour?->image?->toArray(),
         ];
     }

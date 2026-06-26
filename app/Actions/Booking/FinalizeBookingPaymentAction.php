@@ -8,6 +8,7 @@ use App\Models\Booking;
 use App\Models\Payment;
 use App\Services\BookingPaymentWorkflowService;
 use App\Services\BookingPricingService;
+use App\Support\BookingReschedulePayment;
 use Illuminate\Support\Facades\DB;
 
 class FinalizeBookingPaymentAction
@@ -45,7 +46,8 @@ class FinalizeBookingPaymentAction
                 return $lockedBooking;
             }
 
-            $targetStatus = $paidAmount >= (float) $quote['grand_total']
+            $reschedulePayment = app(BookingReschedulePayment::class);
+            $targetStatus = $reschedulePayment->isFullyPaid($lockedBooking, $paidAmount)
                 ? BookingStatus::FULL_PAYMENT
                 : BookingStatus::DOWN_PAYMENT;
 
@@ -108,7 +110,7 @@ class FinalizeBookingPaymentAction
         $paidAmount = $this->paymentWorkflowService->finalizablePaidAmount($booking, $exceptPaymentId);
         $paidAmount += $incomingAmount;
 
-        if ($paidAmount < (float) $quote['grand_total']) {
+        if (! app(BookingReschedulePayment::class)->isFullyPaid($booking, $paidAmount)) {
             return;
         }
 
