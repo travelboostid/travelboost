@@ -159,6 +159,21 @@ type BookingResource = {
         | null;
 };
 
+type BookingIndexRowActionPayload = {
+    payment_workflow?: BookingResource['payment_workflow'];
+    manual_payment?: BookingResource['manual_payment'];
+    can_review_payment?: boolean;
+    can_review_manual_payment?: boolean;
+    invoice_options?: BookingResource['invoice_options'];
+    can_cancel?: boolean;
+    can_refund?: boolean;
+    can_reschedule?: boolean;
+    can_reactivate?: boolean;
+    can_reorder?: boolean;
+    proforma_invoice_available?: boolean;
+    pending_action_request?: BookingResource['pending_action_request'];
+};
+
 type PageProps = {
     data: {
         data: BookingResource[];
@@ -178,6 +193,7 @@ type PageProps = {
 };
 
 export type {
+    BookingIndexRowActionPayload,
     BookingResource,
     DocumentDetail,
     FollowupPayload,

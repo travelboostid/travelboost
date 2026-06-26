@@ -87,6 +87,7 @@ Route::prefix('companies')->middleware(['can:access-company-pages', 'use-analyti
             Route::get('waiting-lists/schedules/{schedule}', [WaitingListController::class, 'showSchedule'])
                 ->name('waiting-lists.schedules.show');
             Route::get('bookings', [BookingIndexController::class, 'index'])->name('bookings.index');
+            Route::get('bookings/{booking}/row-actions', [BookingIndexController::class, 'rowActions'])->name('bookings.row-actions');
             Route::get('bookings/create/{tour}', [DashboardBookingController::class, 'create'])->name('bookings.create');
             Route::get('bookings/{booking}/payment-result', [DashboardBookingController::class, 'paymentResult'])->name('bookings.payment-result');
             Route::get('booking-correction', [BookingIndexController::class, 'actionRequests'])->name('booking-correction.index');

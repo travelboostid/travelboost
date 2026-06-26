@@ -383,8 +383,14 @@ test('bookings index exposes can_reschedule and can_reactivate flags', function 
         ->get("/companies/{$agent->username}/dashboard/bookings")
         ->assertOk()
         ->assertInertia(fn ($page) => $page
-            ->where('data.data.0.can_reschedule', true)
-            ->where('data.data.0.can_reactivate', false));
+            ->missing('data.data.0.can_reschedule')
+            ->missing('data.data.0.can_reactivate'));
+
+    $this->actingAs($this->user)
+        ->getJson("/companies/{$agent->username}/dashboard/bookings/{$booking->id}/row-actions")
+        ->assertOk()
+        ->assertJsonPath('can_reschedule', true)
+        ->assertJsonPath('can_reactivate', false);
 
     $booking->update(['status' => BookingStatus::CANCELLED]);
 
@@ -392,8 +398,14 @@ test('bookings index exposes can_reschedule and can_reactivate flags', function 
         ->get("/companies/{$agent->username}/dashboard/bookings?status=cancelled")
         ->assertOk()
         ->assertInertia(fn ($page) => $page
-            ->where('data.data.0.can_reschedule', false)
-            ->where('data.data.0.can_reactivate', true));
+            ->missing('data.data.0.can_reschedule')
+            ->missing('data.data.0.can_reactivate'));
+
+    $this->actingAs($this->user)
+        ->getJson("/companies/{$agent->username}/dashboard/bookings/{$booking->id}/row-actions")
+        ->assertOk()
+        ->assertJsonPath('can_reschedule', false)
+        ->assertJsonPath('can_reactivate', true);
 });
 
 test('reschedule options endpoint returns alternative schedules lazily', function () {

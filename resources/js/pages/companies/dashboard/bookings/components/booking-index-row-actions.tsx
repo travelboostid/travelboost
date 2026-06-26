@@ -51,6 +51,7 @@ import {
 import * as React from 'react';
 import { FormattedMessage, useIntl, type IntlShape } from 'react-intl';
 import type {
+    BookingIndexRowActionPayload,
     BookingResource,
     PaymentDetail,
     PaymentReviewItem,
@@ -258,10 +259,40 @@ export function BookingIndexRowActions({
         | 'pay_vendor_online'
         | null
     >(null);
-    const workflow = booking.payment_workflow;
+    const [actionPayload, setActionPayload] =
+        React.useState<BookingIndexRowActionPayload | null>(null);
+    const [loadingActionPayload, setLoadingActionPayload] =
+        React.useState(false);
+    const activeBooking = React.useMemo(
+        () =>
+            ({
+                ...booking,
+                ...actionPayload,
+            }) as BookingResource,
+        [actionPayload, booking],
+    );
+    const loadActionPayload = React.useCallback(async () => {
+        if (actionPayload !== null || loadingActionPayload) {
+            return actionPayload;
+        }
+
+        setLoadingActionPayload(true);
+
+        try {
+            const { data } = await axios.get<BookingIndexRowActionPayload>(
+                `/companies/${companyUsername}/dashboard/bookings/${booking.id}/row-actions`,
+            );
+            setActionPayload(data);
+
+            return data;
+        } finally {
+            setLoadingActionPayload(false);
+        }
+    }, [actionPayload, booking.id, companyUsername, loadingActionPayload]);
+    const workflow = activeBooking.payment_workflow;
     const workflowCustomerPayment = workflow?.customer_payment ?? null;
     const workflowAgentVendorPayment = workflow?.agent_vendor_payment ?? null;
-    const manualPayment = booking.manual_payment;
+    const manualPayment = activeBooking.manual_payment;
     const customerPayment =
         manualPayment?.customer_payment ??
         workflowCustomerPayment ??
@@ -272,45 +303,51 @@ export function BookingIndexRowActions({
         manualPayment?.agent_vendor_payment ?? workflowAgentVendorPayment;
     const canPayVendor = Boolean(workflow?.can_pay_vendor && customerPayment);
     const canReviewPayment =
-        booking.status === 'waiting payment approval' &&
-        Boolean(booking.manual_payment) &&
+        activeBooking.status === 'waiting payment approval' &&
+        Boolean(activeBooking.manual_payment) &&
         Boolean(
-            booking.can_review_payment ?? booking.can_review_manual_payment,
+            activeBooking.can_review_payment ??
+            activeBooking.can_review_manual_payment,
         );
     const canOpenPaymentReview = canReviewPayment || canPayVendor;
     const isAgentCollectionWorkflow = workflow?.mode === 'agent_collection';
     const canReviewCustomerPayment = Boolean(
         isAgentCollectionWorkflow &&
         workflow?.can_review_customer_payment &&
-        booking.manual_payment?.payment_flow_stage === 'customer_to_agent',
+        activeBooking.manual_payment?.payment_flow_stage ===
+            'customer_to_agent',
     );
     const canReviewAgentVendorPayment = Boolean(
         isAgentCollectionWorkflow &&
         workflow?.can_review_agent_vendor_payment &&
-        booking.manual_payment?.payment_flow_stage === 'agent_to_vendor',
+        activeBooking.manual_payment?.payment_flow_stage === 'agent_to_vendor',
     );
     const canReviewDirectPayment = Boolean(
         !isAgentCollectionWorkflow &&
         canReviewPayment &&
-        booking.manual_payment,
+        activeBooking.manual_payment,
     );
     const canSubmitPaymentReviewDecision =
         canReviewCustomerPayment ||
         canReviewAgentVendorPayment ||
         canReviewDirectPayment;
-    const hasPendingActionRequest = Boolean(booking.pending_action_request);
-    const canCancel = Boolean(booking.can_cancel) && !hasPendingActionRequest;
-    const canRefund = Boolean(booking.can_refund) && !hasPendingActionRequest;
+    const hasPendingActionRequest = Boolean(
+        activeBooking.pending_action_request,
+    );
+    const canCancel =
+        Boolean(activeBooking.can_cancel) && !hasPendingActionRequest;
+    const canRefund =
+        Boolean(activeBooking.can_refund) && !hasPendingActionRequest;
     const canReschedule =
-        Boolean(booking.can_reschedule) && !hasPendingActionRequest;
+        Boolean(activeBooking.can_reschedule) && !hasPendingActionRequest;
     const canReactivate =
-        Boolean(booking.can_reactivate) && !hasPendingActionRequest;
-    const canReorder = Boolean(booking.can_reorder);
+        Boolean(activeBooking.can_reactivate) && !hasPendingActionRequest;
+    const canReorder = Boolean(activeBooking.can_reorder);
     const canOpenCorrection =
         canCancel || canRefund || canReschedule || canReactivate;
     const activeCorrectionAction = isAgent ? correctionAction : actionDialog;
-    const invoiceOptions = booking.invoice_options ?? [];
-    const manualPaymentId = booking.manual_payment?.id;
+    const invoiceOptions = activeBooking.invoice_options ?? [];
+    const manualPaymentId = activeBooking.manual_payment?.id;
     const isPayVendorFollowup =
         booking.payment_followup?.action_label === 'Pay Vendor';
     const editStep =
@@ -325,29 +362,39 @@ export function BookingIndexRowActions({
     const editLabel = intl.formatMessage({ defaultMessage: 'Edit' });
 
     React.useEffect(() => {
-        if (!canOpenPaymentReview || !manualPaymentId) {
-            return;
-        }
-
         const reviewPaymentId = new URLSearchParams(window.location.search).get(
             'review_payment',
         );
 
-        if (reviewPaymentId === String(manualPaymentId)) {
-            setReviewOpen(true);
+        if (!reviewPaymentId) {
+            return;
         }
-    }, [canOpenPaymentReview, manualPaymentId]);
+
+        void loadActionPayload().then((payload) => {
+            if (String(payload?.manual_payment?.id) === reviewPaymentId) {
+                setReviewOpen(true);
+            }
+        });
+    }, [loadActionPayload]);
+
+    const handleMenuOpenChange = (open: boolean) => {
+        if (open) {
+            void loadActionPayload();
+        }
+    };
 
     const handleReviewOpenChange = React.useCallback((open: boolean) => {
         setReviewOpen(open);
     }, []);
 
     const submitManualPaymentDecision = () => {
-        if (!booking.manual_payment || !canSubmitPaymentReviewDecision) return;
+        if (!activeBooking.manual_payment || !canSubmitPaymentReviewDecision) {
+            return;
+        }
 
         setProcessingAction('accept');
         router.post(
-            `/companies/${companyUsername}/dashboard/bookings/${booking.id}/payments/${booking.manual_payment.id}/approve`,
+            `/companies/${companyUsername}/dashboard/bookings/${booking.id}/payments/${activeBooking.manual_payment.id}/approve`,
             {},
             {
                 preserveScroll: true,
@@ -601,7 +648,7 @@ export function BookingIndexRowActions({
 
     return (
         <>
-            <DropdownMenu>
+            <DropdownMenu onOpenChange={handleMenuOpenChange}>
                 <DropdownMenuTrigger asChild>
                     <Button
                         variant="secondary"
@@ -615,7 +662,12 @@ export function BookingIndexRowActions({
                     </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="start">
-                    {canReviewPayment && (
+                    {loadingActionPayload && (
+                        <DropdownMenuItem disabled>
+                            <FormattedMessage defaultMessage="Loading actions…" />
+                        </DropdownMenuItem>
+                    )}
+                    {!loadingActionPayload && canReviewPayment && (
                         <>
                             <DropdownMenuItem
                                 onSelect={(event) => {
@@ -629,7 +681,7 @@ export function BookingIndexRowActions({
                             <DropdownMenuSeparator />
                         </>
                     )}
-                    {canPayVendor && (
+                    {!loadingActionPayload && canPayVendor && (
                         <>
                             <DropdownMenuItem
                                 onSelect={(event) => {
@@ -659,19 +711,20 @@ export function BookingIndexRowActions({
                             </Link>
                         </DropdownMenuItem>
                     )}
-                    {invoiceOptions.map((option) => (
-                        <DropdownMenuItem key={option.type} asChild>
-                            <a
-                                href={`/companies/${companyUsername}/dashboard/bookings/${booking.id}/invoice?type=${option.type}`}
-                                target="_blank"
-                                rel="noreferrer"
-                            >
-                                <FileTextIcon className="mr-2 h-4 w-4" />
-                                {option.label}
-                            </a>
-                        </DropdownMenuItem>
-                    ))}
-                    {canReorder && (
+                    {!loadingActionPayload &&
+                        invoiceOptions.map((option) => (
+                            <DropdownMenuItem key={option.type} asChild>
+                                <a
+                                    href={`/companies/${companyUsername}/dashboard/bookings/${booking.id}/invoice?type=${option.type}`}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                >
+                                    <FileTextIcon className="mr-2 h-4 w-4" />
+                                    {option.label}
+                                </a>
+                            </DropdownMenuItem>
+                        ))}
+                    {!loadingActionPayload && canReorder && (
                         <>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem
@@ -700,6 +753,7 @@ export function BookingIndexRowActions({
                         </Link>
                     </DropdownMenuItem>
                     {isAgent &&
+                        !loadingActionPayload &&
                         (canOpenCorrection || hasPendingActionRequest) && (
                             <>
                                 <DropdownMenuSeparator />
@@ -732,7 +786,7 @@ export function BookingIndexRowActions({
                                             defaultMessage="Pending {action} request"
                                             values={{
                                                 action:
-                                                    booking
+                                                    activeBooking
                                                         .pending_action_request
                                                         ?.target_action ??
                                                     intl.formatMessage({
@@ -746,6 +800,7 @@ export function BookingIndexRowActions({
                             </>
                         )}
                     {!isAgent &&
+                        !loadingActionPayload &&
                         (canCancel ||
                             canRefund ||
                             canReschedule ||

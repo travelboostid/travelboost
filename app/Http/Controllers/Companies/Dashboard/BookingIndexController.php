@@ -29,6 +29,7 @@ use App\Models\User;
 use App\Notifications\BookingPaymentReviewStatusNotification;
 use App\Services\AgentCommissionResolver;
 use App\Services\BookingDownPaymentRuleService;
+use App\Services\BookingIndexFollowupSummaryService;
 use App\Services\BookingPaymentReceiverService;
 use App\Services\BookingPaymentWorkflowService;
 use App\Services\BookingPricingService;
@@ -144,11 +145,8 @@ class BookingIndexController extends Controller
         // routes/console.php. Do not call it here: doing so adds DB load and
         // row-level locks to every dashboard page request.
         $paymentReceiverService = app(BookingPaymentReceiverService::class);
-        $paymentWorkflowService = app(BookingPaymentWorkflowService::class);
         $pricingService = app(BookingPricingService::class);
         $travelDocumentService = app(BookingTravelDocumentService::class);
-        $rescheduleAction = app(RescheduleBookingAction::class);
-        $reactivateAction = app(ReactivateBookingAction::class);
         $reschedulePayment = app(BookingReschedulePayment::class);
         $companyScopeQuery = $this->bookingIndexCompanyScope($company);
         $baseQuery = $this->bookingIndexBaseQuery($company, $request);
@@ -188,7 +186,7 @@ class BookingIndexController extends Controller
             $bookings->getCollection()->pluck('id')->map(fn (mixed $id): int => (int) $id)->all(),
         );
 
-        $bookings->getCollection()->transform(function ($booking) use ($company, $paymentReceiverService, $paymentWorkflowService, $pricingService, $travelDocumentService, $rescheduleAction, $reactivateAction) {
+        $bookings->getCollection()->transform(function ($booking) use ($company, $paymentReceiverService, $pricingService, $travelDocumentService) {
             $booking = $pricingService->reconcileSnapshotTotals($booking);
             $commissionAmount = (float) ($booking->commission_amount ?? 0);
             $booking->commission_amount = $commissionAmount > 0
@@ -205,36 +203,6 @@ class BookingIndexController extends Controller
             $booking->document_detail = $documentFollowupState === 'completed'
                 ? $travelDocumentService->documentDetails($booking)
                 : [];
-            $booking->payment_workflow = $paymentWorkflowService->workflowPayload($company, $booking);
-            $reviewablePayment = $paymentWorkflowService->reviewablePaymentForCompany($company, $booking);
-            $booking->manual_payment = $reviewablePayment
-                ? $this->paymentReviewPayload($booking, $reviewablePayment)
-                : null;
-            $booking->can_review_payment = $reviewablePayment !== null;
-            $booking->can_review_manual_payment = $reviewablePayment !== null;
-            $latestPayment = $booking->payments
-                ->sortByDesc('created_at')
-                ->first();
-            $paymentReceiver = $paymentReceiverService->resolveForBooking($booking);
-            $booking->payment_receiver_type = data_get($latestPayment?->payload, 'payment_receiver_type')
-                ?: $paymentReceiver['receiver_type'];
-            $booking->payment_receiver_company_id = data_get($latestPayment?->payload, 'payment_receiver_company_id')
-                ?: $paymentReceiver['receiver_company']?->id;
-            $booking->invoice_options = $this->invoiceOptions($company, $booking, $paymentReceiver['payment_mode']);
-            $pendingActionRequest = $booking->actionRequests->first();
-            $booking->pending_action_request = $pendingActionRequest
-                ? [
-                    'id' => $pendingActionRequest->id,
-                    'target_action' => $pendingActionRequest->target_action,
-                    'status' => $pendingActionRequest->status,
-                ]
-                : null;
-            $booking->can_cancel = in_array($this->bookingStatusValue($booking), self::CANCELLABLE_STATUSES, true);
-            $booking->can_refund = in_array($this->bookingStatusValue($booking), self::REFUNDABLE_STATUSES, true);
-            $booking->can_reschedule = $rescheduleAction->canReschedule($booking);
-            $booking->can_reactivate = $reactivateAction->canReactivate($booking);
-            $booking->can_reorder = $this->canReorderBooking($booking);
-            $booking->proforma_invoice_available = $this->proformaInvoiceAvailable($booking);
             $booking->was_rescheduled = (bool) ($booking->was_rescheduled ?? false);
 
             return $booking;
@@ -252,6 +220,57 @@ class BookingIndexController extends Controller
                 'status' => (string) $request->input('status', ''),
             ],
         ]);
+    }
+
+    public function rowActions(Company $company, Booking $booking): JsonResponse
+    {
+        $this->assertCompanyCanAccessBooking($company, $booking);
+
+        $booking->load($this->bookingIndexRelationships());
+        $booking->loadSum(['payments as paid_amount' => function ($query): void {
+            $query->where('status', PaymentStatus::PAID->value);
+        }], 'amount');
+
+        app(BookingReschedulePayment::class)->preloadApprovedReschedulePayloads([(int) $booking->id]);
+
+        return response()->json($this->buildBookingRowActionPayload($company, $booking));
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function buildBookingRowActionPayload(Company $company, Booking $booking): array
+    {
+        $paymentWorkflowService = app(BookingPaymentWorkflowService::class);
+        $paymentReceiverService = app(BookingPaymentReceiverService::class);
+        $rescheduleAction = app(RescheduleBookingAction::class);
+        $reactivateAction = app(ReactivateBookingAction::class);
+        $reviewablePayment = $paymentWorkflowService->reviewablePaymentForCompany($company, $booking);
+        $paymentReceiver = $paymentReceiverService->resolveForBooking($booking);
+        $pendingActionRequest = $booking->actionRequests->first();
+
+        return [
+            'payment_workflow' => $paymentWorkflowService->workflowPayload($company, $booking),
+            'manual_payment' => $reviewablePayment
+                ? $this->paymentReviewPayload($booking, $reviewablePayment)
+                : null,
+            'can_review_payment' => $reviewablePayment !== null,
+            'can_review_manual_payment' => $reviewablePayment !== null,
+            'invoice_options' => $this->invoiceOptions($company, $booking, $paymentReceiver['payment_mode']),
+            'can_cancel' => in_array($this->bookingStatusValue($booking), self::CANCELLABLE_STATUSES, true),
+            'can_refund' => in_array($this->bookingStatusValue($booking), self::REFUNDABLE_STATUSES, true),
+            'can_reschedule' => $rescheduleAction->canReschedule($booking),
+            'can_reactivate' => $reactivateAction->canReactivate($booking),
+            'can_reorder' => $this->canReorderBooking($booking),
+            'proforma_invoice_available' => $this->proformaInvoiceAvailable($booking),
+            'pending_action_request' => $pendingActionRequest
+                ? [
+                    'id' => $pendingActionRequest->id,
+                    'target_action' => $pendingActionRequest->target_action,
+                    'status' => $pendingActionRequest->status,
+                ]
+                : null,
+        ];
     }
 
     /**
@@ -278,13 +297,8 @@ class BookingIndexController extends Controller
      */
     private function rememberFollowupSummary(Company $company, Builder $companyScopeQuery, string $cacheKey): array
     {
-        return Cache::remember($cacheKey, now()->addMinutes(2), function () use ($company, $companyScopeQuery): array {
-            $followupBookings = $this->followupBookingsForQuery(
-                clone $companyScopeQuery,
-                $company
-            );
-
-            return $this->followupSummaryFromCollection($followupBookings);
+        return Cache::remember($cacheKey, now()->addMinutes(2), function () use ($companyScopeQuery): array {
+            return app(BookingIndexFollowupSummaryService::class)->summarize(clone $companyScopeQuery);
         });
     }
 

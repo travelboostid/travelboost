@@ -1365,20 +1365,20 @@ test('booking index exposes proforma eligibility for down payment and payment pr
     ]);
 
     $tour = Tour::factory()->create(['company_id' => $vendor->id]);
-    Booking::factory()->create([
+    $downPaymentBooking = Booking::factory()->create([
         'vendor_id' => $vendor->id,
         'tour_id' => $tour->id,
         'booking_number' => 'PRO-DP',
         'status' => BookingStatus::DOWN_PAYMENT,
     ]);
-    Booking::factory()->create([
+    $waitingApprovalBooking = Booking::factory()->create([
         'vendor_id' => $vendor->id,
         'tour_id' => $tour->id,
         'booking_number' => 'PRO-WA-PAY',
         'status' => BookingStatus::WAITING_PAYMENT_APPROVAL,
         'reserved_type' => 'payment_in_progress',
     ]);
-    Booking::factory()->create([
+    $reservedBooking = Booking::factory()->create([
         'vendor_id' => $vendor->id,
         'tour_id' => $tour->id,
         'booking_number' => 'PRO-BR',
@@ -1389,19 +1389,34 @@ test('booking index exposes proforma eligibility for down payment and payment pr
         ->get("/companies/{$vendor->username}/dashboard/bookings?booking_number=PRO-DP")
         ->assertOk()
         ->assertInertia(fn ($page) => $page
-            ->where('data.data.0.proforma_invoice_available', true));
+            ->missing('data.data.0.proforma_invoice_available'));
+
+    $this->actingAs($this->user)
+        ->getJson("/companies/{$vendor->username}/dashboard/bookings/{$downPaymentBooking->id}/row-actions")
+        ->assertOk()
+        ->assertJsonPath('proforma_invoice_available', true);
 
     $this->actingAs($this->user)
         ->get("/companies/{$vendor->username}/dashboard/bookings?booking_number=PRO-WA-PAY")
         ->assertOk()
         ->assertInertia(fn ($page) => $page
-            ->where('data.data.0.proforma_invoice_available', true));
+            ->missing('data.data.0.proforma_invoice_available'));
+
+    $this->actingAs($this->user)
+        ->getJson("/companies/{$vendor->username}/dashboard/bookings/{$waitingApprovalBooking->id}/row-actions")
+        ->assertOk()
+        ->assertJsonPath('proforma_invoice_available', true);
 
     $this->actingAs($this->user)
         ->get("/companies/{$vendor->username}/dashboard/bookings?booking_number=PRO-BR")
         ->assertOk()
         ->assertInertia(fn ($page) => $page
-            ->where('data.data.0.proforma_invoice_available', false));
+            ->missing('data.data.0.proforma_invoice_available'));
+
+    $this->actingAs($this->user)
+        ->getJson("/companies/{$vendor->username}/dashboard/bookings/{$reservedBooking->id}/row-actions")
+        ->assertOk()
+        ->assertJsonPath('proforma_invoice_available', false);
 });
 
 test('booking follow up summary excludes terminal bookings', function () {
@@ -1645,12 +1660,17 @@ test('booking index filters waiting payment approval and exposes manual payment 
     $response->assertInertia(fn ($page) => $page
         ->has('data.data', 1)
         ->where('data.data.0.status', 'waiting payment approval')
-        ->where('data.data.0.manual_payment.id', $payment->id)
-        ->where('data.data.0.manual_payment.sender_bank_name', 'BCA')
-        ->where('data.data.0.manual_payment.sender_account_number', '1234567890')
-        ->where('data.data.0.manual_payment.transfer_amount', 500_000)
-        ->where('data.data.0.manual_payment.payment_date', '2026-05-01')
-        ->where('data.data.0.manual_payment.proof_path', 'payment-proofs/proof.jpg'));
+        ->missing('data.data.0.manual_payment'));
+
+    $this->actingAs($this->user)
+        ->getJson("/companies/{$vendor->username}/dashboard/bookings/{$booking->id}/row-actions")
+        ->assertOk()
+        ->assertJsonPath('manual_payment.id', $payment->id)
+        ->assertJsonPath('manual_payment.sender_bank_name', 'BCA')
+        ->assertJsonPath('manual_payment.sender_account_number', '1234567890')
+        ->assertJsonPath('manual_payment.transfer_amount', 500_000)
+        ->assertJsonPath('manual_payment.payment_date', '2026-05-01')
+        ->assertJsonPath('manual_payment.proof_path', 'payment-proofs/proof.jpg');
 });
 
 test('booking index exposes manual payment review permission only for the payment receiver', function () {
@@ -1719,7 +1739,12 @@ test('booking index exposes manual payment review permission only for the paymen
     $vendorResponse->assertOk();
     $vendorResponse->assertInertia(fn ($page) => $page
         ->has('data.data', 1)
-        ->where('data.data.0.can_review_manual_payment', false));
+        ->missing('data.data.0.can_review_manual_payment'));
+
+    $this->actingAs($vendorUser)
+        ->getJson("/companies/{$vendor->username}/dashboard/bookings/{$booking->id}/row-actions")
+        ->assertOk()
+        ->assertJsonPath('can_review_manual_payment', false);
 
     $agentResponse = $this->actingAs($agentUser)
         ->get("/companies/{$agent->username}/dashboard/bookings?status=waiting%20payment%20approval");
@@ -1727,7 +1752,12 @@ test('booking index exposes manual payment review permission only for the paymen
     $agentResponse->assertOk();
     $agentResponse->assertInertia(fn ($page) => $page
         ->has('data.data', 1)
-        ->where('data.data.0.can_review_manual_payment', true));
+        ->missing('data.data.0.can_review_manual_payment'));
+
+    $this->actingAs($agentUser)
+        ->getJson("/companies/{$agent->username}/dashboard/bookings/{$booking->id}/row-actions")
+        ->assertOk()
+        ->assertJsonPath('can_review_manual_payment', true);
 });
 
 test('booking index exposes payment receiver type for payment mode label', function () {
@@ -1849,15 +1879,20 @@ test('agent index exposes customer online receipt and pay vendor workflow action
 
     $response->assertOk();
     $response->assertInertia(fn ($page) => $page
-        ->where('data.data.0.payment_workflow.mode', 'agent_collection')
-        ->where('data.data.0.payment_workflow.stage', 'agent_vendor_payment_due')
-        ->where('data.data.0.payment_workflow.customer_payment.id', $customerPayment->id)
-        ->where('data.data.0.payment_workflow.customer_payment.receipt.type', 'online')
-        ->where('data.data.0.payment_workflow.customer_payment.receipt.order_id', 'customer-agent-online-order')
-        ->where('data.data.0.payment_workflow.can_pay_vendor', true)
-        ->where('data.data.0.manual_payment', null)
+        ->missing('data.data.0.payment_workflow')
         ->where('data.data.0.payment_followup.action_label', 'Pay Vendor')
         ->where('data.data.0.down_payment_detail', null));
+
+    $this->actingAs($agentUser)
+        ->getJson("/companies/{$agent->username}/dashboard/bookings/{$booking->id}/row-actions")
+        ->assertOk()
+        ->assertJsonPath('payment_workflow.mode', 'agent_collection')
+        ->assertJsonPath('payment_workflow.stage', 'agent_vendor_payment_due')
+        ->assertJsonPath('payment_workflow.customer_payment.id', $customerPayment->id)
+        ->assertJsonPath('payment_workflow.customer_payment.receipt.type', 'online')
+        ->assertJsonPath('payment_workflow.customer_payment.receipt.order_id', 'customer-agent-online-order')
+        ->assertJsonPath('payment_workflow.can_pay_vendor', true)
+        ->assertJsonPath('manual_payment', null);
 });
 
 test('cancelled agent collection booking does not expose pay vendor workflow action', function () {
@@ -1941,12 +1976,17 @@ test('cancelled agent collection booking does not expose pay vendor workflow act
 
     $response->assertOk();
     $response->assertInertia(fn ($page) => $page
-        ->where('data.data.0.payment_workflow.mode', 'agent_collection')
-        ->where('data.data.0.payment_workflow.can_pay_vendor', false)
-        ->where('data.data.0.payment_workflow.can_review_customer_payment', false)
-        ->where('data.data.0.payment_workflow.can_review_agent_vendor_payment', false)
-        ->where('data.data.0.manual_payment', null)
+        ->missing('data.data.0.payment_workflow')
         ->where('data.data.0.payment_followup.action_label', null));
+
+    $this->actingAs($agentUser)
+        ->getJson("/companies/{$agent->username}/dashboard/bookings/{$booking->id}/row-actions")
+        ->assertOk()
+        ->assertJsonPath('payment_workflow.mode', 'agent_collection')
+        ->assertJsonPath('payment_workflow.can_pay_vendor', false)
+        ->assertJsonPath('payment_workflow.can_review_customer_payment', false)
+        ->assertJsonPath('payment_workflow.can_review_agent_vendor_payment', false)
+        ->assertJsonPath('manual_payment', null);
 });
 
 test('pending agent vendor online attempt does not replace pay vendor controls', function () {
@@ -2033,13 +2073,18 @@ test('pending agent vendor online attempt does not replace pay vendor controls',
 
     $response->assertOk();
     $response->assertInertia(fn ($page) => $page
-        ->where('data.data.0.payment_workflow.mode', 'agent_collection')
-        ->where('data.data.0.payment_workflow.stage', 'agent_vendor_payment_due')
-        ->where('data.data.0.payment_workflow.customer_payment.id', $customerPayment->id)
-        ->where('data.data.0.payment_workflow.agent_vendor_payment', null)
-        ->where('data.data.0.payment_workflow.can_pay_vendor', true)
-        ->where('data.data.0.manual_payment', null)
+        ->missing('data.data.0.payment_workflow')
         ->where('data.data.0.payment_followup.action_label', 'Pay Vendor'));
+
+    $this->actingAs($agentUser)
+        ->getJson("/companies/{$agent->username}/dashboard/bookings/{$booking->id}/row-actions")
+        ->assertOk()
+        ->assertJsonPath('payment_workflow.mode', 'agent_collection')
+        ->assertJsonPath('payment_workflow.stage', 'agent_vendor_payment_due')
+        ->assertJsonPath('payment_workflow.customer_payment.id', $customerPayment->id)
+        ->assertJsonPath('payment_workflow.agent_vendor_payment', null)
+        ->assertJsonPath('payment_workflow.can_pay_vendor', true)
+        ->assertJsonPath('manual_payment', null);
 });
 
 test('agent submits gross payment to vendor after customer payment is verified', function () {
@@ -2205,17 +2250,22 @@ test('vendor review sees both staged receipts and approval finalizes booking', f
         ->get("/companies/{$vendor->username}/dashboard/bookings")
         ->assertOk()
         ->assertInertia(fn ($page) => $page
-            ->where('data.data.0.payment_workflow.mode', 'agent_collection')
-            ->where('data.data.0.payment_workflow.stage', 'vendor_review')
-            ->where('data.data.0.payment_workflow.customer_payment.id', $customerPayment->id)
-            ->where('data.data.0.payment_workflow.agent_vendor_payment.id', $agentVendorPayment->id)
-            ->where('data.data.0.payment_workflow.customer_payment.receipt.type', 'manual')
-            ->where('data.data.0.payment_workflow.agent_vendor_payment.receipt.type', 'manual')
-            ->where('data.data.0.payment_workflow.can_review_agent_vendor_payment', true)
-            ->where('data.data.0.manual_payment.id', $agentVendorPayment->id)
-            ->where('data.data.0.manual_payment.customer_payment.receipt.type', 'manual')
-            ->where('data.data.0.manual_payment.agent_vendor_payment.receipt.type', 'manual')
+            ->missing('data.data.0.payment_workflow')
             ->where('data.data.0.down_payment_detail', null));
+
+    $this->actingAs($vendorUser)
+        ->getJson("/companies/{$vendor->username}/dashboard/bookings/{$booking->id}/row-actions")
+        ->assertOk()
+        ->assertJsonPath('payment_workflow.mode', 'agent_collection')
+        ->assertJsonPath('payment_workflow.stage', 'vendor_review')
+        ->assertJsonPath('payment_workflow.customer_payment.id', $customerPayment->id)
+        ->assertJsonPath('payment_workflow.agent_vendor_payment.id', $agentVendorPayment->id)
+        ->assertJsonPath('payment_workflow.customer_payment.receipt.type', 'manual')
+        ->assertJsonPath('payment_workflow.agent_vendor_payment.receipt.type', 'manual')
+        ->assertJsonPath('payment_workflow.can_review_agent_vendor_payment', true)
+        ->assertJsonPath('manual_payment.id', $agentVendorPayment->id)
+        ->assertJsonPath('manual_payment.customer_payment.receipt.type', 'manual')
+        ->assertJsonPath('manual_payment.agent_vendor_payment.receipt.type', 'manual');
 
     $this->actingAs($vendorUser)
         ->post("/companies/{$vendor->username}/dashboard/bookings/{$booking->id}/payments/{$agentVendorPayment->id}/approve")
@@ -2406,7 +2456,7 @@ test('full payment booking exposes cancel and refund actions in dashboard index'
     ]);
 
     $tour = Tour::factory()->create(['company_id' => $vendor->id]);
-    Booking::factory()->create([
+    $fullPaymentBooking = Booking::factory()->create([
         'vendor_id' => $vendor->id,
         'tour_id' => $tour->id,
         'status' => BookingStatus::FULL_PAYMENT,
@@ -2417,8 +2467,14 @@ test('full payment booking exposes cancel and refund actions in dashboard index'
 
     $response->assertOk();
     $response->assertInertia(fn ($page) => $page
-        ->where('data.data.0.can_cancel', true)
-        ->where('data.data.0.can_refund', true));
+        ->missing('data.data.0.can_cancel')
+        ->missing('data.data.0.can_refund'));
+
+    $this->actingAs($this->user)
+        ->getJson("/companies/{$vendor->username}/dashboard/bookings/{$fullPaymentBooking->id}/row-actions")
+        ->assertOk()
+        ->assertJsonPath('can_cancel', true)
+        ->assertJsonPath('can_refund', true);
 });
 
 test('down payment booking exposes cancel and refund actions in dashboard index', function () {
@@ -2433,7 +2489,7 @@ test('down payment booking exposes cancel and refund actions in dashboard index'
     ]);
 
     $tour = Tour::factory()->create(['company_id' => $vendor->id]);
-    Booking::factory()->create([
+    $downPaymentBooking = Booking::factory()->create([
         'vendor_id' => $vendor->id,
         'tour_id' => $tour->id,
         'status' => BookingStatus::DOWN_PAYMENT,
@@ -2444,8 +2500,14 @@ test('down payment booking exposes cancel and refund actions in dashboard index'
 
     $response->assertOk();
     $response->assertInertia(fn ($page) => $page
-        ->where('data.data.0.can_cancel', true)
-        ->where('data.data.0.can_refund', true));
+        ->missing('data.data.0.can_cancel')
+        ->missing('data.data.0.can_refund'));
+
+    $this->actingAs($this->user)
+        ->getJson("/companies/{$vendor->username}/dashboard/bookings/{$downPaymentBooking->id}/row-actions")
+        ->assertOk()
+        ->assertJsonPath('can_cancel', true)
+        ->assertJsonPath('can_refund', true);
 });
 
 test('vendor can directly cancel a full payment booking and release availability', function () {
@@ -2827,7 +2889,12 @@ test('vendor can reorder an eligible expired booking with the same booking numbe
         ->get("/companies/{$vendor->username}/dashboard/bookings")
         ->assertOk()
         ->assertInertia(fn ($page) => $page
-            ->where('data.data.0.can_reorder', true));
+            ->missing('data.data.0.can_reorder'));
+
+    $this->actingAs($this->user)
+        ->getJson("/companies/{$vendor->username}/dashboard/bookings/{$booking->id}/row-actions")
+        ->assertOk()
+        ->assertJsonPath('can_reorder', true);
 
     $response = $this->actingAs($this->user)
         ->post("/companies/{$vendor->username}/dashboard/bookings/{$booking->id}/reorder");
