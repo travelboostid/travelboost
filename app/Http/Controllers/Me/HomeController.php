@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Me;
 
+use App\Actions\Booking\ReconcileBookingPaymentAfterRepriceAction;
 use App\Actions\WaitingList\ResolveWaitingListQueuePositionAction;
 use App\Enums\BookingStatus;
 use App\Enums\TourWaitingListScheduleStatus;
@@ -18,6 +19,7 @@ use App\Models\TourWaitingList;
 use App\Models\TourWaitingListSchedule;
 use App\Services\BookingPaymentReceiverService;
 use App\Services\BookingPaymentWorkflowService;
+use App\Services\BookingPricingService;
 use App\Services\BookingTravelDocumentService;
 use App\Support\BookingReschedulePayment;
 use App\Support\WaitingListBookingCreateUrl;
@@ -232,6 +234,10 @@ class HomeController extends Controller
      */
     private function appendBookingPayload(Booking $booking): array
     {
+        $booking = app(BookingPricingService::class)->reconcileSnapshotTotals($booking);
+        $booking = app(ReconcileBookingPaymentAfterRepriceAction::class)
+            ->reconcileStaleStatusIfBalanceDue($booking);
+
         $paidAmount = app(BookingPaymentWorkflowService::class)->finalizablePaidAmount($booking);
         $reschedulePayment = app(BookingReschedulePayment::class);
         $grandTotalForPayment = $reschedulePayment->effectiveGrandTotalForPayment($booking, $paidAmount);

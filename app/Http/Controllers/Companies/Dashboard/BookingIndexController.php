@@ -6,6 +6,7 @@ use App\Actions\Booking\ExpireBookingReservationsAction;
 use App\Actions\Booking\FinalizeBookingPaymentAction;
 use App\Actions\Booking\NotifyBookingPaymentEventAction;
 use App\Actions\Booking\ReactivateBookingAction;
+use App\Actions\Booking\ReconcileBookingPaymentAfterRepriceAction;
 use App\Actions\Booking\RescheduleBookingAction;
 use App\Actions\Booking\SyncAvailabilityAction;
 use App\Enums\BookingStatus;
@@ -192,10 +193,18 @@ class BookingIndexController extends Controller
             }
 
             $booking = $pricingService->reconcileSnapshotTotals($booking);
+
+            if (in_array($this->bookingStatusValue($booking), self::INVOICEABLE_STATUSES, true)) {
+                $booking = app(ReconcileBookingPaymentAfterRepriceAction::class)
+                    ->reconcileStaleStatusIfBalanceDue($booking);
+            }
+
             $commissionAmount = (float) ($booking->commission_amount ?? 0);
             $booking->commission_amount = $commissionAmount > 0
                 ? $commissionAmount
                 : $this->resolveCommissionAmount($booking);
+
+            $booking->was_rescheduled = $this->bookingWasRescheduled($booking);
 
             $this->attachFollowupPayloads($company, $booking);
             $paymentReceiver = $paymentReceiverService->resolveForBooking($booking);
@@ -209,7 +218,6 @@ class BookingIndexController extends Controller
             $booking->document_detail = $documentFollowupState === 'completed'
                 ? $travelDocumentService->documentDetails($booking)
                 : [];
-            $booking->was_rescheduled = (bool) ($booking->was_rescheduled ?? false);
 
             return $booking;
         });
@@ -2529,7 +2537,7 @@ class BookingIndexController extends Controller
         if (
             $paymentType === 'full_payment'
             && $this->bookingStatusValue($booking) === BookingStatus::DOWN_PAYMENT->value
-            && ($booking->was_rescheduled ?? false)
+            && $this->bookingWasRescheduled($booking)
         ) {
             return null;
         }
@@ -2593,7 +2601,7 @@ class BookingIndexController extends Controller
             return null;
         }
 
-        if (! ($booking->was_rescheduled ?? false)) {
+        if (! $this->bookingWasRescheduled($booking)) {
             return null;
         }
 
@@ -3455,5 +3463,14 @@ class BookingIndexController extends Controller
         return $booking->vendor->companySetting
             ?? $booking->vendor->settings
             ?? $booking->vendor->settings()->first();
+    }
+
+    private function bookingWasRescheduled(Booking $booking): bool
+    {
+        if (array_key_exists('was_rescheduled', $booking->getAttributes())) {
+            return (bool) $booking->getAttribute('was_rescheduled');
+        }
+
+        return app(BookingReschedulePayment::class)->latestApprovedPayload($booking) !== null;
     }
 }

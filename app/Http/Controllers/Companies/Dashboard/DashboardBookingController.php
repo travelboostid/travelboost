@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Companies\Dashboard;
 use App\Actions\Booking\ExpireBookingReservationsAction;
 use App\Actions\Booking\FinalizeBookingPaymentAction;
 use App\Actions\Booking\NotifyBookingPaymentEventAction;
+use App\Actions\Booking\ReconcileBookingPaymentAfterRepriceAction;
 use App\Actions\Booking\SyncAvailabilityAction;
 use App\Enums\BookingStatus;
 use App\Enums\PaymentMethodStatus;
@@ -127,6 +128,8 @@ class DashboardBookingController extends Controller
             if ($existingBooking) {
                 $bookingNumber = $existingBooking->booking_number;
                 $existingBooking = app(BookingPricingService::class)->reconcileSnapshotTotals($existingBooking);
+                $existingBooking = app(ReconcileBookingPaymentAfterRepriceAction::class)
+                    ->reconcileStaleStatusIfBalanceDue($existingBooking);
                 $existingBooking->load([
                     'inputByCompany:id,name,type',
                     'inputByUser:id,name',

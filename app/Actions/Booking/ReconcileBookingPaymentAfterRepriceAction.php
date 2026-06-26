@@ -5,6 +5,7 @@ namespace App\Actions\Booking;
 use App\Enums\BookingStatus;
 use App\Models\Booking;
 use App\Services\BookingPaymentWorkflowService;
+use App\Support\BookingReschedulePayment;
 
 class ReconcileBookingPaymentAfterRepriceAction
 {
@@ -32,6 +33,33 @@ class ReconcileBookingPaymentAfterRepriceAction
             $priceBefore,
             $applyCustomerPriceAdjustment,
         );
+
+        return $booking;
+    }
+
+    public function reconcileStaleStatusIfBalanceDue(Booking $booking): Booking
+    {
+        $currentStatus = $booking->status instanceof BookingStatus
+            ? $booking->status
+            : BookingStatus::tryFrom((string) $booking->status);
+
+        if (! in_array($currentStatus, [BookingStatus::DOWN_PAYMENT, BookingStatus::FULL_PAYMENT], true)) {
+            return $booking;
+        }
+
+        $reschedulePayment = app(BookingReschedulePayment::class);
+
+        if ($reschedulePayment->isPriceAdjustmentWaived($reschedulePayment->latestApprovedPayload($booking))) {
+            return $booking;
+        }
+
+        $paidAmount = app(BookingPaymentWorkflowService::class)->finalizablePaidAmount($booking);
+        $targetStatus = $this->resolveTargetStatus($paidAmount, (float) $booking->grand_total);
+
+        if ($targetStatus !== $currentStatus) {
+            $booking->update(['status' => $targetStatus]);
+            $booking->status = $targetStatus;
+        }
 
         return $booking;
     }
