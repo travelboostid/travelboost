@@ -12,7 +12,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Support\Facades\Route;
 
-$appHost = env('APP_HOST', 'localhost');
+$appHost = config('app.host', 'localhost');
 Route::prefix('customers')
     ->middleware(['can:access-customer-pages', 'use-customer-props', 'set-and-use-anonymous-user-props', 'use-analytics-measurement-ids-props'])
     ->name('customers.')

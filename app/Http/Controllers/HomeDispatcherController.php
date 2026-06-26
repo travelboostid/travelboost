@@ -45,7 +45,7 @@ class HomeDispatcherController extends Controller
 
     public function __invoke(Request $request)
     {
-        $affiliateBaseUrl = 'affiliate.'.env('APP_HOST', 'localhost');
+        $affiliateBaseUrl = 'affiliate.'.config('app.host', 'localhost');
 
         // Determine which homepage variant should handle this request.
         $type = match (true) {
