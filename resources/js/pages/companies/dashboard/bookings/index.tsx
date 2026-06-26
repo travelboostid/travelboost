@@ -73,6 +73,38 @@ const BookingIndexDocumentsDialog = lazy(() =>
     })),
 );
 
+function paginationLabel(label: string, intl: IntlShape): string {
+    return label
+        .replace(
+            '&laquo; Previous',
+            intl.formatMessage({
+                id: 'pagination.previous',
+                defaultMessage: 'Previous',
+            }),
+        )
+        .replace(
+            'Next &raquo;',
+            intl.formatMessage({
+                id: 'pagination.next',
+                defaultMessage: 'Next',
+            }),
+        )
+        .replace(
+            '&laquo;',
+            intl.formatMessage({
+                id: 'pagination.previous',
+                defaultMessage: 'Previous',
+            }),
+        )
+        .replace(
+            '&raquo;',
+            intl.formatMessage({
+                id: 'pagination.next',
+                defaultMessage: 'Next',
+            }),
+        );
+}
+
 function RowActionsFallback() {
     return (
         <div
