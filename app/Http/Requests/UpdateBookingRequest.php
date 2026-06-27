@@ -6,6 +6,7 @@ use App\Enums\BookingStatus;
 use App\Enums\UserGender;
 use App\Models\Booking;
 use App\Services\BookingVisaTypeService;
+use App\Support\BookingDeparture;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -19,6 +20,10 @@ class UpdateBookingRequest extends FormRequest
     public function authorize(): bool
     {
         $booking = $this->route('booking');
+
+        if ($booking instanceof Booking && BookingDeparture::hasDepartedBooking($booking)) {
+            return false;
+        }
 
         $fullEditStatuses = [
             BookingStatus::RESERVED,

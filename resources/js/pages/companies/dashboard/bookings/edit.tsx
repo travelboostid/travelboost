@@ -142,6 +142,7 @@ type PageProps = {
     };
     editMode?: 'full' | 'documents' | 'readonly';
     canEditDocuments?: boolean;
+    departureHasPassed?: boolean;
 };
 
 type EditableGuestEntry = GuestEntry & {
@@ -320,6 +321,7 @@ export default function Page({
     vendorBankInfo,
     editMode = 'readonly',
     canEditDocuments = false,
+    departureHasPassed = false,
 }: PageProps) {
     const intl = useIntl();
     const { company } = usePageSharedDataProps();
@@ -370,11 +372,17 @@ export default function Page({
                                 <FormattedMessage defaultMessage="Editing Disabled" />
                             </h2>
                             <p className="mt-1 text-sm text-amber-700">
-                                <FormattedMessage defaultMessage="This booking can no longer be edited because payment has been made. Current status:" />{' '}
-                                <strong className="capitalize">
-                                    {booking.status}
-                                </strong>
-                                .
+                                {departureHasPassed ? (
+                                    <FormattedMessage defaultMessage="This booking can no longer be edited because the departure date has passed." />
+                                ) : (
+                                    <>
+                                        <FormattedMessage defaultMessage="This booking can no longer be edited because payment has been made. Current status:" />{' '}
+                                        <strong className="capitalize">
+                                            {booking.status}
+                                        </strong>
+                                        .
+                                    </>
+                                )}
                             </p>
                             <Button
                                 variant="outline"

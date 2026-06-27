@@ -36,6 +36,7 @@ use App\Services\BookingPaymentWorkflowService;
 use App\Services\BookingPricingService;
 use App\Services\BookingService;
 use App\Services\BookingTravelDocumentService;
+use App\Support\BookingDeparture;
 use App\Support\BookingIndexFollowupSummaryCache;
 use App\Support\BookingReschedulePayment;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -262,6 +263,8 @@ class BookingIndexController extends Controller
         $reviewablePayment = $paymentWorkflowService->reviewablePaymentForCompany($company, $booking);
         $paymentReceiver = $paymentReceiverService->resolveForBooking($booking);
         $pendingActionRequest = $booking->actionRequests->first();
+        $departureHasPassed = BookingDeparture::hasDepartedBooking($booking);
+        $canEdit = ! $departureHasPassed && $this->resolveEditMode($booking) !== 'readonly';
 
         return [
             'payment_workflow' => $paymentWorkflowService->workflowPayload($company, $booking),
@@ -271,11 +274,13 @@ class BookingIndexController extends Controller
             'can_review_payment' => $reviewablePayment !== null,
             'can_review_manual_payment' => $reviewablePayment !== null,
             'invoice_options' => $this->invoiceOptions($company, $booking, $paymentReceiver['payment_mode']),
-            'can_cancel' => in_array($this->bookingStatusValue($booking), self::CANCELLABLE_STATUSES, true),
-            'can_refund' => in_array($this->bookingStatusValue($booking), self::REFUNDABLE_STATUSES, true),
+            'can_cancel' => ! $departureHasPassed && in_array($this->bookingStatusValue($booking), self::CANCELLABLE_STATUSES, true),
+            'can_refund' => ! $departureHasPassed && in_array($this->bookingStatusValue($booking), self::REFUNDABLE_STATUSES, true),
             'can_reschedule' => $rescheduleAction->canReschedule($booking),
             'can_reactivate' => $reactivateAction->canReactivate($booking),
             'can_reorder' => $this->canReorderBooking($booking),
+            'can_edit' => $canEdit,
+            'departure_has_passed' => $departureHasPassed,
             'proforma_invoice_available' => $this->proformaInvoiceAvailable($booking),
             'pending_action_request' => $pendingActionRequest
                 ? [
@@ -838,6 +843,7 @@ class BookingIndexController extends Controller
     public function update(Company $company, Booking $booking, UpdateBookingRequest $request): RedirectResponse
     {
         $this->assertCompanyCanAccessBooking($company, $booking);
+        $this->assertBookingDepartureIsManageable($booking);
         abort_unless($this->resolveEditMode($booking->loadMissing('passengers')) === 'full', 403);
 
         app(BookingService::class)->updateBookingSnapshot($booking, $request->validated());
@@ -1319,6 +1325,7 @@ class BookingIndexController extends Controller
         $bookingActionRequest->loadMissing('booking');
         $this->assertCanReviewBookingActionRequest($company, $bookingActionRequest);
         abort_unless($bookingActionRequest->status === 'pending', 422);
+        $this->assertBookingDepartureIsManageable($bookingActionRequest->booking);
 
         if (in_array($bookingActionRequest->target_action, ['reschedule', 'restore'], true)) {
             $applyCustomerPriceAdjustment = $bookingActionRequest->target_action === 'reschedule'
@@ -1365,6 +1372,7 @@ class BookingIndexController extends Controller
     private function handleBookingAction(Company $company, Booking $booking, string $action, Request $request): RedirectResponse
     {
         $this->assertCompanyCanAccessBooking($company, $booking);
+        $this->assertBookingDepartureIsManageable($booking);
         $this->assertBookingActionAllowed($booking, $action);
 
         $companyType = $company->type->value ?? $company->type;
@@ -1420,6 +1428,8 @@ class BookingIndexController extends Controller
     ): RedirectResponse {
         $companyType = $company->type->value ?? $company->type;
         $reason = $request->string('reason')->trim()->toString() ?: null;
+
+        $this->assertBookingDepartureIsManageable($booking);
 
         if ($companyType === 'agent') {
             BookingActionRequest::query()->updateOrCreate(
@@ -1700,9 +1710,24 @@ class BookingIndexController extends Controller
         );
     }
 
+    private function assertBookingDepartureIsManageable(Booking $booking): void
+    {
+        if (BookingDeparture::hasDepartedBooking($booking)) {
+            throw ValidationException::withMessages([
+                'booking_action' => 'This booking can no longer be modified because the departure date has passed.',
+            ]);
+        }
+    }
+
     private function assertBookingActionAllowed(Booking $booking, string $action): void
     {
         abort_unless(in_array($action, ['cancel', 'refund'], true), 422);
+
+        if (BookingDeparture::hasDepartedBooking($booking)) {
+            throw ValidationException::withMessages([
+                'booking_action' => 'This booking can no longer be modified because the departure date has passed.',
+            ]);
+        }
 
         $allowedStatuses = $action === 'cancel'
             ? self::CANCELLABLE_STATUSES
@@ -2044,6 +2069,7 @@ class BookingIndexController extends Controller
 
         return Inertia::render($page, [
             'booking' => $booking,
+            'departureHasPassed' => BookingDeparture::hasDepartedBooking($booking),
             'tourPrices' => $tourPrices,
             'addOns' => $addOns,
             'visaCategoryItems' => $tour ? $this->visaCategoryItemsPayload($tour) : [],
@@ -3110,6 +3136,10 @@ class BookingIndexController extends Controller
 
     private function resolveEditMode(Booking $booking): string
     {
+        if (BookingDeparture::hasDepartedBooking($booking)) {
+            return 'readonly';
+        }
+
         if (in_array($booking->status, [
             BookingStatus::RESERVED,
             BookingStatus::BOOKING_RESERVED,
@@ -3131,6 +3161,10 @@ class BookingIndexController extends Controller
 
     private function canEditTravelDocuments(Booking $booking): bool
     {
+        if (BookingDeparture::hasDepartedBooking($booking)) {
+            return false;
+        }
+
         return in_array($booking->status, [
             BookingStatus::WAITING_PAYMENT_APPROVAL,
             BookingStatus::DOWN_PAYMENT,
@@ -3288,6 +3322,16 @@ class BookingIndexController extends Controller
             ];
         }
 
+        if (BookingDeparture::hasDepartedBooking($booking)) {
+            return [
+                ...$basePayload,
+                'state' => 'incomplete',
+                'label' => 'Incomplete',
+                'action_url' => null,
+                'action_label' => null,
+            ];
+        }
+
         return [
             ...$basePayload,
             'state' => 'incomplete',
@@ -3417,6 +3461,10 @@ class BookingIndexController extends Controller
 
     private function completePaymentUrl(Company $company, Booking $booking): ?string
     {
+        if (BookingDeparture::hasDepartedBooking($booking)) {
+            return null;
+        }
+
         if (! $booking->tour_id || ! $booking->departure_date || blank($booking->booking_number)) {
             return null;
         }
@@ -3430,6 +3478,10 @@ class BookingIndexController extends Controller
 
     private function continueBookingUrl(Company $company, Booking $booking): ?string
     {
+        if (BookingDeparture::hasDepartedBooking($booking)) {
+            return null;
+        }
+
         if ($this->bookingStatusValue($booking) !== BookingStatus::AWAITING_PAYMENT->value) {
             return null;
         }

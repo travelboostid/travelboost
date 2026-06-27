@@ -27,7 +27,6 @@ use App\Models\TourPrice;
 use App\Models\TourSchedule;
 use App\Models\User;
 use App\Models\VendorAgentPartner;
-use App\Services\AgentCommissionResolver;
 use App\Services\BookingAddOnOptionsService;
 use App\Services\BookingContactPaymentEmailService;
 use App\Services\BookingDownPaymentRuleService;
@@ -44,6 +43,7 @@ use App\Services\PaymentGatewayStatusSyncService;
 use App\Services\PrismaLinkException;
 use App\Services\PrismaLinkService;
 use App\Services\ReusableMidtransBookingPaymentAttemptService;
+use App\Support\BookingDeparture;
 use App\Support\BookingReschedulePayment;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
@@ -539,6 +539,13 @@ class DashboardBookingController extends Controller
     public function updateTravelDocuments(Company $company, Booking $booking, Request $request): RedirectResponse
     {
         $this->assertCompanyCanAccessBooking($company, $booking);
+
+        if (BookingDeparture::hasDepartedBooking($booking)) {
+            throw ValidationException::withMessages([
+                'booking_action' => 'This booking can no longer be modified because the departure date has passed.',
+            ]);
+        }
+
         abort_unless(in_array($booking->status, [
             BookingStatus::WAITING_PAYMENT_APPROVAL,
             BookingStatus::DOWN_PAYMENT,
