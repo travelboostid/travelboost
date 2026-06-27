@@ -71,15 +71,17 @@ test('past departure booking row actions only allow read-only operations', funct
     ['vendor' => $vendor, 'booking' => $booking] = createPastDepartureBooking();
     attachPastDepartureVendorTeam($this->user, $vendor);
 
-    $this->actingAs($this->user)
-        ->getJson("/companies/{$vendor->username}/dashboard/bookings/{$booking->id}/row-actions")
-        ->assertOk()
+    $response = $this->actingAs($this->user)
+        ->getJson("/companies/{$vendor->username}/dashboard/bookings/{$booking->id}/row-actions");
+
+    $response->assertOk()
         ->assertJsonPath('can_cancel', false)
         ->assertJsonPath('can_refund', false)
         ->assertJsonPath('can_reschedule', false)
         ->assertJsonPath('can_edit', false)
-        ->assertJsonPath('departure_has_passed', true)
-        ->assertJson(fn ($json) => collect($json['invoice_options'] ?? [])->isNotEmpty());
+        ->assertJsonPath('departure_has_passed', true);
+
+    expect($response->json('invoice_options'))->not->toBeEmpty();
 });
 
 test('future departure booking row actions remain manageable', function () {
