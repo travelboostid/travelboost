@@ -6,6 +6,7 @@ use App\Enums\BookingStatus;
 use App\Models\Booking;
 use App\Models\TourSchedule;
 use App\Services\BookingPricingService;
+use App\Support\BookingDeparture;
 use Illuminate\Support\Carbon;
 use Illuminate\Validation\ValidationException;
 
@@ -32,6 +33,12 @@ class RescheduleBookingAction
         ], true)) {
             throw ValidationException::withMessages([
                 'booking_action' => 'Only down payment or full payment bookings can be rescheduled.',
+            ]);
+        }
+
+        if (BookingDeparture::hasDepartedBooking($booking)) {
+            throw ValidationException::withMessages([
+                'booking_action' => 'This booking can no longer be rescheduled because the departure date has passed.',
             ]);
         }
 
@@ -96,6 +103,10 @@ class RescheduleBookingAction
             BookingStatus::DOWN_PAYMENT->value,
             BookingStatus::FULL_PAYMENT->value,
         ], true)) {
+            return false;
+        }
+
+        if (BookingDeparture::hasDepartedBooking($booking)) {
             return false;
         }
 

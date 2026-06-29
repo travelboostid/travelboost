@@ -117,6 +117,8 @@ type BookingResource = {
     can_reschedule?: boolean;
     can_reactivate?: boolean;
     can_reorder?: boolean;
+    can_edit?: boolean;
+    departure_has_passed?: boolean;
     proforma_invoice_available?: boolean;
     down_payment_detail: PaymentDetail | null;
     full_payment_detail: PaymentDetail | null;
@@ -170,6 +172,8 @@ type BookingIndexRowActionPayload = {
     can_reschedule?: boolean;
     can_reactivate?: boolean;
     can_reorder?: boolean;
+    can_edit?: boolean;
+    departure_has_passed?: boolean;
     proforma_invoice_available?: boolean;
     pending_action_request?: BookingResource['pending_action_request'];
 };

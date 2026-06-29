@@ -343,6 +343,25 @@ export function BookingIndexRowActions({
     const canReactivate =
         Boolean(activeBooking.can_reactivate) && !hasPendingActionRequest;
     const canReorder = Boolean(activeBooking.can_reorder);
+    const departureHasPassed = React.useMemo(() => {
+        if (activeBooking.departure_has_passed === true) {
+            return true;
+        }
+
+        if (activeBooking.departure_has_passed === false) {
+            return false;
+        }
+
+        if (!booking.departure_date) {
+            return false;
+        }
+
+        const departure = dayjs(booking.departure_date).startOf('day');
+        const today = dayjs().startOf('day');
+
+        return departure.isBefore(today);
+    }, [activeBooking.departure_has_passed, booking.departure_date]);
+    const canEdit = activeBooking.can_edit ?? !departureHasPassed;
     const canOpenCorrection =
         canCancel || canRefund || canReschedule || canReactivate;
     const activeCorrectionAction = isAgent ? correctionAction : actionDialog;
@@ -746,12 +765,14 @@ export function BookingIndexRowActions({
                         </>
                     )}
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem asChild>
-                        <Link href={editHref}>
-                            <EditIcon className="mr-2 h-4 w-4" />
-                            {editLabel}
-                        </Link>
-                    </DropdownMenuItem>
+                    {canEdit && (
+                        <DropdownMenuItem asChild>
+                            <Link href={editHref}>
+                                <EditIcon className="mr-2 h-4 w-4" />
+                                {editLabel}
+                            </Link>
+                        </DropdownMenuItem>
+                    )}
                     {isAgent &&
                         !loadingActionPayload &&
                         (canOpenCorrection || hasPendingActionRequest) && (
