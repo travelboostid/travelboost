@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Companies\Dashboard;
 
 use App\Actions\Booking\ExpireBookingReservationsAction;
 use App\Actions\Booking\SyncAvailabilityAction;
+use App\Enums\TourStatus;
 use App\Events\TourUpdated;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreTourRequest;
@@ -18,6 +19,7 @@ use App\Notifications\TourStatusChangedNotification;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Routing\Attributes\Controllers\Authorize;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -82,6 +84,10 @@ class TourController extends Controller
         DB::beginTransaction();
 
         try {
+            if (array_key_exists('status', $data)) {
+                $this->assertActiveTourHasSchedule($tour, (string) $data['status']);
+            }
+
             $tour = $company->tours()->create($data);
 
             DB::commit();
@@ -165,6 +171,10 @@ class TourController extends Controller
                 $payload['visa_category_id'] = $payload['visa_category_id'] ?: null;
             }
 
+            if (array_key_exists('status', $payload)) {
+                $this->assertActiveTourHasSchedule($tour, (string) $payload['status']);
+            }
+
             $tour->fill($payload);
             $tour->save();
 
@@ -184,6 +194,10 @@ class TourController extends Controller
         $data['visa_category_id'] = ($data['visa_category_id'] ?? null) ?: null;
         $data['image_id'] = $data['image_id'] ?: null;
         $data['document_id'] = $data['document_id'] ?: null;
+
+        if (array_key_exists('status', $data)) {
+            $this->assertActiveTourHasSchedule($tour, (string) $data['status']);
+        }
 
         DB::beginTransaction();
 
@@ -261,5 +275,20 @@ class TourController extends Controller
     private function syncTourAvailabilitySnapshots(Company $company, Tour $tour): void
     {
         app(SyncAvailabilityAction::class)->syncAllSchedulesForTour((int) $tour->id, (int) $company->id);
+    }
+
+    private function assertActiveTourHasSchedule(Tour $tour, string $nextStatus): void
+    {
+        if ($nextStatus !== TourStatus::ACTIVE->value) {
+            return;
+        }
+
+        if ($tour->schedules()->exists()) {
+            return;
+        }
+
+        throw ValidationException::withMessages([
+            'status' => 'Add at least one departure schedule before activating this tour.',
+        ]);
     }
 }

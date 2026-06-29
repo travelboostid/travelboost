@@ -217,8 +217,8 @@ test('online full payment is blocked for the losing booking when only one seat r
     createHeldBooking($customerA, $vendor, $tour, $schedule, $quote, 'BKG-RACE-FP-A');
     $loser = createHeldBooking($customerB, $vendor, $tour, $schedule, $quote, 'BKG-RACE-FP-B');
 
-    mockMidtransCoreApiCharge();
-    $paymentMethod = createMidtransBcaPaymentMethod();
+    mockPrismaLinkBookingCharge();
+    $paymentMethod = createPrismaLinkBcaPaymentMethod();
 
     $response = $this->actingAs($customerB)
         ->postJson("/bookings/{$loser->id}/online-payment", [
@@ -240,8 +240,8 @@ test('online down payment is blocked for the losing booking when only one seat r
     createHeldBooking($customerA, $vendor, $tour, $schedule, $quote, 'BKG-RACE-DP-A');
     $loser = createHeldBooking($customerB, $vendor, $tour, $schedule, $quote, 'BKG-RACE-DP-B');
 
-    mockMidtransCoreApiCharge();
-    $paymentMethod = createMidtransBcaPaymentMethod();
+    mockPrismaLinkBookingCharge();
+    $paymentMethod = createPrismaLinkBcaPaymentMethod();
     $downPaymentAmount = (float) ceil($quote['grand_total'] * 0.3);
 
     $response = $this->actingAs($customerB)
@@ -360,8 +360,8 @@ test('payment in progress hold is not expired while the customer completes check
 
     $booking = createHeldBooking($customerA, $vendor, $tour, $schedule, $quote, 'BKG-RACE-HOLD');
 
-    mockMidtransCoreApiCharge();
-    $paymentMethod = createMidtransBcaPaymentMethod();
+    mockPrismaLinkBookingCharge();
+    $paymentMethod = createPrismaLinkBcaPaymentMethod();
 
     $this->actingAs($customerA)
         ->postJson("/bookings/{$booking->id}/online-payment", [

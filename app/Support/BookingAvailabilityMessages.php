@@ -10,6 +10,8 @@ final class BookingAvailabilityMessages
 
     public const FINALIZATION = 'Payment could not be completed because seats for this departure are no longer available. If you were charged, please contact customer support for assistance.';
 
+    public const MISSING_SCHEDULE = 'This departure is no longer available because the tour schedule is missing. Please contact customer support.';
+
     public static function forReserve(int $freeSeats): string
     {
         return str_replace(':limit', (string) max(0, $freeSeats), self::RESERVE);
@@ -23,5 +25,10 @@ final class BookingAvailabilityMessages
     public static function forFinalization(): string
     {
         return self::FINALIZATION;
+    }
+
+    public static function missingSchedule(): string
+    {
+        return self::MISSING_SCHEDULE;
     }
 }
