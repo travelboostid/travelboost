@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Companies\Dashboard;
 
+use App\Actions\Booking\AssertBookingOnlinePaymentStartAllowedAction;
 use App\Actions\Booking\AssertScheduleSeatAvailabilityAction;
 use App\Actions\Booking\ExpireBookingReservationsAction;
 use App\Actions\Booking\FinalizeBookingPaymentAction;
@@ -688,7 +689,6 @@ class DashboardBookingController extends Controller
     public function storeOnlinePayment(Company $company, Booking $booking, Request $request): JsonResponse
     {
         $this->assertCompanyCanAccessBooking($company, $booking);
-        $booking = $this->ensureBookingNotExpired($booking);
 
         $validated = $request->validate([
             'payment_type' => ['required', 'string', 'in:down_payment,full_payment'],
@@ -698,34 +698,44 @@ class DashboardBookingController extends Controller
 
         $paymentMethod = $this->resolveEnabledBookingOnlinePaymentMethod((int) $validated['payment_method_id']);
 
-        $paymentWorkflow = app(BookingPaymentWorkflowService::class);
-        $agentVendorCustomerPayment = $paymentWorkflow->agentVendorCustomerPaymentForDashboardPayment($company, $booking);
+        return DB::transaction(function () use ($company, $request, $booking, $validated, $paymentMethod): JsonResponse {
+            $booking = Booking::query()
+                ->whereKey($booking->id)
+                ->lockForUpdate()
+                ->firstOrFail();
 
-        if ($agentVendorCustomerPayment) {
-            $paymentWorkflow->assertAgentVendorPaymentMatchesCustomerPayment(
-                $agentVendorCustomerPayment,
-                (float) $validated['amount'],
-                (string) $validated['payment_type']
+            $booking = $this->ensureBookingNotExpired($booking);
+
+            app(AssertBookingOnlinePaymentStartAllowedAction::class)->assert($booking);
+
+            $paymentWorkflow = app(BookingPaymentWorkflowService::class);
+            $agentVendorCustomerPayment = $paymentWorkflow->agentVendorCustomerPaymentForDashboardPayment($company, $booking);
+
+            if ($agentVendorCustomerPayment) {
+                $paymentWorkflow->assertAgentVendorPaymentMatchesCustomerPayment(
+                    $agentVendorCustomerPayment,
+                    (float) $validated['amount'],
+                    (string) $validated['payment_type']
+                );
+            } else {
+                $this->assertDashboardCanStartPayment($booking, (float) $validated['amount'], (string) $validated['payment_type']);
+            }
+
+            $paymentReceiver = app(BookingPaymentReceiverService::class)->resolveForBooking($booking);
+            $paymentWorkflowPayload = $agentVendorCustomerPayment
+                ? $paymentWorkflow->agentVendorPaymentPayload($booking, $agentVendorCustomerPayment, (string) $validated['payment_type'])
+                : $paymentWorkflow->initialPaymentPayload($paymentReceiver, (string) $validated['payment_type']);
+
+            return $this->storePrismaLinkOnlinePayment(
+                $company,
+                $request,
+                $booking,
+                $validated,
+                $agentVendorCustomerPayment !== null,
+                $paymentWorkflowPayload,
+                $paymentMethod,
             );
-        } else {
-            $this->assertDashboardCanStartPayment($booking, (float) $validated['amount'], (string) $validated['payment_type']);
-        }
-
-        $paymentWorkflow = app(BookingPaymentWorkflowService::class);
-        $paymentReceiver = app(BookingPaymentReceiverService::class)->resolveForBooking($booking);
-        $paymentWorkflowPayload = $agentVendorCustomerPayment
-            ? $paymentWorkflow->agentVendorPaymentPayload($booking, $agentVendorCustomerPayment, (string) $validated['payment_type'])
-            : $paymentWorkflow->initialPaymentPayload($paymentReceiver, (string) $validated['payment_type']);
-
-        return $this->storePrismaLinkOnlinePayment(
-            $company,
-            $request,
-            $booking,
-            $validated,
-            $agentVendorCustomerPayment !== null,
-            $paymentWorkflowPayload,
-            $paymentMethod,
-        );
+        });
     }
 
     private function markDashboardBookingOnlinePaymentInProgress(Booking $booking, bool $agentVendorCustomerPayment): void
@@ -738,6 +748,21 @@ class DashboardBookingController extends Controller
             'reserved_type' => 'payment_in_progress',
             'reserved_expires_at' => null,
         ]);
+    }
+
+    /**
+     * @template TReturn
+     *
+     * @param  callable(): TReturn  $callback
+     * @return TReturn
+     */
+    private function runPrismaLinkOnlinePaymentTransaction(callable $callback): mixed
+    {
+        if (DB::transactionLevel() > 0) {
+            return $callback();
+        }
+
+        return DB::transaction($callback);
     }
 
     private function markDashboardBookingManualPaymentInProgress(Booking $booking): void
@@ -763,7 +788,7 @@ class DashboardBookingController extends Controller
         array $paymentWorkflowPayload,
         PaymentMethod $paymentMethod,
     ): JsonResponse {
-        $payment = DB::transaction(function () use ($request, $booking, $validated, $isAgentVendorCustomerPayment, $paymentWorkflowPayload, $paymentMethod): Payment {
+        $payment = $this->runPrismaLinkOnlinePaymentTransaction(function () use ($request, $booking, $validated, $isAgentVendorCustomerPayment, $paymentWorkflowPayload, $paymentMethod): Payment {
             $payment = $booking->payments()->create([
                 'owner_type' => get_class($request->user()),
                 'owner_id' => $request->user()->id,
