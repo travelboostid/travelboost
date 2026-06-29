@@ -4,6 +4,7 @@ namespace Database\Seeders\Common;
 
 use App\Enums\PaymentMethodCategory;
 use App\Enums\PaymentMethodStatus;
+use App\Enums\PaymentMethodUsageScope;
 use App\Models\PaymentMethod;
 use Illuminate\Database\Seeder;
 
@@ -176,27 +177,47 @@ class PaymentMethodSeeder extends Seeder
     public function run(): void
     {
         foreach (self::METHODS as $method) {
-            foreach (['midtrans', 'prismalink'] as $provider) {
-                if (! isset($method[$provider])) {
-                    continue;
-                }
-
-                $config = $method[$provider];
+            if (isset($method['prismalink'])) {
+                $config = $method['prismalink'];
 
                 PaymentMethod::updateOrCreate(
                     [
-                        'provider' => $provider,
+                        'provider' => 'prismalink',
                         'method' => $method['method'],
                     ],
                     [
                         'name' => $config['name'],
                         'description' => $config['description'],
                         'category' => $method['category'],
+                        'usage_scope' => PaymentMethodUsageScope::Booking,
                         'meta' => $config['meta'] ?? null,
                         'status' => $config['status'] ?? PaymentMethodStatus::ENABLED,
                     ],
                 );
             }
+
+            // Midtrans methods are reserved for platform payments (wallet top-up, AI credits, subscriptions).
+            // Booking online payments use PrismaLink only — re-enable when platform Snap flow ships.
+            /*
+            if (isset($method['midtrans'])) {
+                $config = $method['midtrans'];
+
+                PaymentMethod::updateOrCreate(
+                    [
+                        'provider' => 'midtrans',
+                        'method' => $method['method'],
+                    ],
+                    [
+                        'name' => $config['name'],
+                        'description' => $config['description'],
+                        'category' => $method['category'],
+                        'usage_scope' => PaymentMethodUsageScope::Platform,
+                        'meta' => $config['meta'] ?? null,
+                        'status' => $config['status'] ?? PaymentMethodStatus::ENABLED,
+                    ],
+                );
+            }
+            */
         }
     }
 }

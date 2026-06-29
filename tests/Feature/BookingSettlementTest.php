@@ -474,8 +474,9 @@ test('customer manual full payment is blocked before proof is stored when vendor
 test('customer online full payment is blocked before core api payment is created when vendor wallet cannot settle commissions', function () {
     ['customer' => $customer, 'vendor' => $vendor, 'booking' => $booking, 'quote' => $quote] = createSettlementScenario(vendorBalance: 100_000);
 
-    mockMidtransCoreApiCharge();
-    $paymentMethod = createMidtransBcaPaymentMethod();
+    configurePrismaLinkForTests();
+    mockPrismaLinkBookingCharge();
+    $paymentMethod = createPrismaLinkBcaPaymentMethod();
 
     $booking->update([
         'status' => BookingStatus::BOOKING_RESERVED,
@@ -500,8 +501,9 @@ test('customer online down payment remains available when vendor wallet cannot s
     ['customer' => $customer, 'vendor' => $vendor, 'booking' => $booking, 'quote' => $quote] = createSettlementScenario(vendorBalance: 100_000);
     $downPaymentAmount = (float) ceil($quote['grand_total'] * 0.3);
 
-    mockMidtransCoreApiCharge();
-    $paymentMethod = createMidtransBcaPaymentMethod();
+    configurePrismaLinkForTests();
+    mockPrismaLinkBookingCharge();
+    $paymentMethod = createPrismaLinkBcaPaymentMethod();
 
     $booking->update([
         'status' => BookingStatus::BOOKING_RESERVED,
@@ -522,15 +524,18 @@ test('customer online down payment remains available when vendor wallet cannot s
         ->and((int) $vendor->wallet->fresh()->balance)->toBe(100_000);
 });
 
-test('customer online payment returns validation error when midtrans core api charge fails', function () {
+test('customer online payment returns validation error when prismalink charge fails', function () {
     ['customer' => $customer, 'booking' => $booking, 'quote' => $quote] = createSettlementScenario(vendorBalance: 100_000);
     $downPaymentAmount = (float) ceil($quote['grand_total'] * 0.3);
 
-    Mockery::mock('alias:Midtrans\CoreApi')
-        ->shouldReceive('charge')
-        ->once()
-        ->andThrow(new RuntimeException('CURL Error: Failed to connect to api.sandbox.midtrans.com'));
-    $paymentMethod = createMidtransBcaPaymentMethod();
+    configurePrismaLinkForTests();
+    Http::fake([
+        'api-staging.plink.co.id/*' => Http::response([
+            'response_code' => 'PL999',
+            'response_message' => 'Gateway unavailable',
+        ], 500),
+    ]);
+    $paymentMethod = createPrismaLinkBcaPaymentMethod();
 
     $booking->update([
         'status' => BookingStatus::BOOKING_RESERVED,
@@ -556,11 +561,14 @@ test('customer can submit manual payment after online provider is unavailable', 
     ['customer' => $customer, 'booking' => $booking, 'quote' => $quote] = createSettlementScenario(vendorBalance: 100_000);
     $downPaymentAmount = (float) ceil($quote['grand_total'] * 0.3);
 
-    Mockery::mock('alias:Midtrans\CoreApi')
-        ->shouldReceive('charge')
-        ->once()
-        ->andThrow(new RuntimeException('CURL Error: Failed to connect to api.sandbox.midtrans.com'));
-    $paymentMethod = createMidtransBcaPaymentMethod();
+    configurePrismaLinkForTests();
+    Http::fake([
+        'api-staging.plink.co.id/*' => Http::response([
+            'response_code' => 'PL999',
+            'response_message' => 'Gateway unavailable',
+        ], 500),
+    ]);
+    $paymentMethod = createPrismaLinkBcaPaymentMethod();
 
     $booking->update([
         'status' => BookingStatus::BOOKING_RESERVED,
@@ -639,8 +647,9 @@ test('customer balance payment is blocked when it would finalize full payment wi
         'payload' => ['payment_type' => 'down_payment'],
     ]);
 
-    mockMidtransCoreApiCharge();
-    $paymentMethod = createMidtransBcaPaymentMethod();
+    configurePrismaLinkForTests();
+    mockPrismaLinkBookingCharge();
+    $paymentMethod = createPrismaLinkBcaPaymentMethod();
 
     $response = $this->actingAs($customer)
         ->postJson("/bookings/{$booking->id}/online-payment", [

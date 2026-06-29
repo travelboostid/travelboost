@@ -39,7 +39,7 @@ import type { RoomConfig } from './Step2RoomConfiguration';
 // ─── Types ───────────────────────────────────────────────────────────────────────
 
 export type PaymentType = 'down_payment' | 'full_payment';
-export type PaymentMethod = 'manual_transfer' | 'midtrans';
+export type PaymentMethod = 'manual_transfer' | 'online';
 export type DownPaymentRule =
     | {
           mode: 'grand_total_percent';
@@ -711,7 +711,7 @@ export default function Step4BookingSummary({
 
         if (
             (method === 'manual_transfer' && !manualPaymentAvailable) ||
-            (method === 'midtrans' && !onlinePaymentAvailable)
+            (method === 'online' && !onlinePaymentAvailable)
         ) {
             return;
         }
@@ -803,9 +803,7 @@ export default function Step4BookingSummary({
                         <button
                             type="button"
                             className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors hover:bg-muted"
-                            onClick={() =>
-                                handlePaymentMethodSelect('midtrans')
-                            }
+                            onClick={() => handlePaymentMethodSelect('online')}
                         >
                             <CreditCardIcon className="size-5 text-blue-600" />
                             <div className="text-left">

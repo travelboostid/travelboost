@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Webapi;
 
 use App\Enums\PaymentMethodStatus;
+use App\Enums\PaymentMethodUsageScope;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\PaymentMethodResource;
 use App\Models\PaymentMethod;
@@ -20,6 +21,7 @@ class PaymentMethodController extends Controller
     {
         $validated = $request->validate([
             'status' => ['nullable', Rule::enum(PaymentMethodStatus::class)],
+            'usage_scope' => ['nullable', Rule::enum(PaymentMethodUsageScope::class)],
         ]);
 
         $paymentMethods = PaymentMethod::query()
@@ -27,6 +29,10 @@ class PaymentMethodController extends Controller
                 isset($validated['status']),
                 fn ($query) => $query->where('status', $validated['status']),
                 fn ($query) => $query->enabled(),
+            )
+            ->when(
+                isset($validated['usage_scope']),
+                fn ($query) => $query->forUsageScope(PaymentMethodUsageScope::from($validated['usage_scope'])),
             )
             ->orderBy('name')
             ->get();

@@ -9,6 +9,7 @@ use App\Actions\Booking\ReconcileBookingPaymentAfterRepriceAction;
 use App\Actions\Booking\SyncAvailabilityAction;
 use App\Enums\BookingStatus;
 use App\Enums\PaymentMethodStatus;
+use App\Enums\PaymentMethodUsageScope;
 use App\Enums\PaymentStatus;
 use App\Enums\TourWaitingListScheduleStatus;
 use App\Http\Requests\StoreBookingRequest;
@@ -38,7 +39,6 @@ use App\Services\MidtransService;
 use App\Services\PaymentGatewayStatusSyncService;
 use App\Services\PrismaLinkException;
 use App\Services\PrismaLinkService;
-use App\Services\ReusableMidtransBookingPaymentAttemptService;
 use App\Support\BookingReschedulePayment;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -825,7 +825,7 @@ class BookingController extends Controller
             'payment_method_id' => ['required', 'exists:payment_methods,id'],
         ]);
 
-        $paymentMethod = $this->resolveEnabledOnlinePaymentMethod((int) $validated['payment_method_id']);
+        $paymentMethod = $this->resolveEnabledBookingOnlinePaymentMethod((int) $validated['payment_method_id']);
 
         $this->assertCustomerCanStartPayment(
             $booking,
@@ -837,99 +837,13 @@ class BookingController extends Controller
         $paymentWorkflowPayload = app(BookingPaymentWorkflowService::class)
             ->initialPaymentPayload($paymentReceiver, (string) $validated['payment_type']);
 
-        if ($paymentMethod->provider === 'prismalink') {
-            return $this->storePrismaLinkOnlinePayment(
-                $request,
-                $booking,
-                $validated,
-                $paymentWorkflowPayload,
-                $paymentMethod,
-            );
-        }
-
-        $reusableAttemptService = app(ReusableMidtransBookingPaymentAttemptService::class);
-        $reusablePayment = $reusableAttemptService->findReusableAttempt(
+        return $this->storePrismaLinkOnlinePayment(
+            $request,
             $booking,
-            get_class($request->user()),
-            $request->user()->id,
-            (string) $validated['payment_type'],
-            (float) $validated['amount'],
+            $validated,
             $paymentWorkflowPayload,
+            $paymentMethod,
         );
-
-        if ($reusablePayment) {
-            $booking->update([
-                'status' => $this->pendingOnlinePaymentBookingStatus($booking),
-                'payment_mode' => 'online',
-            ]);
-
-            return response()->json([
-                'payment' => $this->onlinePaymentResponsePayload($reusablePayment->fresh(), true),
-                'bookingPaymentResult' => $this->buildBookingPaymentResult($booking->fresh(), $reusablePayment->fresh()),
-            ]);
-        }
-
-        $payment = DB::transaction(function () use ($request, $booking, $validated, $paymentWorkflowPayload, $reusableAttemptService, $paymentMethod) {
-            $payment = $booking->payments()->create([
-                'owner_type' => get_class($request->user()),
-                'owner_id' => $request->user()->id,
-                'provider' => 'midtrans',
-                'payment_method' => $paymentMethod->method,
-                'amount' => $validated['amount'],
-                'status' => 'unpaid',
-                'payload' => $paymentWorkflowPayload,
-            ]);
-
-            $chargeExpiresAt = $reusableAttemptService->newChargeExpiresAt();
-
-            try {
-                $chargePayload = $this->midtransService->charge(
-                    $payment,
-                    $paymentMethod,
-                    $request->user(),
-                    url('/mybookings'),
-                );
-            } catch (Throwable $exception) {
-                Log::warning('Midtrans Core API charge failed', [
-                    'booking_id' => $booking->id,
-                    'payment_id' => $payment->id,
-                    'payment_type' => $validated['payment_type'],
-                    'payment_method' => $paymentMethod->method,
-                    'amount' => (float) $payment->amount,
-                    'midtrans_environment' => $this->midtransEnvironment(),
-                    'message' => $exception->getMessage(),
-                ]);
-
-                throw ValidationException::withMessages([
-                    'payment' => self::ONLINE_PAYMENT_UNAVAILABLE_MESSAGE,
-                ]);
-            }
-
-            $payment->update([
-                'status' => 'pending',
-                'payload' => [
-                    ...$paymentWorkflowPayload,
-                    ...$chargePayload,
-                    'charge_expires_at' => $chargeExpiresAt->toISOString(),
-                ],
-                'expired_at' => $chargeExpiresAt,
-            ]);
-
-            $booking->update([
-                'status' => $this->pendingOnlinePaymentBookingStatus($booking),
-                'payment_mode' => 'online',
-            ]);
-
-            return $payment;
-        });
-
-        app(SyncAvailabilityAction::class)->executeForBooking($booking->fresh());
-        app(NotifyBookingPaymentEventAction::class)->execute($booking->fresh(), 'online_payment_pending', $payment->fresh());
-
-        return response()->json([
-            'payment' => $this->onlinePaymentResponsePayload($payment->fresh(), false),
-            'bookingPaymentResult' => $this->buildBookingPaymentResult($booking->fresh(), $payment->fresh()),
-        ]);
     }
 
     /**
@@ -1059,14 +973,15 @@ class BookingController extends Controller
         ]);
     }
 
-    private function resolveEnabledOnlinePaymentMethod(int $paymentMethodId): PaymentMethod
+    private function resolveEnabledBookingOnlinePaymentMethod(int $paymentMethodId): PaymentMethod
     {
         $paymentMethod = PaymentMethod::query()->find($paymentMethodId);
 
         if (
             ! $paymentMethod instanceof PaymentMethod
             || $paymentMethod->status !== PaymentMethodStatus::ENABLED
-            || ! in_array($paymentMethod->provider, ['midtrans', 'prismalink'], true)
+            || $paymentMethod->provider !== 'prismalink'
+            || $paymentMethod->usage_scope !== PaymentMethodUsageScope::Booking
         ) {
             throw ValidationException::withMessages([
                 'payment_method_id' => 'Selected payment method is not available.',
