@@ -42,6 +42,7 @@ use App\Services\MidtransService;
 use App\Services\PaymentGatewayStatusSyncService;
 use App\Services\PrismaLinkException;
 use App\Services\PrismaLinkService;
+use App\Services\ReusablePrismaLinkBookingPaymentAttemptService;
 use App\Support\BookingReschedulePayment;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -848,6 +849,10 @@ class BookingController extends Controller
             $paymentWorkflowPayload = app(BookingPaymentWorkflowService::class)
                 ->initialPaymentPayload($paymentReceiver, (string) $validated['payment_type']);
 
+            if ($reusableResponse = $this->reusablePrismaLinkOnlinePaymentResponse($request, $booking, $validated, $paymentWorkflowPayload)) {
+                return $reusableResponse;
+            }
+
             return $this->storePrismaLinkOnlinePayment(
                 $request,
                 $booking,
@@ -856,6 +861,37 @@ class BookingController extends Controller
                 $paymentMethod,
             );
         });
+    }
+
+    /**
+     * @param  array<string, mixed>  $validated
+     * @param  array<string, mixed>  $paymentWorkflowPayload
+     */
+    private function reusablePrismaLinkOnlinePaymentResponse(
+        Request $request,
+        Booking $booking,
+        array $validated,
+        array $paymentWorkflowPayload,
+    ): ?JsonResponse {
+        $reusablePayment = app(ReusablePrismaLinkBookingPaymentAttemptService::class)->findReusableAttempt(
+            $booking,
+            get_class($request->user()),
+            (int) $request->user()->id,
+            (string) $validated['payment_type'],
+            (float) $validated['amount'],
+            $paymentWorkflowPayload,
+        );
+
+        if (! $reusablePayment) {
+            return null;
+        }
+
+        $this->markBookingOnlinePaymentInProgress($booking);
+
+        return response()->json([
+            'payment' => $this->onlinePaymentResponsePayload($reusablePayment->fresh(), true),
+            'bookingPaymentResult' => $this->buildBookingPaymentResult($booking->fresh(), $reusablePayment->fresh()),
+        ]);
     }
 
     /**
@@ -1224,6 +1260,9 @@ class BookingController extends Controller
                 },
                 $freshPayment
             );
+        } else {
+            app(BookingContactPaymentEmailService::class)
+                ->sendOnlinePaymentConfirmedIfEligible($booking->fresh(), $freshPayment);
         }
 
         return response()->json([

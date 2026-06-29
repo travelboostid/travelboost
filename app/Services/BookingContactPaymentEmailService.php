@@ -49,7 +49,7 @@ class BookingContactPaymentEmailService
         return filled($booking->contact_email)
             && $this->bookingStatus($booking) === BookingStatus::FULL_PAYMENT
             && $this->paymentStatus($payment) === PaymentStatus::PAID
-            && $payment->provider === 'midtrans'
+            && in_array($payment->provider, ['midtrans', 'prismalink'], true)
             && $payment->bookingPaymentType() === Payment::BOOKING_PAYMENT_TYPE_FULL_PAYMENT
             && ! filled(data_get($payment->payload, self::ONLINE_CONFIRMATION_ATTEMPTED_AT));
     }

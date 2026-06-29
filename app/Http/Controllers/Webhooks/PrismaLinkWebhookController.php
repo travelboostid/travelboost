@@ -3,10 +3,12 @@
 namespace App\Http\Controllers\Webhooks;
 
 use App\Actions\Booking\FinalizeBookingPaymentAction;
+use App\Actions\Booking\NotifyBookingPaymentEventAction;
 use App\Enums\PaymentStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Booking;
 use App\Models\Payment;
+use App\Services\BookingContactPaymentEmailService;
 use App\Services\BookingPaymentWorkflowService;
 use App\Services\OnlinePaymentSettlementService;
 use App\Services\PrismaLinkService;
@@ -48,7 +50,9 @@ class PrismaLinkWebhookController extends Controller
         }
 
         if ($this->isAlreadyProcessed($payment)) {
+            $this->reconcileAlreadyProcessedBookingPayment($payment);
             $this->settlementService->settle($payment);
+            $this->sendBookingContactOnlinePaymentConfirmation($payment);
 
             return response()->json(['ack' => true, 'message' => 'Payment already processed']);
         }
@@ -81,8 +85,12 @@ class PrismaLinkWebhookController extends Controller
 
             if ($newStatus === PaymentStatus::PAID) {
                 $this->settlementService->settle($payment->fresh());
+            } elseif ($payment->payable_type === Booking::class) {
+                $this->notifyBookingPaymentEvent($payment->fresh(), $newStatus);
             }
         });
+
+        $this->sendBookingContactOnlinePaymentConfirmation($payment->fresh());
 
         return response()->json(['ack' => true]);
     }
@@ -112,5 +120,60 @@ class PrismaLinkWebhookController extends Controller
     private function isAlreadyProcessed(Payment $payment): bool
     {
         return $payment->status === PaymentStatus::PAID;
+    }
+
+    private function reconcileAlreadyProcessedBookingPayment(Payment $payment): void
+    {
+        if ($payment->payable_type !== Booking::class) {
+            return;
+        }
+
+        $payment->load('payable');
+
+        if (! $payment->payable instanceof Booking) {
+            return;
+        }
+
+        app(FinalizeBookingPaymentAction::class)->reconcilePaidStatusIfStale(
+            $payment->payable->fresh(),
+            $payment->fresh()
+        );
+    }
+
+    private function sendBookingContactOnlinePaymentConfirmation(Payment $payment): void
+    {
+        $payment = $payment->fresh();
+
+        if (! $payment || $payment->payable_type !== Booking::class) {
+            return;
+        }
+
+        $payment->load('payable');
+
+        if (! $payment->payable instanceof Booking) {
+            return;
+        }
+
+        app(BookingContactPaymentEmailService::class)
+            ->sendOnlinePaymentConfirmedIfEligible($payment->payable->fresh(), $payment);
+    }
+
+    private function notifyBookingPaymentEvent(Payment $payment, PaymentStatus $status): void
+    {
+        $payment->load('payable');
+
+        if (! $payment->payable instanceof Booking) {
+            return;
+        }
+
+        app(NotifyBookingPaymentEventAction::class)->execute(
+            $payment->payable->fresh(),
+            match ($status) {
+                PaymentStatus::PAID => 'online_payment_confirmed',
+                PaymentStatus::FAILED => 'online_payment_failed',
+                default => 'online_payment_pending',
+            },
+            $payment->fresh()
+        );
     }
 }
