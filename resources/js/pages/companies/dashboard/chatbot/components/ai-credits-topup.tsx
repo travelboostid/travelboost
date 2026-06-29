@@ -329,6 +329,7 @@ export function AiCreditsTopupDialog({ children }: AiCreditsTopupDialogProps) {
             <PaymentMethodDialog
                 open={methodDialogOpen}
                 onOpenChange={setMethodDialogOpen}
+                usageScope="platform"
                 title="Top up AI credits"
                 confirmLabel="Pay now"
                 description={

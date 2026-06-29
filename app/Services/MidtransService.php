@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Enums\PaymentMethodStatus;
+use App\Enums\PaymentMethodUsageScope;
 use App\Models\Payment;
 use App\Models\PaymentMethod;
 use App\Models\User;
@@ -11,6 +12,7 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 use Midtrans\CoreApi;
+use Midtrans\Snap;
 use RuntimeException;
 use Throwable;
 
@@ -35,6 +37,107 @@ class MidtransService
         }
 
         return $paymentMethod;
+    }
+
+    public function resolveEnabledPlatformPaymentMethod(int $paymentMethodId): PaymentMethod
+    {
+        $paymentMethod = $this->resolveEnabledPaymentMethod($paymentMethodId);
+
+        if ($paymentMethod->usage_scope !== PaymentMethodUsageScope::Platform) {
+            throw ValidationException::withMessages([
+                'payment_method_id' => 'Selected payment method is not available for platform payments.',
+            ]);
+        }
+
+        return $paymentMethod;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function createSnapToken(
+        Payment $payment,
+        PaymentMethod $paymentMethod,
+        User $user,
+        ?string $finishUrl = null,
+    ): array {
+        $orderId = $payment->id.'-'.uniqid();
+        $params = $this->buildSnapParams(
+            $orderId,
+            (int) $payment->amount,
+            $paymentMethod,
+            $user,
+            $finishUrl,
+        );
+
+        try {
+            $snapToken = Snap::getSnapToken($params);
+        } catch (Throwable $exception) {
+            throw MidtransException::fromThrowable($exception);
+        }
+
+        return [
+            'order_id' => $orderId,
+            'snap_token' => $snapToken,
+            'instruction_type' => 'snap',
+            'transaction_status' => 'pending',
+            'snap_token_expires_at' => $this->newChargeExpiresAt()->toISOString(),
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function buildSnapParams(
+        string $orderId,
+        int $amount,
+        PaymentMethod $paymentMethod,
+        User $user,
+        ?string $finishUrl = null,
+    ): array {
+        $params = [
+            'transaction_details' => [
+                'order_id' => $orderId,
+                'gross_amount' => $amount,
+            ],
+            'customer_details' => [
+                'first_name' => $user->name,
+                'email' => $user->email,
+            ],
+            'expiry' => $this->chargeExpiryPayload(),
+            'enabled_payments' => $this->snapEnabledPayments($paymentMethod),
+        ];
+
+        if (filled($finishUrl)) {
+            $params['callbacks'] = [
+                'finish' => $finishUrl,
+            ];
+        }
+
+        return $params;
+    }
+
+    /**
+     * @return list<string>
+     */
+    public function snapEnabledPayments(PaymentMethod $paymentMethod): array
+    {
+        return match ($paymentMethod->method) {
+            'bca_va' => ['bca_va'],
+            'bni_va' => ['bni_va'],
+            'bri_va' => ['bri_va'],
+            'permata_va' => ['permata_va'],
+            'cimb_va' => ['cimb_va'],
+            'mandiri_va' => ['echannel'],
+            'danamon_va' => ['danamon_online'],
+            'cstore' => match ((string) data_get($paymentMethod->meta, 'store', 'alfamart')) {
+                'indomaret' => ['indomaret'],
+                default => ['alfamart'],
+            },
+            'qris' => ['gopay', 'shopeepay', 'qris'],
+            'credit-card' => ['credit_card'],
+            default => [$paymentMethod->method],
+        };
     }
 
     /**

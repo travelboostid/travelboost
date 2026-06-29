@@ -136,3 +136,13 @@ function mockMidtransCoreApiCharge(array $overrides = []): void
             ],
         ], $overrides));
 }
+
+/**
+ * @param  array<string, mixed>  $overrides
+ */
+function mockMidtransSnapGetToken(string $token = 'platform-snap-token', array $overrides = []): void
+{
+    Mockery::mock('alias:Midtrans\Snap')
+        ->shouldReceive('getSnapToken')
+        ->andReturn($token);
+}

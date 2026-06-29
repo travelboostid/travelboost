@@ -18,6 +18,8 @@ export type PaymentInstructionPayload = {
     payment_page_url?: string | null;
     transaction_status?: string | null;
     charge_expires_at?: string | null;
+    snap_token?: string | null;
+    snap_token_expires_at?: string | null;
 };
 
 export type PaymentInstructionKind =
@@ -26,6 +28,7 @@ export type PaymentInstructionKind =
     | 'qris'
     | 'cstore'
     | 'redirect'
+    | 'snap'
     | 'external_page'
     | 'unknown';
 
@@ -38,6 +41,10 @@ export function paymentInstructionPayload(
 export function hasMidtransPaymentInstructions(
     payload: PaymentInstructionPayload,
 ): boolean {
+    if (typeof payload.snap_token === 'string' && payload.snap_token !== '') {
+        return true;
+    }
+
     if (payload.instruction_type) {
         return payload.instruction_type !== 'unknown';
     }
@@ -179,6 +186,8 @@ export function resolveInstructionKind(
             return 'cstore';
         case 'redirect':
             return 'redirect';
+        case 'snap':
+            return 'snap';
         default:
             return 'unknown';
     }
@@ -191,6 +200,7 @@ export function instructionKindLabel(kind: PaymentInstructionKind): string {
         qris: 'QRIS',
         cstore: 'Convenience Store',
         redirect: 'Card Payment',
+        snap: 'Midtrans Snap',
         external_page: 'Online Payment',
         unknown: 'Online Payment',
     }[kind];
@@ -227,6 +237,11 @@ export function instructionSteps(kind: PaymentInstructionKind): string[] {
             return [
                 'Continue to the secure payment page.',
                 'Enter your card details and complete 3D Secure if asked.',
+            ];
+        case 'snap':
+            return [
+                'Complete payment in the Midtrans popup.',
+                'Choose your preferred channel and confirm the amount.',
             ];
         case 'external_page':
             return [

@@ -340,6 +340,7 @@ export function TopupDialog({ children }: TopupDialogProps) {
             <PaymentMethodDialog
                 open={methodDialogOpen}
                 onOpenChange={setMethodDialogOpen}
+                usageScope="platform"
                 title="Top up wallet"
                 confirmLabel="Pay now"
                 description={

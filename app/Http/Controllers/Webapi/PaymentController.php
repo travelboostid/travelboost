@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Webapi;
 
 use App\Enums\PaymentMethodStatus;
+use App\Enums\PaymentMethodUsageScope;
 use App\Enums\PaymentStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\PaymentIndexRequest;
@@ -28,6 +29,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Throwable;
 
 class PaymentController extends Controller
@@ -140,13 +142,7 @@ class PaymentController extends Controller
         ]);
 
         $user = Auth::user();
-        $paymentMethod = PaymentMethod::query()->findOrFail($validated['payment_method_id']);
-
-        if ($paymentMethod->status !== PaymentMethodStatus::ENABLED) {
-            return response()->json([
-                'message' => 'Selected payment method is not available.',
-            ], 422);
-        }
+        $paymentMethod = $this->resolvePlatformPaymentMethod((int) $validated['payment_method_id']);
 
         $owner = $validated['owner_type'] === 'company'
             ? Company::query()->findOrFail($validated['owner_id'])
@@ -263,13 +259,7 @@ class PaymentController extends Controller
             'payment_method_id' => ['required', 'exists:payment_methods,id'],
         ]);
         $user = Auth::user();
-        $paymentMethod = PaymentMethod::query()->findOrFail($validated['payment_method_id']);
-
-        if ($paymentMethod->status !== PaymentMethodStatus::ENABLED) {
-            return response()->json([
-                'message' => 'Selected payment method is not available.',
-            ], 422);
-        }
+        $paymentMethod = $this->resolvePlatformPaymentMethod((int) $validated['payment_method_id']);
 
         $package = AgentSubscriptionPackage::findOrFail($validated['package_id']);
 
@@ -375,13 +365,7 @@ class PaymentController extends Controller
         ]);
 
         $user = Auth::user();
-        $paymentMethod = PaymentMethod::query()->findOrFail($validated['payment_method_id']);
-
-        if ($paymentMethod->status !== PaymentMethodStatus::ENABLED) {
-            return response()->json([
-                'message' => 'Selected payment method is not available.',
-            ], 422);
-        }
+        $paymentMethod = $this->resolvePlatformPaymentMethod((int) $validated['payment_method_id']);
 
         $payment = DB::transaction(function () use ($validated, $paymentMethod): Payment {
             $topup = AiCreditTopupPayment::create([
@@ -510,7 +494,7 @@ class PaymentController extends Controller
             throw new \RuntimeException('Midtrans payment method is required.');
         }
 
-        $chargePayload = $this->midtransService->charge(
+        $chargePayload = $this->midtransService->createSnapToken(
             $payment,
             $selectedPaymentMethod,
             $user,
@@ -738,5 +722,30 @@ class PaymentController extends Controller
             )
             ->latest()
             ->first();
+    }
+
+    private function resolvePlatformPaymentMethod(int $paymentMethodId): PaymentMethod
+    {
+        $paymentMethod = PaymentMethod::query()->find($paymentMethodId);
+
+        if (! $paymentMethod instanceof PaymentMethod) {
+            throw ValidationException::withMessages([
+                'payment_method_id' => 'Selected payment method is not available.',
+            ]);
+        }
+
+        if ($paymentMethod->status !== PaymentMethodStatus::ENABLED) {
+            throw ValidationException::withMessages([
+                'payment_method_id' => 'Selected payment method is not available.',
+            ]);
+        }
+
+        if ($paymentMethod->usage_scope !== PaymentMethodUsageScope::Platform) {
+            throw ValidationException::withMessages([
+                'payment_method_id' => 'Selected payment method is not available for platform payments.',
+            ]);
+        }
+
+        return $paymentMethod;
     }
 }
