@@ -239,73 +239,27 @@ test('agent accepts customer manual payment proof without finalizing agent colle
         ->and($booking->fresh()->status)->toBe(BookingStatus::WAITING_PAYMENT_APPROVAL);
 });
 
-test('customer online payment to agent stays waiting approval after gateway confirmation', function () {
-    $customer = User::factory()->create();
-    $vendor = Company::factory()->create([
-        'username' => 'onlineagentvendor',
-        'type' => 'vendor',
-    ]);
-    $vendor->companySetting()->updateOrCreate([], [
-        'minimum_down_payment' => 30,
-    ]);
-    $agent = Company::factory()->create([
-        'username' => 'onlineagent',
-        'type' => 'agent',
-    ]);
-    VendorAgentPartner::create([
-        'vendor_id' => $vendor->id,
-        'agent_id' => $agent->id,
-        'status' => VendorAgentPartnerStatus::ACTIVE,
-        'accepted_at' => now(),
-        'payment_mode' => 'agent',
-    ]);
-
-    $tour = Tour::factory()->create(['company_id' => $vendor->id]);
-    $booking = createScheduledBooking($vendor, $tour, [
-        'user_id' => $customer->id,
-        'agent_id' => $agent->id,
-        'status' => BookingStatus::BOOKING_RESERVED,
-        'payment_mode' => 'online',
-        'grand_total' => 1_000_000,
-    ]);
-
-    mockMidtransCoreApiCharge();
-    $paymentMethod = createMidtransBcaPaymentMethod();
-
-    $this->actingAs($customer)
-        ->postJson("/bookings/{$booking->id}/online-payment", [
-            'payment_type' => 'down_payment',
-            'amount' => 300_000,
-            'payment_method_id' => $paymentMethod->id,
-        ])
-        ->assertOk()
-        ->assertJsonPath('payment.payload.payment_flow_stage', 'customer_to_agent');
-
-    $payment = $booking->fresh()->payments()->latest()->first();
-
-    Mockery::mock('alias:Midtrans\Transaction')
-        ->shouldReceive('status')
-        ->once()
-        ->andReturn((object) [
-            'order_id' => data_get($payment->payload, 'order_id'),
-            'transaction_status' => 'settlement',
-        ]);
-
-    $this->actingAs($customer)
-        ->postJson("/bookings/{$booking->id}/online-payment/{$payment->id}/confirm")
-        ->assertOk()
-        ->assertJsonPath('booking.status', BookingStatus::WAITING_PAYMENT_APPROVAL->value)
-        ->assertJsonPath('payment.status', PaymentStatus::PAID->value);
-
-    $payment->refresh();
-
-    expect(data_get($payment->payload, 'payment_flow_stage'))->toBe('customer_to_agent')
-        ->and(data_get($payment->payload, 'agent_review_status'))->toBe('approved')
-        ->and(data_get($payment->payload, 'counts_toward_booking_total'))->toBeFalse()
-        ->and($booking->fresh()->status)->toBe(BookingStatus::WAITING_PAYMENT_APPROVAL);
-})->skip('Legacy Midtrans booking flows; PrismaLink parity in follow-up PR');
-
 test('agent online payment to vendor remains waiting approval until vendor approves', function () {
+    configurePrismaLinkForTests();
+
+    Http::fake([
+        'api-staging.plink.co.id/*' => Http::sequence()
+            ->push([
+                'response_code' => 'PL000',
+                'plink_ref_no' => 'PLINK-AGENT-VENDOR-1',
+                'transaction_status' => 'PNDNG',
+                'validity' => now()->addDay()->toDateTimeString(),
+                'va_number_list' => json_encode([
+                    ['bank' => 'BCA', 'va' => '80777100123456'],
+                ]),
+            ])
+            ->push([
+                'response_code' => 'PL000',
+                'payment_status' => 'SETLD',
+                'transaction_status' => 'SETLD',
+            ]),
+    ]);
+
     $agentUser = User::factory()->create();
     $vendor = Company::factory()->create([
         'username' => 'agentonlinevendor',
@@ -360,8 +314,7 @@ test('agent online payment to vendor remains waiting approval until vendor appro
         ],
     ]);
 
-    mockMidtransCoreApiCharge();
-    $paymentMethod = createMidtransBcaPaymentMethod();
+    $paymentMethod = createPrismaLinkBcaPaymentMethod();
 
     $this->actingAs($agentUser)
         ->postJson("/companies/{$agent->username}/dashboard/bookings/{$booking->id}/online-payment", [
@@ -377,14 +330,6 @@ test('agent online payment to vendor remains waiting approval until vendor appro
     $agentVendorPayment = $booking->fresh()->payments
         ->first(fn ($payment): bool => data_get($payment->payload, 'payment_flow_stage') === 'agent_to_vendor');
 
-    Mockery::mock('alias:Midtrans\Transaction')
-        ->shouldReceive('status')
-        ->once()
-        ->andReturn((object) [
-            'order_id' => data_get($agentVendorPayment->payload, 'order_id'),
-            'transaction_status' => 'settlement',
-        ]);
-
     $this->actingAs($agentUser)
         ->postJson("/companies/{$agent->username}/dashboard/bookings/{$booking->id}/online-payment/{$agentVendorPayment->id}/confirm")
         ->assertOk()
@@ -397,9 +342,11 @@ test('agent online payment to vendor remains waiting approval until vendor appro
         ->and(data_get($agentVendorPayment->payload, 'payment_flow_stage'))->toBe('agent_to_vendor')
         ->and(data_get($agentVendorPayment->payload, 'vendor_review_status'))->toBe('pending')
         ->and(data_get($agentVendorPayment->payload, 'counts_toward_booking_total'))->toBeFalse();
-})->skip('Legacy Midtrans booking flows; PrismaLink parity in follow-up PR');
+});
 
-test('agent online payment to vendor reuses active snap attempt', function () {
+test('agent online payment to vendor reuses active prismalink attempt', function () {
+    configurePrismaLinkForTests();
+
     $agentUser = User::factory()->create();
     $vendor = Company::factory()->create([
         'username' => 'agentreusevendor',
@@ -434,8 +381,8 @@ test('agent online payment to vendor reuses active snap attempt', function () {
     $customerPayment = $booking->payments()->create([
         'owner_type' => User::class,
         'owner_id' => $booking->user_id,
-        'provider' => 'midtrans',
-        'payment_method' => 'snap',
+        'provider' => 'prismalink',
+        'payment_method' => 'bca_va',
         'amount' => 500_000,
         'status' => PaymentStatus::PAID,
         'paid_at' => now()->subMinute(),
@@ -448,15 +395,15 @@ test('agent online payment to vendor reuses active snap attempt', function () {
             'partnership_payment_mode' => 'agent',
             'agent_review_status' => 'approved',
             'counts_toward_booking_total' => false,
-            'order_id' => 'customer-agent-order',
-            'snap_token' => 'customer-agent-token',
+            'merchant_ref_no' => 'PL0000000999customeragent',
+            'plink_ref_no' => 'PLINK-CUSTOMER-AGENT',
         ],
     ]);
     $agentVendorPayment = $booking->payments()->create([
         'owner_type' => User::class,
         'owner_id' => $agentUser->id,
-        'provider' => 'midtrans',
-        'payment_method' => 'snap',
+        'provider' => 'prismalink',
+        'payment_method' => 'bca_va',
         'amount' => 500_000,
         'status' => PaymentStatus::PENDING,
         'payload' => [
@@ -469,7 +416,8 @@ test('agent online payment to vendor reuses active snap attempt', function () {
             'partnership_payment_mode' => 'agent',
             'vendor_review_status' => 'pending',
             'counts_toward_booking_total' => false,
-            'order_id' => 'agent-vendor-order',
+            'merchant_ref_no' => 'PL0000000999agentvendor',
+            'plink_ref_no' => 'PLINK-AGENT-VENDOR',
             'instruction_type' => 'va',
             'va_number' => '80777100888888',
             'charge_expires_at' => now()->addMinutes(30)->toISOString(),
@@ -477,10 +425,8 @@ test('agent online payment to vendor reuses active snap attempt', function () {
         'expired_at' => now()->addMinutes(30),
     ]);
 
-    Mockery::mock('alias:Midtrans\CoreApi')
-        ->shouldReceive('charge')
-        ->never();
-    $paymentMethod = createMidtransBcaPaymentMethod();
+    Http::fake();
+    $paymentMethod = createPrismaLinkBcaPaymentMethod();
 
     $this->actingAs($agentUser)
         ->postJson("/companies/{$agent->username}/dashboard/bookings/{$booking->id}/online-payment", [
@@ -491,14 +437,14 @@ test('agent online payment to vendor reuses active snap attempt', function () {
         ->assertOk()
         ->assertJsonPath('payment.id', $agentVendorPayment->id)
         ->assertJsonPath('payment.reused', true)
-        ->assertJsonPath('payment.payload.order_id', 'agent-vendor-order')
+        ->assertJsonPath('payment.payload.merchant_ref_no', 'PL0000000999agentvendor')
         ->assertJsonPath('payment.payload.va_number', '80777100888888');
 
     expect($booking->fresh()->payments()
-        ->where('provider', 'midtrans')
+        ->where('provider', 'prismalink')
         ->where('status', PaymentStatus::PENDING)
         ->count())->toBe(1);
-})->skip('Legacy Midtrans booking flows; PrismaLink parity in follow-up PR');
+});
 
 test('manual payment proof requires payment type', function () {
     Storage::fake('public');
@@ -719,63 +665,10 @@ test('customer can create an online booking payment with prismalink', function (
     expect($booking->fresh()->payment_mode)->toBe('online');
 });
 
-test('customer reuses active online booking payment attempt while hold is active', function () {
-    $user = User::factory()->create();
-    $vendor = Company::factory()->create(['type' => 'vendor']);
-    $vendor->companySetting()->updateOrCreate([], [
-        'minimum_down_payment' => 30,
-    ]);
-    $tour = Tour::factory()->create(['company_id' => $vendor->id]);
-    $booking = createScheduledBooking($vendor, $tour, [
-        'user_id' => $user->id,
-        'status' => BookingStatus::BOOKING_RESERVED,
-        'reserved_type' => 'system',
-        'reserved_expires_at' => now()->addMinutes(5),
-        'grand_total' => 1_000_000,
-    ]);
+test('customer creates new online booking payment when previous prismalink attempt is expired', function () {
+    configurePrismaLinkForTests();
+    mockPrismaLinkBookingCharge();
 
-    $payment = $booking->payments()->create([
-        'owner_type' => User::class,
-        'owner_id' => $user->id,
-        'provider' => 'midtrans',
-        'payment_method' => 'bca_va',
-        'amount' => 300_000,
-        'status' => 'pending',
-        'payload' => [
-            'booking_payment_type' => 'down_payment',
-            'payment_type' => 'down_payment',
-            'order_id' => 'old-booking-order',
-            'instruction_type' => 'va',
-            'va_number' => '80777100123456',
-            'charge_expires_at' => now()->addMinutes(30)->toISOString(),
-        ],
-        'expired_at' => now()->addMinutes(30),
-    ]);
-
-    Mockery::mock('alias:Midtrans\CoreApi')
-        ->shouldReceive('charge')
-        ->never();
-    $paymentMethod = createMidtransBcaPaymentMethod();
-
-    $response = $this->actingAs($user)->postJson("/bookings/{$booking->id}/online-payment", [
-        'payment_type' => 'down_payment',
-        'amount' => 300_000,
-        'payment_method_id' => $paymentMethod->id,
-    ]);
-
-    $response->assertOk()
-        ->assertJsonPath('payment.id', $payment->id)
-        ->assertJsonPath('payment.reused', true)
-        ->assertJsonPath('payment.payload.order_id', 'old-booking-order')
-        ->assertJsonPath('payment.payload.va_number', '80777100123456')
-        ->assertJsonPath('bookingPaymentResult.bookingStatus', 'booking reserved')
-        ->assertJsonPath('bookingPaymentResult.paymentStatus', 'pending');
-
-    expect($booking->fresh()->status)->toBe(BookingStatus::BOOKING_RESERVED)
-        ->and($booking->fresh()->payments()->where('provider', 'midtrans')->where('status', PaymentStatus::PENDING)->count())->toBe(1);
-})->skip('Legacy Midtrans booking reusable attempt; PrismaLink parity in follow-up PR');
-
-test('customer creates new online booking payment when previous core api attempt is expired', function () {
     $user = User::factory()->create();
     $vendor = Company::factory()->create(['type' => 'vendor']);
     $vendor->companySetting()->updateOrCreate([], [
@@ -793,14 +686,15 @@ test('customer creates new online booking payment when previous core api attempt
     $oldPayment = $booking->payments()->create([
         'owner_type' => User::class,
         'owner_id' => $user->id,
-        'provider' => 'midtrans',
+        'provider' => 'prismalink',
         'payment_method' => 'bca_va',
         'amount' => 300_000,
         'status' => PaymentStatus::PENDING,
         'payload' => [
             'booking_payment_type' => 'down_payment',
             'payment_type' => 'down_payment',
-            'order_id' => 'expired-booking-order',
+            'merchant_ref_no' => 'PL0000000999expired',
+            'plink_ref_no' => 'PLINK-EXPIRED',
             'instruction_type' => 'va',
             'va_number' => '80777100999999',
             'charge_expires_at' => now()->subMinute()->toISOString(),
@@ -808,8 +702,7 @@ test('customer creates new online booking payment when previous core api attempt
         'expired_at' => now()->subMinute(),
     ]);
 
-    mockMidtransCoreApiCharge();
-    $paymentMethod = createMidtransBcaPaymentMethod();
+    $paymentMethod = createPrismaLinkBcaPaymentMethod();
 
     $response = $this->actingAs($user)->postJson("/bookings/{$booking->id}/online-payment", [
         'payment_type' => 'down_payment',
@@ -824,18 +717,21 @@ test('customer creates new online booking payment when previous core api attempt
 
     $oldPayment->refresh();
     $newPayment = $booking->fresh()->payments()
-        ->where('provider', 'midtrans')
+        ->where('provider', 'prismalink')
         ->where('id', '!=', $oldPayment->id)
         ->latest('id')
         ->first();
 
     expect($oldPayment->status)->toBe(PaymentStatus::FAILED)
         ->and($newPayment->id)->not->toBe($oldPayment->id)
-        ->and(data_get($newPayment->payload, 'order_id'))->not->toBe('expired-booking-order')
+        ->and(data_get($newPayment->payload, 'merchant_ref_no'))->not->toBe('PL0000000999expired')
         ->and(data_get($newPayment->payload, 'charge_expires_at'))->not->toBeNull();
-})->skip('Legacy Midtrans booking reusable attempt; PrismaLink parity in follow-up PR');
+});
 
-test('dashboard online full payment keeps down payment booking status until midtrans confirms', function () {
+test('dashboard online full payment keeps down payment booking status until prismalink confirms', function () {
+    configurePrismaLinkForTests();
+    mockPrismaLinkBookingCharge();
+
     $user = User::factory()->create();
     $vendorUser = User::factory()->create();
     $vendor = Company::factory()->create(['type' => 'vendor']);
@@ -872,8 +768,7 @@ test('dashboard online full payment keeps down payment booking status until midt
         'paid_at' => now()->subDay(),
     ]);
 
-    mockMidtransCoreApiCharge();
-    $paymentMethod = createMidtransBcaPaymentMethod();
+    $paymentMethod = createPrismaLinkBcaPaymentMethod();
 
     $response = $this->actingAs($vendorUser)
         ->postJson("/companies/{$vendor->username}/dashboard/bookings/{$booking->id}/online-payment", [
@@ -890,9 +785,12 @@ test('dashboard online full payment keeps down payment booking status until midt
 
     expect($booking->fresh()->status)->toBe(BookingStatus::DOWN_PAYMENT)
         ->and($booking->fresh()->payment_mode)->toBe('online');
-})->skip('Legacy Midtrans booking flows; PrismaLink parity in follow-up PR');
+});
 
-test('dashboard online payment preserves waiting approval payment process status until midtrans confirms', function () {
+test('dashboard online payment preserves waiting approval payment process status until prismalink confirms', function () {
+    configurePrismaLinkForTests();
+    mockPrismaLinkBookingCharge();
+
     $user = User::factory()->create();
     $vendorUser = User::factory()->create();
     $vendor = Company::factory()->create(['type' => 'vendor']);
@@ -920,8 +818,7 @@ test('dashboard online payment preserves waiting approval payment process status
         'commission_amount' => 0,
     ]);
 
-    mockMidtransCoreApiCharge();
-    $paymentMethod = createMidtransBcaPaymentMethod();
+    $paymentMethod = createPrismaLinkBcaPaymentMethod();
 
     $response = $this->actingAs($vendorUser)
         ->postJson("/companies/{$vendor->username}/dashboard/bookings/{$booking->id}/online-payment", [
@@ -938,7 +835,7 @@ test('dashboard online payment preserves waiting approval payment process status
     expect($booking->fresh()->status)->toBe(BookingStatus::WAITING_PAYMENT_APPROVAL)
         ->and($booking->fresh()->reserved_type)->toBe('payment_in_progress')
         ->and($booking->fresh()->payment_mode)->toBe('online');
-})->skip('Legacy Midtrans booking flows; PrismaLink parity in follow-up PR');
+});
 
 test('dashboard full payment amount must cover finalizable remaining balance', function () {
     $user = User::factory()->create();
@@ -988,7 +885,10 @@ test('dashboard full payment amount must cover finalizable remaining balance', f
     expect($booking->fresh()->payments()->count())->toBe(1);
 });
 
-test('customer online full payment keeps down payment booking status until midtrans confirms', function () {
+test('customer online full payment keeps down payment booking status until prismalink confirms', function () {
+    configurePrismaLinkForTests();
+    mockPrismaLinkBookingCharge();
+
     $user = User::factory()->create();
     $vendor = Company::factory()->create(['type' => 'vendor']);
     $tour = Tour::factory()->create(['company_id' => $vendor->id]);
@@ -1013,8 +913,7 @@ test('customer online full payment keeps down payment booking status until midtr
         'paid_at' => now()->subDay(),
     ]);
 
-    mockMidtransCoreApiCharge();
-    $paymentMethod = createMidtransBcaPaymentMethod();
+    $paymentMethod = createPrismaLinkBcaPaymentMethod();
 
     $response = $this->actingAs($user)->postJson("/bookings/{$booking->id}/online-payment", [
         'payment_type' => 'full_payment',
@@ -1030,7 +929,7 @@ test('customer online full payment keeps down payment booking status until midtr
 
     expect($booking->fresh()->status)->toBe(BookingStatus::DOWN_PAYMENT)
         ->and($booking->fresh()->payment_mode)->toBe('online');
-})->skip('Legacy Midtrans booking flows; PrismaLink parity in follow-up PR');
+});
 
 test('customer cannot create online payment after booking reservation expired', function () {
     $user = User::factory()->create();
