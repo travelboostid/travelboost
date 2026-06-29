@@ -37,10 +37,8 @@ test('customer can submit a manual payment proof for a booking', function () {
         'minimum_down_payment' => 30,
     ]);
     $tour = Tour::factory()->create(['company_id' => $vendor->id]);
-    $booking = Booking::factory()->create([
+    $booking = createScheduledBooking($vendor, $tour, [
         'user_id' => $user->id,
-        'vendor_id' => $vendor->id,
-        'tour_id' => $tour->id,
         'status' => 'reserved',
         'grand_total' => 1_000_000,
     ]);
@@ -102,10 +100,8 @@ test('customer cannot submit down payment proof when vendor minimum down payment
         'minimum_down_payment' => 0,
     ]);
     $tour = Tour::factory()->create(['company_id' => $vendor->id]);
-    $booking = Booking::factory()->create([
+    $booking = createScheduledBooking($vendor, $tour, [
         'user_id' => $user->id,
-        'vendor_id' => $vendor->id,
-        'tour_id' => $tour->id,
         'status' => 'reserved',
         'grand_total' => 1_000_000,
     ]);
@@ -151,11 +147,9 @@ test('agent payment mode records agent receiver context on manual payment proof'
     ]);
 
     $tour = Tour::factory()->create(['company_id' => $vendor->id]);
-    $booking = Booking::factory()->create([
+    $booking = createScheduledBooking($vendor, $tour, [
         'user_id' => $user->id,
-        'vendor_id' => $vendor->id,
         'agent_id' => $agent->id,
-        'tour_id' => $tour->id,
         'status' => 'reserved',
         'grand_total' => 1_000_000,
     ]);
@@ -214,11 +208,9 @@ test('agent accepts customer manual payment proof without finalizing agent colle
     ]);
 
     $tour = Tour::factory()->create(['company_id' => $vendor->id]);
-    $booking = Booking::factory()->create([
+    $booking = createScheduledBooking($vendor, $tour, [
         'user_id' => $customer->id,
-        'vendor_id' => $vendor->id,
         'agent_id' => $agent->id,
-        'tour_id' => $tour->id,
         'status' => 'reserved',
         'grand_total' => 1_000_000,
     ]);
@@ -269,11 +261,9 @@ test('customer online payment to agent stays waiting approval after gateway conf
     ]);
 
     $tour = Tour::factory()->create(['company_id' => $vendor->id]);
-    $booking = Booking::factory()->create([
+    $booking = createScheduledBooking($vendor, $tour, [
         'user_id' => $customer->id,
-        'vendor_id' => $vendor->id,
         'agent_id' => $agent->id,
-        'tour_id' => $tour->id,
         'status' => BookingStatus::BOOKING_RESERVED,
         'payment_mode' => 'online',
         'grand_total' => 1_000_000,
@@ -344,10 +334,8 @@ test('agent online payment to vendor remains waiting approval until vendor appro
     ]);
 
     $tour = Tour::factory()->create(['company_id' => $vendor->id]);
-    $booking = Booking::factory()->create([
-        'vendor_id' => $vendor->id,
+    $booking = createScheduledBooking($vendor, $tour, [
         'agent_id' => $agent->id,
-        'tour_id' => $tour->id,
         'status' => BookingStatus::WAITING_PAYMENT_APPROVAL,
         'payment_mode' => 'manual',
         'grand_total' => 1_000_000,
@@ -437,10 +425,8 @@ test('agent online payment to vendor reuses active snap attempt', function () {
     ]);
 
     $tour = Tour::factory()->create(['company_id' => $vendor->id]);
-    $booking = Booking::factory()->create([
-        'vendor_id' => $vendor->id,
+    $booking = createScheduledBooking($vendor, $tour, [
         'agent_id' => $agent->id,
-        'tour_id' => $tour->id,
         'status' => BookingStatus::WAITING_PAYMENT_APPROVAL,
         'payment_mode' => 'online',
         'grand_total' => 1_000_000,
@@ -523,10 +509,8 @@ test('manual payment proof requires payment type', function () {
         'minimum_down_payment' => 30,
     ]);
     $tour = Tour::factory()->create(['company_id' => $vendor->id]);
-    $booking = Booking::factory()->create([
+    $booking = createScheduledBooking($vendor, $tour, [
         'user_id' => $user->id,
-        'vendor_id' => $vendor->id,
-        'tour_id' => $tour->id,
         'status' => 'booking reserved',
         'grand_total' => 1_000_000,
     ]);
@@ -553,10 +537,8 @@ test('manual payment proof requires payment date', function () {
         'minimum_down_payment' => 30,
     ]);
     $tour = Tour::factory()->create(['company_id' => $vendor->id]);
-    $booking = Booking::factory()->create([
+    $booking = createScheduledBooking($vendor, $tour, [
         'user_id' => $user->id,
-        'vendor_id' => $vendor->id,
-        'tour_id' => $tour->id,
         'status' => 'booking reserved',
         'grand_total' => 1_000_000,
     ]);
@@ -581,10 +563,8 @@ test('customer cannot submit manual payment after booking reservation expired', 
     $user = User::factory()->create();
     $vendor = Company::factory()->create(['type' => 'vendor']);
     $tour = Tour::factory()->create(['company_id' => $vendor->id]);
-    $booking = Booking::factory()->create([
+    $booking = createScheduledBooking($vendor, $tour, [
         'user_id' => $user->id,
-        'vendor_id' => $vendor->id,
-        'tour_id' => $tour->id,
         'status' => BookingStatus::BOOKING_RESERVED,
         'reserved_type' => 'system',
         'reserved_expires_at' => now()->subMinute(),
@@ -612,10 +592,8 @@ test('customer cannot submit manual payment for another users booking', function
     $otherUser = User::factory()->create();
     $vendor = Company::factory()->create(['type' => 'vendor']);
     $tour = Tour::factory()->create(['company_id' => $vendor->id]);
-    $booking = Booking::factory()->create([
+    $booking = createScheduledBooking($vendor, $tour, [
         'user_id' => $owner->id,
-        'vendor_id' => $vendor->id,
-        'tour_id' => $tour->id,
     ]);
 
     $this->actingAs($otherUser)->post("/bookings/{$booking->id}/manual-payment", [
@@ -632,10 +610,8 @@ test('manual payment sender account number must contain digits only', function (
     $user = User::factory()->create();
     $vendor = Company::factory()->create(['type' => 'vendor']);
     $tour = Tour::factory()->create(['company_id' => $vendor->id]);
-    $booking = Booking::factory()->create([
+    $booking = createScheduledBooking($vendor, $tour, [
         'user_id' => $user->id,
-        'vendor_id' => $vendor->id,
-        'tour_id' => $tour->id,
         'status' => 'reserved',
     ]);
 
@@ -655,10 +631,8 @@ test('booking online payment rejects midtrans payment methods', function () {
     $user = User::factory()->create();
     $vendor = Company::factory()->create(['type' => 'vendor']);
     $tour = Tour::factory()->create(['company_id' => $vendor->id]);
-    $booking = Booking::factory()->create([
+    $booking = createScheduledBooking($vendor, $tour, [
         'user_id' => $user->id,
-        'vendor_id' => $vendor->id,
-        'tour_id' => $tour->id,
         'status' => 'reserved',
         'grand_total' => 1_000_000,
     ]);
@@ -698,10 +672,8 @@ test('customer can create an online booking payment with prismalink', function (
         'minimum_down_payment' => 30,
     ]);
     $tour = Tour::factory()->create(['company_id' => $vendor->id]);
-    $booking = Booking::factory()->create([
+    $booking = createScheduledBooking($vendor, $tour, [
         'user_id' => $user->id,
-        'vendor_id' => $vendor->id,
-        'tour_id' => $tour->id,
         'status' => 'reserved',
         'grand_total' => 1_000_000,
     ]);
@@ -754,10 +726,8 @@ test('customer reuses active online booking payment attempt while hold is active
         'minimum_down_payment' => 30,
     ]);
     $tour = Tour::factory()->create(['company_id' => $vendor->id]);
-    $booking = Booking::factory()->create([
+    $booking = createScheduledBooking($vendor, $tour, [
         'user_id' => $user->id,
-        'vendor_id' => $vendor->id,
-        'tour_id' => $tour->id,
         'status' => BookingStatus::BOOKING_RESERVED,
         'reserved_type' => 'system',
         'reserved_expires_at' => now()->addMinutes(5),
@@ -812,10 +782,8 @@ test('customer creates new online booking payment when previous core api attempt
         'minimum_down_payment' => 30,
     ]);
     $tour = Tour::factory()->create(['company_id' => $vendor->id]);
-    $booking = Booking::factory()->create([
+    $booking = createScheduledBooking($vendor, $tour, [
         'user_id' => $user->id,
-        'vendor_id' => $vendor->id,
-        'tour_id' => $tour->id,
         'status' => BookingStatus::BOOKING_RESERVED,
         'reserved_type' => 'system',
         'reserved_expires_at' => now()->addMinutes(5),
@@ -883,10 +851,8 @@ test('dashboard online full payment keeps down payment booking status until midt
     ]);
 
     $tour = Tour::factory()->create(['company_id' => $vendor->id]);
-    $booking = Booking::factory()->create([
+    $booking = createScheduledBooking($vendor, $tour, [
         'user_id' => $user->id,
-        'vendor_id' => $vendor->id,
-        'tour_id' => $tour->id,
         'status' => BookingStatus::DOWN_PAYMENT,
         'payment_mode' => 'online',
         'grand_total' => 1_000_000,
@@ -942,10 +908,8 @@ test('dashboard online payment preserves waiting approval payment process status
     ]);
 
     $tour = Tour::factory()->create(['company_id' => $vendor->id]);
-    $booking = Booking::factory()->create([
+    $booking = createScheduledBooking($vendor, $tour, [
         'user_id' => $user->id,
-        'vendor_id' => $vendor->id,
-        'tour_id' => $tour->id,
         'status' => BookingStatus::WAITING_PAYMENT_APPROVAL,
         'reserved_type' => 'payment_in_progress',
         'payment_mode' => 'manual',
@@ -989,10 +953,8 @@ test('dashboard full payment amount must cover finalizable remaining balance', f
     ]);
 
     $tour = Tour::factory()->create(['company_id' => $vendor->id]);
-    $booking = Booking::factory()->create([
+    $booking = createScheduledBooking($vendor, $tour, [
         'user_id' => $user->id,
-        'vendor_id' => $vendor->id,
-        'tour_id' => $tour->id,
         'status' => BookingStatus::DOWN_PAYMENT,
         'grand_total' => 1_000_000,
         'total_price' => 1_000_000,
@@ -1011,7 +973,7 @@ test('dashboard full payment amount must cover finalizable remaining balance', f
         'paid_at' => now()->subDay(),
     ]);
 
-    $paymentMethod = createMidtransBcaPaymentMethod();
+    $paymentMethod = createPrismaLinkBcaPaymentMethod();
 
     $response = $this->actingAs($vendorUser)
         ->postJson("/companies/{$vendor->username}/dashboard/bookings/{$booking->id}/online-payment", [
@@ -1030,10 +992,8 @@ test('customer online full payment keeps down payment booking status until midtr
     $user = User::factory()->create();
     $vendor = Company::factory()->create(['type' => 'vendor']);
     $tour = Tour::factory()->create(['company_id' => $vendor->id]);
-    $booking = Booking::factory()->create([
+    $booking = createScheduledBooking($vendor, $tour, [
         'user_id' => $user->id,
-        'vendor_id' => $vendor->id,
-        'tour_id' => $tour->id,
         'status' => BookingStatus::DOWN_PAYMENT,
         'payment_mode' => 'online',
         'grand_total' => 1_000_000,
@@ -1076,19 +1036,20 @@ test('customer cannot create online payment after booking reservation expired', 
     $user = User::factory()->create();
     $vendor = Company::factory()->create(['type' => 'vendor']);
     $tour = Tour::factory()->create(['company_id' => $vendor->id]);
-    $booking = Booking::factory()->create([
+    $booking = createScheduledBooking($vendor, $tour, [
         'user_id' => $user->id,
-        'vendor_id' => $vendor->id,
-        'tour_id' => $tour->id,
         'status' => BookingStatus::BOOKING_RESERVED,
         'reserved_type' => 'system',
         'reserved_expires_at' => now()->subMinute(),
         'grand_total' => 1_000_000,
     ]);
 
+    $paymentMethod = createPrismaLinkBcaPaymentMethod();
+
     $response = $this->actingAs($user)->postJson("/bookings/{$booking->id}/online-payment", [
         'payment_type' => 'down_payment',
         'amount' => 200_000,
+        'payment_method_id' => $paymentMethod->id,
     ]);
 
     $response->assertStatus(422)
@@ -1102,10 +1063,8 @@ test('customer midtrans expired status fails the payment attempt without finaliz
     $user = User::factory()->create();
     $vendor = Company::factory()->create(['type' => 'vendor']);
     $tour = Tour::factory()->create(['company_id' => $vendor->id]);
-    $booking = Booking::factory()->create([
+    $booking = createScheduledBooking($vendor, $tour, [
         'user_id' => $user->id,
-        'vendor_id' => $vendor->id,
-        'tour_id' => $tour->id,
         'status' => BookingStatus::BOOKING_RESERVED,
         'payment_mode' => 'online',
         'grand_total' => 1_000_000,
@@ -1158,10 +1117,8 @@ test('midtrans webhook marks online booking payment as paid and updates booking 
     $user = User::factory()->create();
     $vendor = Company::factory()->create(['type' => 'vendor']);
     $tour = Tour::factory()->create(['company_id' => $vendor->id]);
-    $booking = Booking::factory()->create([
+    $booking = createScheduledBooking($vendor, $tour, [
         'user_id' => $user->id,
-        'vendor_id' => $vendor->id,
-        'tour_id' => $tour->id,
         'status' => 'awaiting payment',
         'payment_mode' => 'online',
         'grand_total' => 1_000_000,
@@ -1198,10 +1155,8 @@ test('midtrans webhook repairs already paid booking payment with stale awaiting 
     $user = User::factory()->create();
     $vendor = Company::factory()->create(['type' => 'vendor']);
     $tour = Tour::factory()->create(['company_id' => $vendor->id]);
-    $booking = Booking::factory()->create([
+    $booking = createScheduledBooking($vendor, $tour, [
         'user_id' => $user->id,
-        'vendor_id' => $vendor->id,
-        'tour_id' => $tour->id,
         'status' => BookingStatus::AWAITING_PAYMENT,
         'payment_mode' => 'online',
         'grand_total' => 1_000_000,
@@ -1238,10 +1193,8 @@ test('customer can confirm successful midtrans booking payment after hold expiry
     $user = User::factory()->create();
     $vendor = Company::factory()->create(['type' => 'vendor']);
     $tour = Tour::factory()->create(['company_id' => $vendor->id]);
-    $booking = Booking::factory()->create([
+    $booking = createScheduledBooking($vendor, $tour, [
         'user_id' => $user->id,
-        'vendor_id' => $vendor->id,
-        'tour_id' => $tour->id,
         'status' => BookingStatus::BOOKING_RESERVED,
         'payment_mode' => 'online',
         'grand_total' => 1_000_000,
@@ -1308,10 +1261,8 @@ test('vendor can approve pending manual payment proof and move booking to select
     ]);
 
     $tour = Tour::factory()->create(['company_id' => $vendor->id]);
-    $booking = Booking::factory()->create([
+    $booking = createScheduledBooking($vendor, $tour, [
         'user_id' => $user->id,
-        'vendor_id' => $vendor->id,
-        'tour_id' => $tour->id,
         'status' => BookingStatus::WAITING_PAYMENT_APPROVAL,
         'payment_mode' => 'manual',
         'grand_total' => 1_000_000,
@@ -1355,10 +1306,8 @@ test('manual payment approval uses verified paid total instead of payload status
     ]);
 
     $tour = Tour::factory()->create(['company_id' => $vendor->id]);
-    $booking = Booking::factory()->create([
+    $booking = createScheduledBooking($vendor, $tour, [
         'user_id' => $user->id,
-        'vendor_id' => $vendor->id,
-        'tour_id' => $tour->id,
         'status' => BookingStatus::WAITING_PAYMENT_APPROVAL,
         'payment_mode' => 'manual',
         'grand_total' => 1_000_000,
@@ -1423,11 +1372,9 @@ test('vendor payment mode lets only vendor review manual transfer proof', functi
     ]);
 
     $tour = Tour::factory()->create(['company_id' => $vendor->id]);
-    $booking = Booking::factory()->create([
+    $booking = createScheduledBooking($vendor, $tour, [
         'user_id' => $user->id,
-        'vendor_id' => $vendor->id,
         'agent_id' => $agent->id,
-        'tour_id' => $tour->id,
         'status' => BookingStatus::WAITING_PAYMENT_APPROVAL,
         'payment_mode' => 'manual',
         'grand_total' => 1_000_000,
@@ -1491,11 +1438,9 @@ test('agent payment mode lets only agent review manual transfer proof', function
     ]);
 
     $tour = Tour::factory()->create(['company_id' => $vendor->id]);
-    $booking = Booking::factory()->create([
+    $booking = createScheduledBooking($vendor, $tour, [
         'user_id' => $user->id,
-        'vendor_id' => $vendor->id,
         'agent_id' => $agent->id,
-        'tour_id' => $tour->id,
         'status' => BookingStatus::WAITING_PAYMENT_APPROVAL,
         'payment_mode' => 'manual',
         'grand_total' => 1_000_000,
@@ -1564,10 +1509,8 @@ test('booking create refresh exposes approved manual down payment result', funct
         'max_pax' => 10,
         'available' => 10,
     ]);
-    $booking = Booking::factory()->create([
+    $booking = createScheduledBooking($vendor, $tour, [
         'user_id' => $user->id,
-        'vendor_id' => $vendor->id,
-        'tour_id' => $tour->id,
         'departure_date' => $schedule->departure_date,
         'status' => BookingStatus::WAITING_PAYMENT_APPROVAL,
         'payment_mode' => 'manual',
@@ -1664,11 +1607,9 @@ test('booking create refresh excludes agent vendor settlement from paid amount',
         'max_pax' => 10,
         'available' => 10,
     ]);
-    $booking = Booking::factory()->create([
+    $booking = createScheduledBooking($vendor, $tour, [
         'user_id' => $user->id,
-        'vendor_id' => $vendor->id,
         'agent_id' => $agent->id,
-        'tour_id' => $tour->id,
         'departure_date' => $schedule->departure_date,
         'status' => BookingStatus::DOWN_PAYMENT,
         'payment_mode' => 'manual',
@@ -1737,10 +1678,8 @@ test('customer full payment amount must cover finalizable remaining balance', fu
     $user = User::factory()->create();
     $vendor = Company::factory()->create(['type' => 'vendor']);
     $tour = Tour::factory()->create(['company_id' => $vendor->id]);
-    $booking = Booking::factory()->create([
+    $booking = createScheduledBooking($vendor, $tour, [
         'user_id' => $user->id,
-        'vendor_id' => $vendor->id,
-        'tour_id' => $tour->id,
         'status' => BookingStatus::DOWN_PAYMENT,
         'grand_total' => 1_000_000,
     ]);
@@ -1816,10 +1755,8 @@ test('booking create refresh exposes approved manual full payment result', funct
         'max_pax' => 10,
         'available' => 10,
     ]);
-    $booking = Booking::factory()->create([
+    $booking = createScheduledBooking($vendor, $tour, [
         'user_id' => $user->id,
-        'vendor_id' => $vendor->id,
-        'tour_id' => $tour->id,
         'departure_date' => $schedule->departure_date,
         'status' => BookingStatus::WAITING_PAYMENT_APPROVAL,
         'payment_mode' => 'manual',
@@ -1870,10 +1807,8 @@ test('another customer cannot read a booking payment result', function () {
     $otherUser = User::factory()->create();
     $vendor = Company::factory()->create(['type' => 'vendor']);
     $tour = Tour::factory()->create(['company_id' => $vendor->id]);
-    $booking = Booking::factory()->create([
+    $booking = createScheduledBooking($vendor, $tour, [
         'user_id' => $user->id,
-        'vendor_id' => $vendor->id,
-        'tour_id' => $tour->id,
         'status' => BookingStatus::DOWN_PAYMENT,
         'payment_mode' => 'manual',
         'grand_total' => 1_000_000,
@@ -1907,10 +1842,8 @@ test('vendor can decline pending manual payment proof and cancel booking', funct
     ]);
 
     $tour = Tour::factory()->create(['company_id' => $vendor->id]);
-    $booking = Booking::factory()->create([
+    $booking = createScheduledBooking($vendor, $tour, [
         'user_id' => $user->id,
-        'vendor_id' => $vendor->id,
-        'tour_id' => $tour->id,
         'status' => BookingStatus::WAITING_PAYMENT_APPROVAL,
         'payment_mode' => 'manual',
     ]);

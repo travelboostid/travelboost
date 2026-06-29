@@ -95,10 +95,8 @@ test('manual payment submission creates a customer payment notification', functi
     $vendor = Company::factory()->create(['type' => 'vendor']);
     $vendor->companySetting()->updateOrCreate([], ['minimum_down_payment' => 30]);
     $tour = Tour::factory()->create(['company_id' => $vendor->id]);
-    $booking = Booking::factory()->create([
+    $booking = createScheduledBooking($vendor, $tour, [
         'user_id' => $user->id,
-        'vendor_id' => $vendor->id,
-        'tour_id' => $tour->id,
         'status' => BookingStatus::AWAITING_PAYMENT,
         'grand_total' => 1_000_000,
     ]);
@@ -153,10 +151,8 @@ test('booking finalization creates down payment and full payment customer notifi
     $user = User::factory()->create(['status' => UserStatus::ACTIVE]);
     $vendor = Company::factory()->create(['type' => 'vendor']);
     $tour = Tour::factory()->create(['company_id' => $vendor->id]);
-    $booking = Booking::factory()->create([
+    $booking = createScheduledBooking($vendor, $tour, [
         'user_id' => $user->id,
-        'vendor_id' => $vendor->id,
-        'tour_id' => $tour->id,
         'status' => BookingStatus::AWAITING_PAYMENT,
         'grand_total' => 1_000_000,
     ]);

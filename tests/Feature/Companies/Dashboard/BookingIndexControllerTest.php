@@ -929,9 +929,8 @@ test('booking index repairs stale awaiting payment booking with paid down paymen
     ]);
 
     $tour = Tour::factory()->create(['company_id' => $vendor->id]);
-    $booking = Booking::factory()->create([
+    $booking = createScheduledBooking($vendor, $tour, [
         'vendor_id' => $vendor->id,
-        'tour_id' => $tour->id,
         'status' => BookingStatus::AWAITING_PAYMENT,
         'grand_total' => 1_000_000,
         'reserved_expires_at' => now()->addMinutes(5),
@@ -2198,10 +2197,8 @@ test('vendor review sees both staged receipts and approval finalizes booking', f
     ]);
 
     $tour = Tour::factory()->create(['company_id' => $vendor->id]);
-    $booking = Booking::factory()->create([
-        'vendor_id' => $vendor->id,
+    $booking = createScheduledBooking($vendor, $tour, [
         'agent_id' => $agent->id,
-        'tour_id' => $tour->id,
         'status' => BookingStatus::WAITING_PAYMENT_APPROVAL,
         'payment_mode' => 'manual',
         'grand_total' => 1_000_000,

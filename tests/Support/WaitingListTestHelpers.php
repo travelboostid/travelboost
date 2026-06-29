@@ -37,6 +37,33 @@ function createQueuedWaitingListSchedule(
     ]);
 }
 
+function createVendorWaitingList(
+    Tour $tour,
+    Company $vendor,
+    User $vendorUser,
+    int $scheduleId,
+    int $adult = 2,
+    ?string $contactEmail = 'waiting@example.test',
+): TourWaitingList {
+    $waitingList = TourWaitingList::query()->create([
+        'tour_id' => $tour->id,
+        'vendor_id' => $tour->company_id,
+        'created_by_user_id' => $vendorUser->id,
+        'created_by_company_id' => $vendor->id,
+        'customer_user_id' => $contactEmail
+            ? User::query()->where('email', $contactEmail)->value('id')
+            : null,
+        'contact_name' => 'Waiting Customer',
+        'contact_email' => $contactEmail ?? 'waiting@example.test',
+        'contact_phone' => '081234567890',
+        'status' => TourWaitingListStatus::PENDING,
+    ]);
+
+    createQueuedWaitingListSchedule($waitingList, $scheduleId, $adult);
+
+    return $waitingList->fresh('schedules');
+}
+
 function createCustomerWaitingList(Tour $tour, User $customer, int $scheduleId, int $adult = 2): TourWaitingList
 {
     $waitingList = TourWaitingList::query()->create([

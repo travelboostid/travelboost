@@ -5,6 +5,7 @@ namespace App\Actions\WaitingList;
 use App\Models\TourAvailability;
 use App\Models\TourWaitingListSchedule;
 use App\Support\WaitingListQueueOrdering;
+use Illuminate\Validation\ValidationException;
 
 class ProcessWaitingListOffersForScheduleAction
 {
@@ -38,7 +39,11 @@ class ProcessWaitingListOffersForScheduleAction
                 continue;
             }
 
-            return app(OfferWaitingListSeatAction::class)->execute($candidate);
+            try {
+                return app(OfferWaitingListSeatAction::class)->execute($candidate);
+            } catch (ValidationException) {
+                continue;
+            }
         }
 
         return null;
