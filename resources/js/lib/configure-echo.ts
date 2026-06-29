@@ -1,9 +1,15 @@
 import { isEchoDeferredPath } from '@/lib/echo-paths';
 import { isMarketingPath } from '@/lib/marketing-pages';
 import { configureEcho } from '@laravel/echo-react';
-import Pusher from 'pusher-js';
 
 let echoConfigured = false;
+
+type EchoPusher = {
+    connection: {
+        bind: (event: string, callback: () => void) => void;
+    };
+    disconnect: () => void;
+};
 
 function isReverbConfigured(): boolean {
     return (
@@ -13,18 +19,28 @@ function isReverbConfigured(): boolean {
     );
 }
 
+function silencePusherConsole(): void {
+    const pusherConstructor = (
+        window as Window & {
+            Pusher?: { logToConsole?: boolean };
+        }
+    ).Pusher;
+
+    if (pusherConstructor) {
+        pusherConstructor.logToConsole = false;
+    }
+}
+
 function attachQuietConnectionGuards(): void {
-    const echoInstance = (
+    const pusher = (
         window as Window & {
             Echo?: {
                 connector?: {
-                    pusher?: Pusher;
+                    pusher?: EchoPusher;
                 };
             };
         }
-    ).Echo;
-
-    const pusher = echoInstance?.connector?.pusher;
+    ).Echo?.connector?.pusher;
 
     if (!pusher) {
         return;
@@ -50,8 +66,6 @@ export function configureEchoNow(): void {
         return;
     }
 
-    Pusher.logToConsole = false;
-
     configureEcho({
         broadcaster: 'reverb',
         key: import.meta.env.VITE_REVERB_APP_KEY,
@@ -62,6 +76,7 @@ export function configureEchoNow(): void {
         enabledTransports: ['ws', 'wss'],
     });
 
+    silencePusherConsole();
     echoConfigured = true;
 
     window.setTimeout(() => {
