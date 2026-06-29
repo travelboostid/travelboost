@@ -339,6 +339,7 @@ export default function SubscribePackages() {
             <PaymentMethodDialog
                 open={methodDialogOpen}
                 onOpenChange={setMethodDialogOpen}
+                usageScope="platform"
                 title={isRenewal ? 'Renew subscription' : 'Subscribe to a plan'}
                 confirmLabel="Pay now"
                 description={

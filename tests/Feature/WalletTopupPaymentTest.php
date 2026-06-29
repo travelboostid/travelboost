@@ -3,6 +3,7 @@
 use App\Enums\CompanyTeamStatus;
 use App\Enums\PaymentMethodCategory;
 use App\Enums\PaymentMethodStatus;
+use App\Enums\PaymentMethodUsageScope;
 use App\Enums\PaymentStatus;
 use App\Models\Company;
 use App\Models\CompanyTeam;
@@ -54,6 +55,58 @@ test('create topup payment rejects when a pending topup already exists', functio
         ]);
 });
 
+test('midtrans wallet topup creates snap token for platform payment', function () {
+    mockMidtransSnapGetToken('wallet-snap-token-1');
+
+    $user = User::factory()->create();
+    $company = Company::factory()->create();
+
+    CompanyTeam::create([
+        'company_id' => $company->id,
+        'user_id' => $user->id,
+        'status' => CompanyTeamStatus::ACTIVE,
+    ]);
+
+    $paymentMethod = createMidtransBcaPaymentMethod();
+
+    $response = $this->actingAs($user)->postJson('/webapi/payments/create-topup-payment', [
+        'owner_type' => 'company',
+        'owner_id' => $company->id,
+        'amount' => 200_000,
+        'payment_method_id' => $paymentMethod->id,
+    ]);
+
+    $response->assertOk()
+        ->assertJsonPath('data.provider', 'midtrans')
+        ->assertJsonPath('data.status', PaymentStatus::PENDING->value)
+        ->assertJsonPath('data.payload.snap_token', 'wallet-snap-token-1')
+        ->assertJsonPath('data.payload.instruction_type', 'snap')
+        ->assertJsonPath('data.payload.order_id', fn (mixed $orderId): bool => is_string($orderId) && $orderId !== '');
+});
+
+test('create topup payment rejects booking-scoped payment methods', function () {
+    $user = User::factory()->create();
+    $company = Company::factory()->create();
+
+    CompanyTeam::create([
+        'company_id' => $company->id,
+        'user_id' => $user->id,
+        'status' => CompanyTeamStatus::ACTIVE,
+    ]);
+
+    $bookingMethod = createPrismaLinkBcaPaymentMethod();
+
+    $response = $this->actingAs($user)->postJson('/webapi/payments/create-topup-payment', [
+        'owner_type' => 'company',
+        'owner_id' => $company->id,
+        'amount' => 200_000,
+        'payment_method_id' => $bookingMethod->id,
+    ]);
+
+    $response->assertStatus(422)
+        ->assertJsonValidationErrors(['payment_method_id']);
+});
+
 test('prismalink wallet topup sends configured backend callback url', function () {
     config([
         'prismalink.merchant_id' => 'merchant',
@@ -84,6 +137,7 @@ test('prismalink wallet topup sends configured backend callback url', function (
         'name' => 'PrismaLink BRI Virtual Account',
         'description' => 'Test PrismaLink BRI VA',
         'category' => PaymentMethodCategory::BANK_TRANSFER,
+        'usage_scope' => PaymentMethodUsageScope::Platform,
         'status' => PaymentMethodStatus::ENABLED,
         'meta' => [
             'bank_id' => '002',

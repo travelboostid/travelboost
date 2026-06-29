@@ -1,4 +1,7 @@
-import { usePaymentMethods } from '@/api/payment/payment-method';
+import {
+    usePaymentMethods,
+    type PaymentMethodUsageScope,
+} from '@/api/payment/payment-method';
 import { PaymentMethodList } from '@/components/payment/payment-method-list';
 import {
     AlertDialog,
@@ -23,6 +26,7 @@ type PaymentMethodDialogProps = {
     onConfirm: (methodId: number) => void;
     title?: string;
     confirmLabel?: string;
+    usageScope?: PaymentMethodUsageScope;
 };
 
 export function PaymentMethodDialog({
@@ -33,11 +37,12 @@ export function PaymentMethodDialog({
     onConfirm,
     title = 'Choose payment method',
     confirmLabel = 'Continue to payment',
+    usageScope = 'booking',
 }: PaymentMethodDialogProps) {
     const [selectedMethodId, setSelectedMethodId] = useState<number | null>(
         null,
     );
-    const paymentMethods = usePaymentMethods();
+    const paymentMethods = usePaymentMethods(usageScope);
     const methods = paymentMethods.data ?? [];
     const selectedMethod = findPaymentMethodById(methods, selectedMethodId);
 
@@ -88,6 +93,7 @@ export function PaymentMethodDialog({
                     <PaymentMethodList
                         selectedMethodId={selectedMethodId}
                         onSelect={setSelectedMethodId}
+                        usageScope={usageScope}
                     />
                 </div>
 

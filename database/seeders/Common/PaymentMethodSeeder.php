@@ -134,8 +134,7 @@ class PaymentMethodSeeder extends Seeder
             'category' => PaymentMethodCategory::CREDIT_CARD,
             'midtrans' => [
                 'name' => 'Midtrans Credit Card',
-                'description' => 'Unavailable: Midtrans Core API requires card tokenization.',
-                'status' => PaymentMethodStatus::DISABLED,
+                'description' => 'Pay with credit card via Midtrans Snap.',
                 'meta' => ['payment_type' => 'credit_card'],
             ],
             'prismalink' => [
@@ -197,8 +196,7 @@ class PaymentMethodSeeder extends Seeder
             }
 
             // Midtrans methods are reserved for platform payments (wallet top-up, AI credits, subscriptions).
-            // Booking online payments use PrismaLink only — re-enable when platform Snap flow ships.
-            /*
+            // Booking online payments use PrismaLink only.
             if (isset($method['midtrans'])) {
                 $config = $method['midtrans'];
 
@@ -217,7 +215,6 @@ class PaymentMethodSeeder extends Seeder
                     ],
                 );
             }
-            */
         }
     }
 }

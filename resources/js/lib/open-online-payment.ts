@@ -1,11 +1,14 @@
+import { loadMidtransSnapScript, openMidtransSnap } from '@/lib/midtrans-snap';
 import {
     hasOnlinePaymentInstructions,
     isPendingOnlinePayment,
     type PaymentInstructionPayload,
 } from '@/lib/payment-instructions';
-import type {
-    PaymentStatusCheckConfig,
-    PaymentStatusSyncResult,
+import {
+    checkPaymentStatus,
+    defaultPaymentStatusCheckUrl,
+    type PaymentStatusCheckConfig,
+    type PaymentStatusSyncResult,
 } from '@/lib/payment-status';
 
 type OnlinePayment = {
@@ -108,12 +111,97 @@ function dispatchOpenOnlinePayment(
     }, 0);
 }
 
+async function syncSnapPaymentStatus(
+    payment: OnlinePayment,
+    callbacks?: OnlinePaymentCallbacks,
+    options?: { statusCheck?: PaymentStatusCheckConfig },
+): Promise<PaymentStatusSyncResult | null> {
+    if (payment.id === null || payment.id === undefined) {
+        return null;
+    }
+
+    const statusCheck = options?.statusCheck ??
+        callbacks?.statusCheck ?? {
+            url: defaultPaymentStatusCheckUrl(payment.id),
+            method: 'POST',
+        };
+
+    try {
+        return await checkPaymentStatus(payment.id, statusCheck);
+    } catch {
+        return null;
+    }
+}
+
+function openMidtransSnapPayment(
+    payment: OnlinePayment,
+    callbacks?: OnlinePaymentCallbacks,
+    options?: { statusCheck?: PaymentStatusCheckConfig },
+): void {
+    const payload = (payment.payload ?? {}) as PaymentInstructionPayload;
+    const snapToken = payload.snap_token;
+
+    if (typeof snapToken !== 'string' || snapToken.trim() === '') {
+        callbacks?.onComplete?.();
+        return;
+    }
+
+    void loadMidtransSnapScript()
+        .then(() => {
+            openMidtransSnap(snapToken, {
+                onSuccess: () => {
+                    void syncSnapPaymentStatus(
+                        payment,
+                        callbacks,
+                        options,
+                    ).then((result) => {
+                        if (result?.status === 'paid') {
+                            callbacks?.onPaid?.(result);
+                            return;
+                        }
+
+                        callbacks?.onComplete?.();
+                    });
+                },
+                onPending: () => {
+                    void syncSnapPaymentStatus(
+                        payment,
+                        callbacks,
+                        options,
+                    ).then((result) => {
+                        if (result?.status === 'paid') {
+                            callbacks?.onPaid?.(result);
+                            return;
+                        }
+
+                        callbacks?.onComplete?.();
+                    });
+                },
+                onError: () => callbacks?.onComplete?.(),
+                onClose: () => callbacks?.onComplete?.(),
+            });
+        })
+        .catch(() => {
+            callbacks?.onComplete?.();
+        });
+}
+
 export function openOnlinePayment(
     payment: OnlinePayment,
     callbacks?: OnlinePaymentCallbacks,
     options?: { statusCheck?: PaymentStatusCheckConfig },
 ): void {
     const payload = (payment.payload ?? {}) as PaymentInstructionPayload;
+
+    if (
+        payment.provider === 'midtrans' &&
+        typeof payload.snap_token === 'string' &&
+        payload.snap_token.trim() !== ''
+    ) {
+        openMidtransSnapPayment(payment, callbacks, options);
+
+        return;
+    }
 
     if (canOpenOnlinePaymentDialog(payment, payload)) {
         dispatchOpenOnlinePayment(payment, callbacks, options);

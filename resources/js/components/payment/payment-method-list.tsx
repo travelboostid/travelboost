@@ -1,6 +1,7 @@
 import {
     usePaymentMethods,
     type PaymentMethodResource,
+    type PaymentMethodUsageScope,
 } from '@/api/payment/payment-method';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -16,6 +17,7 @@ import { createElement } from 'react';
 type PaymentMethodListProps = {
     selectedMethodId: number | null;
     onSelect: (methodId: number) => void;
+    usageScope?: PaymentMethodUsageScope;
 };
 
 function PaymentMethodOption({
@@ -99,8 +101,9 @@ function PaymentMethodListSkeleton() {
 export function PaymentMethodList({
     selectedMethodId,
     onSelect,
+    usageScope = 'booking',
 }: PaymentMethodListProps) {
-    const paymentMethods = usePaymentMethods();
+    const paymentMethods = usePaymentMethods(usageScope);
     const methods = paymentMethods.data ?? [];
 
     if (paymentMethods.isLoading) {
