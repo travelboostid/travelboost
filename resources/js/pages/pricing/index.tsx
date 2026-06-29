@@ -14,6 +14,7 @@ import { BotIcon, CheckIcon, SparklesIcon } from 'lucide-react';
 
 const CHAT_AI_INTERACTION_COST = 75;
 const CHAT_AI_FREE_CREDITS = 50_000;
+const BASIC_SUBSCRIPTION_AI_CREDITS = 200_000;
 const CHAT_AI_FREE_INTERACTIONS = Math.floor(
     CHAT_AI_FREE_CREDITS / CHAT_AI_INTERACTION_COST,
 );
@@ -41,7 +42,6 @@ const PLANS: PricingPlan[] = [
         featuredLabel: 'Mulai Gratis',
         features: [
             'Akses dashboard Agent',
-            'Landing page yang dapat disesuaikan',
             'Katalog Tour dari Vendor',
             'Manajemen booking dasar',
             `Free AI credits Rp ${CHAT_AI_FREE_CREDITS.toLocaleString('id-ID')} untuk Chat AI`,
@@ -61,8 +61,10 @@ const PLANS: PricingPlan[] = [
         features: [
             'Semua fitur Free Trial',
             'Subscription aktif 12 bulan',
-            'Chat AI dengan top-up credits fleksibel',
+            'Landing page yang dapat disesuaikan',
+            `Free AI credits Rp ${BASIC_SUBSCRIPTION_AI_CREDITS.toLocaleString('id-ID')} untuk Chat AI`,
             'Akses Vendor catalog & commission tools',
+            'Manajemen booking yang lebih lengkap',
             'Analytics & laporan penjualan',
             'Payment gateway & wallet',
             'Priority support',

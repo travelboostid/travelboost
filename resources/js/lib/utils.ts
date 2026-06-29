@@ -44,17 +44,57 @@ export function extractDocumentUrl(media: MediaResource) {
     return url || '';
 }
 
-export const formatIDR = (value: number) =>
-    value >= 1000000
-        ? new Intl.NumberFormat('id-ID', {
-              notation: 'compact',
-              compactDisplay: 'short',
-              style: 'currency',
-              currency: 'IDR',
-              minimumFractionDigits: 0,
-          }).format(value)
-        : new Intl.NumberFormat('id-ID', {
-              style: 'currency',
-              currency: 'IDR',
-              minimumFractionDigits: 0,
-          }).format(value);
+function resolveActiveLocale(preferredLocale?: string): string {
+    if (preferredLocale) {
+        return preferredLocale.toLowerCase().startsWith('id')
+            ? 'id-ID'
+            : 'en-US';
+    }
+
+    if (typeof window !== 'undefined') {
+        const storedLocale = window.localStorage.getItem('locale-code');
+
+        if (storedLocale) {
+            return storedLocale.toLowerCase().startsWith('id')
+                ? 'id-ID'
+                : 'en-US';
+        }
+    }
+
+    if (typeof document !== 'undefined' && document.documentElement.lang) {
+        return document.documentElement.lang.toLowerCase().startsWith('id')
+            ? 'id-ID'
+            : 'en-US';
+    }
+
+    return 'id-ID';
+}
+
+export const formatIDR = (
+    value: number,
+    options?: {
+        locale?: string;
+        compactThreshold?: number;
+    },
+) => {
+    const locale = resolveActiveLocale(options?.locale);
+    const compactThreshold = options?.compactThreshold ?? 1_000_000;
+
+    if (Math.abs(value) >= compactThreshold) {
+        return new Intl.NumberFormat(locale, {
+            notation: 'compact',
+            compactDisplay: 'short',
+            style: 'currency',
+            currency: 'IDR',
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 1,
+        }).format(value);
+    }
+
+    return new Intl.NumberFormat(locale, {
+        style: 'currency',
+        currency: 'IDR',
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0,
+    }).format(value);
+};
