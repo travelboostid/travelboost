@@ -121,7 +121,7 @@ test('dashboard cannot start a second online payment while checkout is in progre
     expect($booking->fresh()->payments()->count())->toBe(0);
 });
 
-test('customer cannot start another online payment when an unpaid prismalink attempt already exists', function () {
+test('customer cannot start another online payment when checkout is already in progress', function () {
     configurePrismaLinkForTests();
 
     $user = User::factory()->create();
@@ -136,16 +136,7 @@ test('customer cannot start another online payment when an unpaid prismalink att
         'tour_id' => $tour->id,
         'status' => 'reserved',
         'grand_total' => 1_000_000,
-    ]);
-
-    $booking->payments()->create([
-        'owner_type' => User::class,
-        'owner_id' => $user->id,
-        'provider' => 'prismalink',
-        'payment_method' => 'bri_va',
-        'amount' => 300_000,
-        'status' => 'pending',
-        'payload' => ['payment_type' => 'down_payment'],
+        'reserved_type' => 'payment_in_progress',
     ]);
 
     $paymentMethod = createPrismaLinkBcaPaymentMethod([
@@ -167,5 +158,5 @@ test('customer cannot start another online payment when an unpaid prismalink att
             AssertBookingOnlinePaymentStartAllowedAction::PAYMENT_IN_PROGRESS_MESSAGE,
         );
 
-    expect($booking->fresh()->payments()->count())->toBe(1);
+    expect($booking->fresh()->payments()->count())->toBe(0);
 });

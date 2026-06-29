@@ -47,6 +47,7 @@ use App\Services\MidtransService;
 use App\Services\PaymentGatewayStatusSyncService;
 use App\Services\PrismaLinkException;
 use App\Services\PrismaLinkService;
+use App\Services\ReusablePrismaLinkBookingPaymentAttemptService;
 use App\Support\BookingDeparture;
 use App\Support\BookingReschedulePayment;
 use Illuminate\Database\Eloquent\Builder;
@@ -726,6 +727,16 @@ class DashboardBookingController extends Controller
                 ? $paymentWorkflow->agentVendorPaymentPayload($booking, $agentVendorCustomerPayment, (string) $validated['payment_type'])
                 : $paymentWorkflow->initialPaymentPayload($paymentReceiver, (string) $validated['payment_type']);
 
+            if ($reusableResponse = $this->reusablePrismaLinkOnlinePaymentResponse(
+                $request,
+                $booking,
+                $validated,
+                $agentVendorCustomerPayment !== null,
+                $paymentWorkflowPayload,
+            )) {
+                return $reusableResponse;
+            }
+
             return $this->storePrismaLinkOnlinePayment(
                 $company,
                 $request,
@@ -736,6 +747,38 @@ class DashboardBookingController extends Controller
                 $paymentMethod,
             );
         });
+    }
+
+    /**
+     * @param  array<string, mixed>  $validated
+     * @param  array<string, mixed>  $paymentWorkflowPayload
+     */
+    private function reusablePrismaLinkOnlinePaymentResponse(
+        Request $request,
+        Booking $booking,
+        array $validated,
+        bool $isAgentVendorCustomerPayment,
+        array $paymentWorkflowPayload,
+    ): ?JsonResponse {
+        $reusablePayment = app(ReusablePrismaLinkBookingPaymentAttemptService::class)->findReusableAttempt(
+            $booking,
+            get_class($request->user()),
+            (int) $request->user()->id,
+            (string) $validated['payment_type'],
+            (float) $validated['amount'],
+            $paymentWorkflowPayload,
+        );
+
+        if (! $reusablePayment) {
+            return null;
+        }
+
+        $this->markDashboardBookingOnlinePaymentInProgress($booking, $isAgentVendorCustomerPayment);
+
+        return response()->json([
+            'payment' => $this->onlinePaymentResponsePayload($reusablePayment->fresh(), true),
+            'bookingPaymentResult' => $this->buildBookingPaymentResult($booking->fresh(), $reusablePayment->fresh()),
+        ]);
     }
 
     private function markDashboardBookingOnlinePaymentInProgress(Booking $booking, bool $agentVendorCustomerPayment): void

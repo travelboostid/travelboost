@@ -271,7 +271,7 @@ class BookingPaymentWorkflowService
                 && data_get($payment->payload, 'vendor_review_status') === self::REVIEW_PENDING
                 && (
                     ($payment->provider === 'manual' && $payment->payment_method === 'bank_transfer' && $payment->status === PaymentStatus::PENDING)
-                    || ($payment->provider === 'midtrans' && $payment->status === PaymentStatus::PAID)
+                    || ($this->isPaidOnlineBookingProvider($payment))
                 );
         }
 
@@ -380,7 +380,7 @@ class BookingPaymentWorkflowService
             ];
         }
 
-        if ($payment->provider !== 'midtrans') {
+        if (! in_array($payment->provider, ['midtrans', 'prismalink'], true)) {
             return null;
         }
 
@@ -435,11 +435,17 @@ class BookingPaymentWorkflowService
             return $payment->status === PaymentStatus::PENDING;
         }
 
-        if ($payment->provider === 'midtrans') {
-            return $payment->status === PaymentStatus::PAID;
+        if ($this->isPaidOnlineBookingProvider($payment)) {
+            return true;
         }
 
         return false;
+    }
+
+    private function isPaidOnlineBookingProvider(Payment $payment): bool
+    {
+        return in_array($payment->provider, ['midtrans', 'prismalink'], true)
+            && $payment->status === PaymentStatus::PAID;
     }
 
     private function latestCustomerToAgentPayment(Booking $booking): ?Payment
