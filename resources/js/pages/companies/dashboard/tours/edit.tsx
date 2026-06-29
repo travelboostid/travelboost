@@ -1340,17 +1340,6 @@ export default function Page({ tour }: Props) {
         try {
             const payload = buildAddOnsPayload(data);
 
-            if (payload.length === 0) {
-                toast.error(
-                    intl.formatMessage({
-                        defaultMessage: 'Add-ons cannot be empty',
-                    }),
-                );
-                return;
-            }
-
-            console.log('SYNC PAYLOAD:', payload);
-
             router.post(
                 `/companies/${company.username}/dashboard/tour-add-ons`,
                 { add_ons: payload, schedule_ids: Object.keys(addOns) },
