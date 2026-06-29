@@ -104,7 +104,7 @@ class MidtransService
                 'first_name' => $user->name,
                 'email' => $user->email,
             ],
-            'expiry' => $this->chargeExpiryPayload(),
+            'expiry' => $this->snapExpiryPayload(),
             'enabled_payments' => $this->snapEnabledPayments($paymentMethod),
         ];
 
@@ -175,6 +175,17 @@ class MidtransService
 
     /**
      * @return array{unit: string, duration: int}
+     */
+    public function snapExpiryPayload(): array
+    {
+        return [
+            'unit' => 'minute',
+            'duration' => self::CHARGE_LIFETIME_MINUTES,
+        ];
+    }
+
+    /**
+     * @return array{unit: string, expiry_duration: int}
      */
     public function chargeExpiryPayload(): array
     {

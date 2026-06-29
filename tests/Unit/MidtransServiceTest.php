@@ -115,3 +115,41 @@ test('midtrans snap enabled payments map platform method codes', function () {
 
     expect($service->snapEnabledPayments($paymentMethod))->toBe(['bca_va']);
 });
+
+test('midtrans snap params use duration field for expiry object', function () {
+    $user = User::factory()->create();
+    $paymentMethod = createMidtransBcaPaymentMethod();
+    $service = app(MidtransService::class);
+
+    $params = $service->buildSnapParams(
+        '99-test-order',
+        200_000,
+        $paymentMethod,
+        $user,
+        'https://example.test/finish',
+    );
+
+    expect($params['expiry'] ?? null)->toMatchArray([
+        'unit' => 'minute',
+        'duration' => MidtransService::CHARGE_LIFETIME_MINUTES,
+    ])->and($params['expiry'] ?? null)->not->toHaveKey('expiry_duration');
+});
+
+test('midtrans charge params use expiry_duration field for custom_expiry object', function () {
+    $user = User::factory()->create();
+    $paymentMethod = createMidtransBcaPaymentMethod();
+    $service = app(MidtransService::class);
+
+    $params = $service->buildChargeParams(
+        '99-test-order',
+        200_000,
+        $paymentMethod,
+        $user,
+        'https://example.test/finish',
+    );
+
+    expect($params['custom_expiry'] ?? null)->toMatchArray([
+        'unit' => 'minute',
+        'expiry_duration' => MidtransService::CHARGE_LIFETIME_MINUTES,
+    ])->and($params['custom_expiry'] ?? null)->not->toHaveKey('duration');
+});
