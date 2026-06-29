@@ -6,7 +6,10 @@ use App\Enums\BookingStatus;
 use App\Enums\PaymentStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Booking;
+use App\Models\BookingAddon;
+use App\Models\BookingPassenger;
 use App\Models\Company;
+use App\Models\Payment;
 use App\Models\TourPrice;
 use App\Models\TourSchedule;
 use Carbon\Carbon;
@@ -18,7 +21,6 @@ use Illuminate\Support\Collection;
 use Inertia\Inertia;
 use Inertia\Response;
 use Maatwebsite\Excel\Concerns\FromView;
-use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Maatwebsite\Excel\Concerns\WithColumnWidths;
 use Maatwebsite\Excel\Concerns\WithEvents;
 use Maatwebsite\Excel\Concerns\WithStyles;
@@ -55,7 +57,7 @@ class SalesReportController extends Controller
         $filename = $this->filename('xlsx');
 
         return Excel::download(
-            new class($data) implements FromView, ShouldAutoSize, WithColumnWidths, WithEvents, WithStyles
+            new class($data) implements FromView, WithColumnWidths, WithEvents, WithStyles
             {
                 public function __construct(private readonly array $data) {}
 
@@ -68,21 +70,24 @@ class SalesReportController extends Controller
                 {
                     return [
                         'A' => 6,
-                        'B' => 16,
-                        'C' => 28,
-                        'D' => 14,
-                        'E' => 32,
-                        'F' => 26,
-                        'G' => 20,
-                        'H' => 26,
-                        'I' => 16,
-                        'J' => 8,
-                        'K' => 18,
-                        'L' => 14,
-                        'M' => 14,
-                        'N' => 14,
-                        'O' => 18,
+                        'B' => 18,
+                        'C' => 26,
+                        'D' => 16,
+                        'E' => 36,
+                        'F' => 24,
+                        'G' => 18,
+                        'H' => 24,
+                        'I' => 8,
+                        'J' => 20,
+                        'K' => 26,
+                        'L' => 26,
+                        'M' => 18,
+                        'N' => 16,
+                        'O' => 26,
                         'P' => 18,
+                        'Q' => 18,
+                        'R' => 18,
+                        'S' => 18,
                     ];
                 }
 
@@ -93,8 +98,8 @@ class SalesReportController extends Controller
                         ->setWrapText(true)
                         ->setVertical(Alignment::VERTICAL_CENTER);
 
-                    $sheet->getStyle('A1:P3')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT);
-                    $sheet->getStyle('A4:P4')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+                    $sheet->getStyle('A1:S3')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT);
+                    $sheet->getStyle('A4:S4')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
                     $sheet->getDefaultRowDimension()->setRowHeight(-1);
 
                     return [];
@@ -107,17 +112,17 @@ class SalesReportController extends Controller
                             $worksheet = $event->sheet->getDelegate();
                             $highestRow = $worksheet->getHighestRow();
                             $totalRow = $highestRow;
-                            $worksheet->mergeCells('A1:P1');
-                            $worksheet->mergeCells('A2:P2');
-                            $worksheet->mergeCells('A3:P3');
+                            $worksheet->mergeCells('A1:S1');
+                            $worksheet->mergeCells('A2:S2');
+                            $worksheet->mergeCells('A3:S3');
                             $worksheet->freezePane('A5');
-                            $worksheet->setAutoFilter("A4:P{$highestRow}");
+                            $worksheet->setAutoFilter("A4:S{$highestRow}");
                             $worksheet->setShowGridlines(false);
                             $worksheet->getRowDimension(1)->setRowHeight(30);
                             $worksheet->getRowDimension(2)->setRowHeight(22);
                             $worksheet->getRowDimension(3)->setRowHeight(22);
                             $worksheet->getRowDimension(4)->setRowHeight(30);
-                            $worksheet->getStyle('A1:P3')->applyFromArray([
+                            $worksheet->getStyle('A1:S3')->applyFromArray([
                                 'fill' => [
                                     'fillType' => Fill::FILL_SOLID,
                                     'startColor' => ['rgb' => 'EEF4FF'],
@@ -132,8 +137,8 @@ class SalesReportController extends Controller
                             $worksheet->getStyle('A1')->getFont()->setBold(true)->setSize(18)->getColor()->setRGB('0F172A');
                             $worksheet->getStyle('A2')->getFont()->setBold(true)->setSize(12)->getColor()->setRGB('111827');
                             $worksheet->getStyle('A3')->getFont()->setSize(10)->getColor()->setRGB('64748B');
-                            $worksheet->getStyle('A1:P3')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT)->setVertical(Alignment::VERTICAL_CENTER);
-                            $worksheet->getStyle('A4:P4')->applyFromArray([
+                            $worksheet->getStyle('A1:S3')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT)->setVertical(Alignment::VERTICAL_CENTER);
+                            $worksheet->getStyle('A4:S4')->applyFromArray([
                                 'font' => [
                                     'bold' => true,
                                     'color' => ['rgb' => 'FFFFFF'],
@@ -143,8 +148,8 @@ class SalesReportController extends Controller
                                     'startColor' => ['rgb' => '1E293B'],
                                 ],
                             ]);
-                            $worksheet->getStyle('A4:P4')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER)->setVertical(Alignment::VERTICAL_CENTER);
-                            $worksheet->getStyle("A4:P{$highestRow}")->applyFromArray([
+                            $worksheet->getStyle('A4:S4')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER)->setVertical(Alignment::VERTICAL_CENTER);
+                            $worksheet->getStyle("A4:S{$highestRow}")->applyFromArray([
                                 'borders' => [
                                     'allBorders' => [
                                         'borderStyle' => Border::BORDER_THIN,
@@ -152,18 +157,17 @@ class SalesReportController extends Controller
                                     ],
                                 ],
                             ]);
-                            $worksheet->getStyle("A5:P{$highestRow}")->getAlignment()->setVertical(Alignment::VERTICAL_CENTER);
+                            $worksheet->getStyle("A5:S{$highestRow}")->getAlignment()->setVertical(Alignment::VERTICAL_CENTER);
                             $worksheet->getStyle("A5:A{$highestRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-                            $worksheet->getStyle("F5:G{$highestRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-                            $worksheet->getStyle("I5:P{$highestRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
+                            $worksheet->getStyle("G5:G{$highestRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
                             $worksheet->getStyle("J5:J{$highestRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-                            $worksheet->getStyle("I5:I{$highestRow}")->getNumberFormat()->setFormatCode('"Rp" #,##0');
-                            $worksheet->getStyle("K5:P{$highestRow}")->getNumberFormat()->setFormatCode('"Rp" #,##0');
+                            $worksheet->getStyle("K5:S{$highestRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
                             $worksheet->getStyle("J5:J{$highestRow}")->getNumberFormat()->setFormatCode('#,##0');
+                            $worksheet->getStyle("K5:S{$highestRow}")->getNumberFormat()->setFormatCode('"Rp" #,##0');
 
                             for ($row = 5; $row < $totalRow; $row++) {
                                 if ($row % 2 === 0) {
-                                    $worksheet->getStyle("A{$row}:P{$row}")->applyFromArray([
+                                    $worksheet->getStyle("A{$row}:S{$row}")->applyFromArray([
                                         'fill' => [
                                             'fillType' => Fill::FILL_SOLID,
                                             'startColor' => ['rgb' => 'F8FAFC'],
@@ -174,7 +178,7 @@ class SalesReportController extends Controller
                                 $worksheet->getRowDimension($row)->setRowHeight(-1);
                             }
 
-                            $worksheet->getStyle("A{$totalRow}:P{$totalRow}")->applyFromArray([
+                            $worksheet->getStyle("A{$totalRow}:S{$totalRow}")->applyFromArray([
                                 'font' => [
                                     'bold' => true,
                                     'color' => ['rgb' => '0F172A'],
@@ -219,14 +223,14 @@ class SalesReportController extends Controller
                 'agent.users:id',
                 'vendor:id,name',
                 'tour:id,name,code',
-                'user:id,name',
+                'user:id,name,email',
                 'passengers',
-                'addons:id,booking_id,price',
+                'addons:id,booking_id,name,price,is_taxable',
                 'payments' => function ($query): void {
                     $query
                         ->where('status', PaymentStatus::PAID->value)
-                        ->orderByDesc('paid_at')
-                        ->latest();
+                        ->orderBy('paid_at')
+                        ->orderBy('created_at');
                 },
             ])
             ->latest()
@@ -235,41 +239,67 @@ class SalesReportController extends Controller
         $schedules = $this->scheduleMap($bookings);
         $companyType = $this->companyType($company);
 
-        return $bookings->map(function (Booking $booking) use ($companyType, $schedules): array {
-            $paidAt = $booking->payments->first()?->paid_at;
-            $agentUserId = $booking->agent?->users?->first()?->id;
-            $pax = (int) $booking->pax_adult + (int) $booking->pax_child + (int) $booking->pax_infant;
-            $departureDate = $this->dateString($booking->departure_date);
-            $schedule = $schedules->get($this->scheduleKey((int) $booking->tour_id, $departureDate));
-            $addonCost = (float) $booking->addons->sum('price');
-            $commissionAmount = $this->resolveCommissionAmount($booking);
-            $pricing = $this->passengerPricingSummary($booking, $schedule);
-            $salesAmount = (float) $pricing['discounted_total'];
+        return $bookings
+            ->map(function (Booking $booking) use ($companyType, $schedules): ?array {
+                $paidPayments = $booking->payments
+                    ->filter(fn (Payment $payment): bool => $payment->status === PaymentStatus::PAID)
+                    ->sortBy(fn (Payment $payment): string => (string) ($payment->paid_at ?? $payment->created_at))
+                    ->values();
 
-            return [
-                'id' => $booking->id,
-                'agent_code' => $agentUserId ? str_pad((string) $agentUserId, 4, '0', STR_PAD_LEFT) : '-',
-                'agent_name' => $booking->agent?->name ?? '-',
-                'vendor_name' => $booking->vendor?->name ?? '-',
-                'tour_code' => $booking->tour?->code ?? '-',
-                'tour_name' => $booking->tour?->name ?? '-',
-                'departure_date' => $departureDate,
-                'return_date' => $this->dateString($schedule?->return_date),
-                'booking_code' => $booking->booking_number,
-                'booking_contact' => $booking->contact_name ?: $booking->user?->name ?: '-',
-                'booking_date' => $booking->created_at?->toIso8601String(),
-                'pax' => $pax,
-                'tour_price' => $pricing['average_price'],
-                'tour_price_total' => $pricing['discounted_total'],
-                'tax_amount' => (float) $booking->tax_amount,
-                'addon_cost' => $addonCost,
-                'promo_amount' => $pricing['promo_amount'],
-                'grand_total' => $salesAmount,
-                'commission_amount' => $commissionAmount,
-                'paid_at' => $paidAt?->toIso8601String(),
-                'visible_agent_identity' => $companyType === 'vendor',
-            ];
-        })->values();
+                $fullPayment = $this->resolveFinalFullPayment($paidPayments);
+
+                if (! $fullPayment) {
+                    return null;
+                }
+
+                $paymentDate = $this->resolvePaymentDate($fullPayment);
+                $agentUserId = $booking->agent?->users?->first()?->id;
+                $pax = (int) $booking->pax_adult + (int) $booking->pax_child + (int) $booking->pax_infant;
+                $departureDate = $this->dateString($booking->departure_date);
+                $schedule = $schedules->get($this->scheduleKey((int) $booking->tour_id, $departureDate));
+                $commissionAmount = $this->resolveCommissionAmount($booking);
+                $pricing = $this->passengerPricingSummary($booking, $schedule);
+                $taxableVisaRows = $this->visaBreakdownRows($booking->passengers, true);
+                $nonTaxableVisaRows = $this->visaBreakdownRows($booking->passengers, false);
+                $taxableAddonRows = $this->addonBreakdownRows($booking->addons, true);
+                $nonTaxableAddonRows = $this->addonBreakdownRows($booking->addons, false);
+
+                return [
+                    'id' => $booking->id,
+                    'agent_code' => $agentUserId ? str_pad((string) $agentUserId, 4, '0', STR_PAD_LEFT) : '-',
+                    'agent_name' => $booking->agent?->name ?? '-',
+                    'vendor_name' => $booking->vendor?->name ?? '-',
+                    'tour_code' => $booking->tour?->code ?? '-',
+                    'tour_name' => $booking->tour?->name ?? '-',
+                    'departure_date' => $departureDate,
+                    'return_date' => $this->dateString($schedule?->return_date),
+                    'booking_code' => $booking->booking_number,
+                    'booking_contact' => $booking->contact_name ?: $booking->user?->name ?: '-',
+                    'booking_date' => $booking->created_at?->toIso8601String(),
+                    'pax' => $pax,
+                    'base_tour_total' => (float) $pricing['discounted_total'],
+                    'base_tour_average' => (float) $pricing['average_price'],
+                    'taxable_visa_total' => (float) $taxableVisaRows->sum('amount'),
+                    'taxable_addon_total' => (float) $taxableAddonRows->sum('amount'),
+                    'vat_amount' => (float) $booking->tax_amount,
+                    'promo_amount' => (float) $pricing['promo_amount'],
+                    'non_taxable_visa_total' => (float) $nonTaxableVisaRows->sum('amount'),
+                    'non_taxable_addon_total' => (float) $nonTaxableAddonRows->sum('amount'),
+                    'platform_fee' => (float) $booking->platform_fee,
+                    'grand_total' => (float) $booking->grand_total,
+                    'commission_amount' => $commissionAmount,
+                    'paid_at' => $paymentDate?->toIso8601String(),
+                    'taxable_visa_items' => $taxableVisaRows->values()->all(),
+                    'taxable_addon_items' => $taxableAddonRows->values()->all(),
+                    'non_taxable_visa_items' => $nonTaxableVisaRows->values()->all(),
+                    'non_taxable_addon_items' => $nonTaxableAddonRows->values()->all(),
+                    'visible_agent_identity' => $companyType === 'vendor',
+                ];
+            })
+            ->filter()
+            ->filter(fn (array $row): bool => $this->rowMatchesPeriod($row, $filters))
+            ->sortByDesc(fn (array $row): int => Carbon::parse((string) $row['paid_at'])->timestamp)
+            ->values();
     }
 
     private function baseBookingQuery(Company $company, array $filters): Builder
@@ -294,62 +324,50 @@ class SalesReportController extends Controller
             })
             ->when($filters['departure_date'], function (Builder $query) use ($filters): void {
                 $query->whereDate('departure_date', $filters['departure_date']);
-            })
-            ->when($filters['period_from'], function (Builder $query) use ($filters): void {
-                $query->whereHas('payments', function (Builder $query) use ($filters): void {
-                    $query
-                        ->where('status', PaymentStatus::PAID->value)
-                        ->whereDate('paid_at', '>=', $filters['period_from']);
-                });
-            })
-            ->when($filters['period_to'], function (Builder $query) use ($filters): void {
-                $query->whereHas('payments', function (Builder $query) use ($filters): void {
-                    $query
-                        ->where('status', PaymentStatus::PAID->value)
-                        ->whereDate('paid_at', '<=', $filters['period_to']);
-                });
             });
     }
 
     private function buildOptions(Company $company, array $filters): array
     {
-        $bookings = $this->baseBookingQuery($company, [
+        $rows = $this->buildRows($company, [
             ...$filters,
             'agent_id' => null,
             'tour_code' => null,
             'departure_date' => null,
-        ])
-            ->with(['agent:id,name', 'tour:id,name,code'])
-            ->get();
+        ]);
 
         $agents = $this->companyType($company) === 'vendor'
-            ? $bookings
-                ->filter(fn (Booking $booking): bool => filled($booking->agent_id))
-                ->map(fn (Booking $booking): array => [
-                    'id' => $booking->agent_id,
-                    'name' => $booking->agent?->name ?? 'Unknown Agent',
+            ? $rows
+                ->filter(fn (array $row): bool => $row['agent_name'] !== '-')
+                ->map(fn (array $row): array => [
+                    'id' => (int) ltrim((string) $row['agent_code'], '0'),
+                    'name' => $row['agent_name'],
+                    'company_id' => $this->agentCompanyIdForName($company, $row['agent_name']),
                 ])
-                ->unique('id')
+                ->filter(fn (array $row): bool => (int) ($row['company_id'] ?? 0) > 0)
+                ->unique('company_id')
                 ->sortBy('name')
+                ->map(fn (array $row): array => [
+                    'id' => (int) $row['company_id'],
+                    'name' => $row['name'],
+                ])
                 ->values()
             : collect();
 
-        $tourCodes = $bookings
-            ->filter(fn (Booking $booking): bool => filled($booking->tour?->code))
-            ->map(fn (Booking $booking): array => [
-                'code' => $booking->tour?->code,
-                'name' => $booking->tour?->name,
+        $tourCodes = $rows
+            ->filter(fn (array $row): bool => filled($row['tour_code']))
+            ->map(fn (array $row): array => [
+                'code' => $row['tour_code'],
+                'name' => $row['tour_name'],
             ])
             ->unique('code')
             ->sortBy('code')
             ->values();
 
         $departureDates = filled($filters['tour_code'])
-            ? $bookings
-                ->filter(fn (Booking $booking): bool => $booking->tour?->code === $filters['tour_code'])
+            ? $rows
+                ->filter(fn (array $row): bool => $row['tour_code'] === $filters['tour_code'])
                 ->pluck('departure_date')
-                ->filter()
-                ->map(fn ($date): ?string => $this->dateString($date))
                 ->filter()
                 ->unique()
                 ->sort()
@@ -496,6 +514,117 @@ class SalesReportController extends Controller
         ];
     }
 
+    private function resolveFinalFullPayment(Collection $paidPayments): ?Payment
+    {
+        $fullPayments = $paidPayments
+            ->filter(fn (Payment $payment): bool => $payment->bookingPaymentType() === Payment::BOOKING_PAYMENT_TYPE_FULL_PAYMENT)
+            ->values();
+
+        return $fullPayments->last() ?? $paidPayments->last();
+    }
+
+    private function resolvePaymentDate(Payment $payment): ?Carbon
+    {
+        $payloadPaymentDate = data_get($payment->payload, 'payment_date');
+
+        if (filled($payloadPaymentDate)) {
+            return Carbon::parse((string) $payloadPaymentDate);
+        }
+
+        if ($payment->paid_at) {
+            return Carbon::parse($payment->paid_at);
+        }
+
+        return $payment->created_at ? Carbon::parse($payment->created_at) : null;
+    }
+
+    private function rowMatchesPeriod(array $row, array $filters): bool
+    {
+        $paidAt = $row['paid_at'] ?? null;
+
+        if (! $paidAt) {
+            return false;
+        }
+
+        $paidDate = Carbon::parse((string) $paidAt)->toDateString();
+
+        if (filled($filters['period_from']) && $paidDate < $filters['period_from']) {
+            return false;
+        }
+
+        if (filled($filters['period_to']) && $paidDate > $filters['period_to']) {
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * @param  Collection<int, BookingPassenger>  $passengers
+     * @return Collection<int, array{label: string, quantity: int, unit_price: float, amount: float}>
+     */
+    private function visaBreakdownRows(Collection $passengers, bool $taxable): Collection
+    {
+        return $passengers
+            ->filter(function (BookingPassenger $passenger) use ($taxable): bool {
+                return filled($passenger->visa_type_description)
+                    && (float) ($passenger->visa_type_price ?? 0) > 0
+                    && (bool) $passenger->visa_type_is_taxable === $taxable;
+            })
+            ->groupBy(function (BookingPassenger $passenger): string {
+                return mb_strtolower((string) $passenger->visa_type_description).'|'.(string) $passenger->visa_type_price;
+            })
+            ->map(function (Collection $group): array {
+                /** @var BookingPassenger $passenger */
+                $passenger = $group->first();
+                $quantity = $group->count();
+                $unitPrice = (float) ($passenger->visa_type_price ?? 0);
+
+                return [
+                    'label' => (string) $passenger->visa_type_description,
+                    'quantity' => $quantity,
+                    'unit_price' => $unitPrice,
+                    'amount' => $unitPrice * $quantity,
+                ];
+            })
+            ->values();
+    }
+
+    /**
+     * @param  Collection<int, BookingAddon>  $addons
+     * @return Collection<int, array{label: string, quantity: int, unit_price: float, amount: float}>
+     */
+    private function addonBreakdownRows(Collection $addons, bool $taxable): Collection
+    {
+        return $addons
+            ->filter(fn (BookingAddon $addon): bool => (bool) $addon->is_taxable === $taxable)
+            ->groupBy(function (BookingAddon $addon): string {
+                return mb_strtolower((string) $addon->name).'|'.(string) $addon->price;
+            })
+            ->map(function (Collection $group): array {
+                /** @var BookingAddon $addon */
+                $addon = $group->first();
+                $quantity = $group->count();
+                $unitPrice = (float) $addon->price;
+
+                return [
+                    'label' => (string) $addon->name,
+                    'quantity' => $quantity,
+                    'unit_price' => $unitPrice,
+                    'amount' => $unitPrice * $quantity,
+                ];
+            })
+            ->values();
+    }
+
+    private function agentCompanyIdForName(Company $company, string $agentName): ?int
+    {
+        return Booking::query()
+            ->where('vendor_id', $company->id)
+            ->whereHas('agent', fn (Builder $query): Builder => $query->where('name', $agentName))
+            ->value('agent_id');
+    }
+
     private function summary(Collection $rows): array
     {
         return [
@@ -503,6 +632,14 @@ class SalesReportController extends Controller
             'total_pax' => (int) $rows->sum('pax'),
             'total_sales' => (float) $rows->sum('grand_total'),
             'total_commission' => (float) $rows->sum('commission_amount'),
+            'base_tour_total' => (float) $rows->sum('base_tour_total'),
+            'taxable_visa_total' => (float) $rows->sum('taxable_visa_total'),
+            'taxable_addon_total' => (float) $rows->sum('taxable_addon_total'),
+            'vat_total' => (float) $rows->sum('vat_amount'),
+            'promo_total' => (float) $rows->sum('promo_amount'),
+            'non_taxable_visa_total' => (float) $rows->sum('non_taxable_visa_total'),
+            'non_taxable_addon_total' => (float) $rows->sum('non_taxable_addon_total'),
+            'platform_fee_total' => (float) $rows->sum('platform_fee'),
         ];
     }
 

@@ -171,14 +171,15 @@ class RoomListingController extends Controller
                         'I' => 7,
                         'J' => 22,
                         'K' => 16,
-                        'L' => 13,
+                        'L' => 16,
                         'M' => 13,
-                        'N' => 16,
-                        'O' => 13,
-                        'P' => 14,
-                        'Q' => 12,
-                        'R' => 18,
-                        'S' => 6,
+                        'N' => 13,
+                        'O' => 16,
+                        'P' => 13,
+                        'Q' => 14,
+                        'R' => 12,
+                        'S' => 18,
+                        'T' => 6,
                     ];
                 }
 
@@ -194,32 +195,32 @@ class RoomListingController extends Controller
                         ->getAlignment()
                         ->setVertical(Alignment::VERTICAL_CENTER);
 
-                    $sheet->getStyle('A1:S4')->getAlignment()
+                    $sheet->getStyle('A1:T4')->getAlignment()
                         ->setHorizontal(Alignment::HORIZONTAL_LEFT)
                         ->setVertical(Alignment::VERTICAL_CENTER);
 
-                    $sheet->getStyle('A6:S6')->getAlignment()
+                    $sheet->getStyle('A6:T6')->getAlignment()
                         ->setHorizontal(Alignment::HORIZONTAL_CENTER)
                         ->setVertical(Alignment::VERTICAL_CENTER);
 
-                    $sheet->getStyle('A6:S6')->getFill()
+                    $sheet->getStyle('A6:T6')->getFill()
                         ->setFillType(Fill::FILL_SOLID)
                         ->getStartColor()
                         ->setRGB('EAF2FF');
 
-                    $sheet->getStyle('A6:S6')->getBorders()->getAllBorders()
+                    $sheet->getStyle('A6:T6')->getBorders()->getAllBorders()
                         ->setBorderStyle(Border::BORDER_THIN)
                         ->getColor()
                         ->setRGB('B8C7D9');
 
-                    $sheet->getStyle('A1:S3')->getFill()
+                    $sheet->getStyle('A1:T3')->getFill()
                         ->setFillType(Fill::FILL_SOLID)
                         ->getStartColor()
                         ->setRGB('FFFFFF');
 
                     $highestRow = max(7, $sheet->getHighestRow());
 
-                    $sheet->getStyle('A7:S'.$highestRow)->getBorders()->getAllBorders()
+                    $sheet->getStyle('A7:T'.$highestRow)->getBorders()->getAllBorders()
                         ->setBorderStyle(Border::BORDER_THIN)
                         ->getColor()
                         ->setRGB('D8E1EC');
@@ -263,7 +264,7 @@ class RoomListingController extends Controller
                                 ->getColor()
                                 ->setRGB('64748B');
 
-                            $worksheet->getStyle('L1:R2')->getFont()
+                            $worksheet->getStyle('L1:T2')->getFont()
                                 ->setBold(true)
                                 ->setSize(10)
                                 ->getColor()
@@ -275,7 +276,7 @@ class RoomListingController extends Controller
                                 ->getColor()
                                 ->setRGB('334155');
 
-                            $worksheet->getStyle('A1:S4')->getBorders()->getBottom()
+                            $worksheet->getStyle('A1:T4')->getBorders()->getBottom()
                                 ->setBorderStyle(Border::BORDER_MEDIUM)
                                 ->getColor()
                                 ->setRGB('0F172A');
@@ -289,6 +290,64 @@ class RoomListingController extends Controller
             },
             $filename,
         );
+    }
+
+    public function exportDocuments(Company $company, Request $request)
+    {
+        $this->ensureVendorAccess($company);
+
+        $tourId = $request->input('tour_id');
+        $departureDate = $request->input('departure_date');
+
+        abort_unless(filled($tourId) && filled($departureDate), 422);
+
+        $tour = Tour::query()
+            ->where('company_id', $company->id)
+            ->findOrFail($tourId);
+
+        $bookings = $this->roomListingBookings($company, $tourId, $departureDate);
+
+        $zipFile = tempnam(sys_get_temp_dir(), 'docs');
+        $zip = new \ZipArchive;
+        $zip->open($zipFile, \ZipArchive::CREATE | \ZipArchive::OVERWRITE);
+
+        $hasFiles = false;
+
+        $zip->addEmptyDir('passport');
+        $zip->addEmptyDir('visa');
+
+        foreach ($bookings as $booking) {
+            foreach ($booking->passengers as $passenger) {
+                $name = preg_replace('/[^A-Za-z0-9\-]/', '_', trim($passenger->first_name.' '.$passenger->last_name));
+                $name = trim($name, '_');
+
+                if ($passenger->passport_file_path && \Storage::disk('public')->exists($passenger->passport_file_path)) {
+                    $ext = pathinfo($passenger->passport_file_path, PATHINFO_EXTENSION) ?: 'pdf';
+                    $filename = "passport/{$name}_passport.{$ext}";
+                    $zip->addFile(\Storage::disk('public')->path($passenger->passport_file_path), $filename);
+                    $hasFiles = true;
+                }
+
+                if ($passenger->visa_file_path && \Storage::disk('public')->exists($passenger->visa_file_path)) {
+                    $ext = pathinfo($passenger->visa_file_path, PATHINFO_EXTENSION) ?: 'pdf';
+                    $filename = "visa/{$name}_visa.{$ext}";
+                    $zip->addFile(\Storage::disk('public')->path($passenger->visa_file_path), $filename);
+                    $hasFiles = true;
+                }
+            }
+        }
+
+        $zip->close();
+
+        if (! $hasFiles) {
+            unlink($zipFile);
+
+            return back()->with('error', 'No documents found for the selected passengers.');
+        }
+
+        $filename = $this->generateFilename($tour, $departureDate, 'zip');
+
+        return response()->download($zipFile, $filename)->deleteFileAfterSend(true);
     }
 
     private function generateFilename($tour, ?string $departureDate, string $extension): string
