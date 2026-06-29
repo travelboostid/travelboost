@@ -1221,7 +1221,7 @@ function EditableWizard({
                 const payload = response.data?.payment?.payload as
                     | Record<string, unknown>
                     | undefined;
-                const provider = payment?.provider ?? 'midtrans';
+                const provider = payment?.provider ?? 'prismalink';
                 const paymentAmount = Number(payment?.amount ?? finalAmount);
 
                 if (
@@ -1327,7 +1327,7 @@ function EditableWizard({
     ) => {
         setPaymentErrorMessage(null);
 
-        if (paymentMethod === 'midtrans') {
+        if (paymentMethod === 'online') {
             setIsSubmitting(false);
             setPendingOnlinePayment({
                 paymentType,

@@ -14,6 +14,9 @@ class PaymentMethodResource extends JsonResource
             'name' => $this->name,
             'description' => $this->description,
             'provider' => $this->provider,
+            'usage_scope' => $this->usage_scope instanceof \BackedEnum
+                ? $this->usage_scope->value
+                : $this->usage_scope,
             'method' => $this->method,
             'category' => $this->category instanceof \BackedEnum
                 ? $this->category->value

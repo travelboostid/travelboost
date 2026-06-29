@@ -2157,7 +2157,7 @@ export default function Page() {
                     | Record<string, unknown>
                     | undefined;
                 const paymentId = payment?.id;
-                const provider = payment?.provider ?? 'midtrans';
+                const provider = payment?.provider ?? 'prismalink';
                 const paymentAmount = Number(payment?.amount ?? finalAmount);
                 const pendingResult = response.data?.bookingPaymentResult as
                     | BookingPaymentResultData
@@ -2212,7 +2212,7 @@ export default function Page() {
 
                 router.put(
                     `/bookings/${existingBooking.id}`,
-                    buildBookingPayload(addOns, paymentType, 'midtrans', false),
+                    buildBookingPayload(addOns, paymentType, 'online', false),
                     {
                         forceFormData: true,
                         preserveScroll: true,
@@ -2249,7 +2249,7 @@ export default function Page() {
             const payload = buildBookingPayload(
                 addOns,
                 paymentType,
-                'midtrans',
+                'online',
                 true,
             );
 
@@ -2579,7 +2579,7 @@ export default function Page() {
     ) => {
         setPaymentErrorMessage(null);
 
-        if (paymentMethod === 'midtrans') {
+        if (paymentMethod === 'online') {
             setIsSubmitting(false);
             setPendingMidtransPayment({
                 paymentType,
