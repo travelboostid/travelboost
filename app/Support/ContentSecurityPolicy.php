@@ -4,6 +4,23 @@ namespace App\Support;
 
 class ContentSecurityPolicy
 {
+    private static ?string $nonce = null;
+
+    public static function setNonce(string $nonce): void
+    {
+        self::$nonce = $nonce;
+    }
+
+    public static function nonce(): ?string
+    {
+        return self::$nonce;
+    }
+
+    public static function clearNonce(): void
+    {
+        self::$nonce = null;
+    }
+
     /**
      * @return array<string, list<string>>
      */
@@ -11,6 +28,10 @@ class ContentSecurityPolicy
     {
         /** @var array<string, list<string>> $directives */
         $directives = config('csp.directives', []);
+
+        if (self::$nonce !== null) {
+            $directives['script-src'][] = "'nonce-".self::$nonce."'";
+        }
 
         return $directives;
     }

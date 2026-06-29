@@ -19,6 +19,22 @@ test('content security policy header includes midtrans snap inline hash', functi
         ->and($header)->toContain('sha256-DueWcbxgRVJl6J5x2OBGlMjJ0RI9aTrwDoqaA4GHDhs=');
 });
 
+test('content security policy header includes request nonce', function () {
+    config([
+        'csp.enabled' => true,
+        'csp.directives' => [
+            'script-src' => ["'self'"],
+        ],
+    ]);
+
+    ContentSecurityPolicy::setNonce('test-nonce-value');
+
+    expect(ContentSecurityPolicy::headerValue())
+        ->toContain("'nonce-test-nonce-value'");
+
+    ContentSecurityPolicy::clearNonce();
+});
+
 test('web responses include content security policy when enabled', function () {
     config([
         'csp.enabled' => true,
@@ -35,8 +51,12 @@ test('web responses include content security policy when enabled', function () {
 
     $response->assertOk();
     $response->assertHeader('Content-Security-Policy');
-    expect($response->headers->get('Content-Security-Policy'))
-        ->toContain('sha256-DueWcbxgRVJl6J5x2OBGlMjJ0RI9aTrwDoqaA4GHDhs=');
+
+    $policy = (string) $response->headers->get('Content-Security-Policy');
+
+    expect($policy)
+        ->toContain('sha256-DueWcbxgRVJl6J5x2OBGlMjJ0RI9aTrwDoqaA4GHDhs=')
+        ->toContain('nonce-');
 });
 
 test('content security policy middleware does not override existing header', function () {

@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <script>
+    <script @if (! empty($cspNonce)) nonce="{{ $cspNonce }}" @endif>
         (function () {
             const appearance = '{{ $appearance ?? "system" }}';
 
@@ -24,7 +24,7 @@
             async
             src="https://www.googletagmanager.com/gtag/js?id={{ $analyticsMeasurementIds[0] }}"
         ></script>
-        <script>
+        <script @if (! empty($cspNonce)) nonce="{{ $cspNonce }}" @endif>
             window.dataLayer = window.dataLayer || [];
 
             function gtag() {
@@ -74,7 +74,7 @@
         rel="apple-touch-icon"
         href="/images/logo/logo-square/apple-touch-icon.png"
     />
-    <script>
+    <script @if (! empty($cspNonce)) nonce="{{ $cspNonce }}" @endif>
         window.addEventListener(
             'load',
             function () {
@@ -107,20 +107,9 @@
         />
     @endif
     <link
-        rel="preload"
+        rel="stylesheet"
         href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600|playfair-display:600,700&display=swap"
-        as="style"
-        onload="
-            this.onload = null;
-            this.rel = 'stylesheet';
-        "
     />
-    <noscript>
-        <link
-            href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600|playfair-display:600,700&display=swap"
-            rel="stylesheet"
-        />
-    </noscript>
 
     @php
         $pageProps = $page['props'] ?? [];
