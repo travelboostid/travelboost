@@ -2,6 +2,7 @@ import { PaymentQrCode } from '@/components/payment/payment-qr-code';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { formatIDR } from '@/constants/booking';
+import { loadMidtransSnapScript, openMidtransSnap } from '@/lib/midtrans-snap';
 import {
     buildPaymentDetailsText,
     formatBankLabel,
@@ -325,6 +326,54 @@ export function OnlinePaymentInstructions({
                         Continue to secure payment
                         <ExternalLinkIcon className="size-4" />
                     </a>
+                </Button>
+            </div>
+        );
+    }
+
+    if (
+        kind === 'snap' &&
+        typeof instructions.snap_token === 'string' &&
+        instructions.snap_token.trim() !== ''
+    ) {
+        const snapToken = instructions.snap_token.trim();
+
+        return (
+            <div className="space-y-4">
+                <PaymentAmountCard
+                    amount={amount}
+                    expiresAt={
+                        instructions.snap_token_expires_at ??
+                        instructions.charge_expires_at
+                    }
+                />
+                <InstructionSteps steps={steps} />
+                <Button
+                    type="button"
+                    className="h-11 w-full"
+                    size="lg"
+                    onClick={() => {
+                        void loadMidtransSnapScript()
+                            .then(() => {
+                                openMidtransSnap(snapToken, {
+                                    onError: () => {
+                                        toast.error(
+                                            'Midtrans could not open the payment page. Please try again.',
+                                        );
+                                    },
+                                });
+                            })
+                            .catch((error: unknown) => {
+                                toast.error(
+                                    error instanceof Error
+                                        ? error.message
+                                        : 'Failed to load Midtrans Snap.',
+                                );
+                            });
+                    }}
+                >
+                    Open Midtrans payment
+                    <ExternalLinkIcon className="size-4" />
                 </Button>
             </div>
         );

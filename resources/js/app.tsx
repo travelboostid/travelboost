@@ -10,10 +10,12 @@ import '../css/app.css';
 import { DeferredAppServices } from './components/deferred-app-services';
 import I18nProvider from './components/i18n-provider';
 import { LocaleProvider } from './components/locale-context';
+import { MidtransConfigBootstrap } from './components/midtrans-config-bootstrap';
 import { Toaster } from './components/ui/sonner';
 import { TooltipProvider } from './components/ui/tooltip';
 import { initializeTheme } from './hooks/use-appearance';
 import { configureEchoIfNeeded } from './lib/configure-echo';
+import { setMidtransPublicConfig } from './lib/midtrans-snap';
 import { NuqsAdapter } from './lib/nuqs-inertia-adapter';
 
 dayjs.extend(relativeTime);
@@ -45,6 +47,14 @@ createInertiaApp({
             import.meta.glob('./pages/**/*.tsx'),
         ),
     setup({ el, App, props }) {
+        setMidtransPublicConfig(
+            (
+                props.initialPage.props as {
+                    midtrans?: Parameters<typeof setMidtransPublicConfig>[0];
+                }
+            ).midtrans,
+        );
+
         const root = createRoot(el);
 
         const isOnDesignerPage =
@@ -64,6 +74,7 @@ createInertiaApp({
                             <TooltipProvider>
                                 <QueryClientProvider client={queryClient}>
                                     <NuqsAdapter>
+                                        <MidtransConfigBootstrap />
                                         <App {...props} />
                                     </NuqsAdapter>
                                     <DeferredAppServices />

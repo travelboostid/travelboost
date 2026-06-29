@@ -54,6 +54,10 @@ class HandleInertiaRequests extends Middleware
                 'wa_cs'
             ),
             'affiliatePageUrl' => fn (): ?string => $this->resolveAffiliatePageUrl($request),
+            'midtrans' => [
+                'clientKey' => (string) config('midtrans.client_key', ''),
+                'isProduction' => (bool) config('midtrans.is_production', false),
+            ],
         ];
     }
 

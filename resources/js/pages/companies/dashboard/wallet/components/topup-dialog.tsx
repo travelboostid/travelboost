@@ -18,6 +18,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import usePageProps from '@/hooks/use-page-props';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
+import { loadMidtransSnapScript } from '@/lib/midtrans-snap';
 import { openOnlinePayment } from '@/lib/open-online-payment';
 import {
     refreshWalletPage,
@@ -111,6 +112,10 @@ export function TopupDialog({ children }: TopupDialogProps) {
             setPendingConfirmOpen(true);
             return;
         }
+
+        void loadMidtransSnapScript().catch(() => {
+            // Best-effort preload during the user click; errors surface on open.
+        });
 
         topup.mutate(
             {

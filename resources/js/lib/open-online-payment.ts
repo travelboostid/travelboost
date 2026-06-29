@@ -10,6 +10,7 @@ import {
     type PaymentStatusCheckConfig,
     type PaymentStatusSyncResult,
 } from '@/lib/payment-status';
+import { toast } from 'sonner';
 
 type OnlinePayment = {
     id?: number | string | null;
@@ -37,6 +38,7 @@ export const ONLINE_PAYMENT_OPEN_EVENT = 'online-payment:open';
 
 const PRISMALINK_SANDBOX_WEB_BASE_URL = 'https://secure2-staging.plink.co.id';
 const PRISMALINK_PRODUCTION_WEB_BASE_URL = 'https://secure3.plink.co.id';
+const SNAP_OPEN_DELAY_MS = 300;
 
 function resolvePrismaLinkPaymentPageUrl(url: string): string {
     const configuredBase = import.meta.env.VITE_PRISMALINK_WEB_BASE_URL as
@@ -142,48 +144,65 @@ function openMidtransSnapPayment(
     const snapToken = payload.snap_token;
 
     if (typeof snapToken !== 'string' || snapToken.trim() === '') {
-        callbacks?.onComplete?.();
+        toast.error(
+            'Payment was created but Midtrans Snap token is missing. Please try again.',
+        );
+        dispatchOpenOnlinePayment(payment, callbacks, options);
+
         return;
     }
 
-    void loadMidtransSnapScript()
-        .then(() => {
-            openMidtransSnap(snapToken, {
-                onSuccess: () => {
-                    void syncSnapPaymentStatus(
-                        payment,
-                        callbacks,
-                        options,
-                    ).then((result) => {
-                        if (result?.status === 'paid') {
-                            callbacks?.onPaid?.(result);
-                            return;
-                        }
+    window.setTimeout(() => {
+        void loadMidtransSnapScript()
+            .then(() => {
+                openMidtransSnap(snapToken, {
+                    onSuccess: () => {
+                        void syncSnapPaymentStatus(
+                            payment,
+                            callbacks,
+                            options,
+                        ).then((result) => {
+                            if (result?.status === 'paid') {
+                                callbacks?.onPaid?.(result);
+                                return;
+                            }
 
-                        callbacks?.onComplete?.();
-                    });
-                },
-                onPending: () => {
-                    void syncSnapPaymentStatus(
-                        payment,
-                        callbacks,
-                        options,
-                    ).then((result) => {
-                        if (result?.status === 'paid') {
-                            callbacks?.onPaid?.(result);
-                            return;
-                        }
+                            callbacks?.onComplete?.();
+                        });
+                    },
+                    onPending: () => {
+                        void syncSnapPaymentStatus(
+                            payment,
+                            callbacks,
+                            options,
+                        ).then((result) => {
+                            if (result?.status === 'paid') {
+                                callbacks?.onPaid?.(result);
+                                return;
+                            }
 
-                        callbacks?.onComplete?.();
-                    });
-                },
-                onError: () => callbacks?.onComplete?.(),
-                onClose: () => callbacks?.onComplete?.(),
+                            callbacks?.onComplete?.();
+                        });
+                    },
+                    onError: () => {
+                        toast.error(
+                            'Midtrans could not open the payment page. Use the payment dialog to try again.',
+                        );
+                        dispatchOpenOnlinePayment(payment, callbacks, options);
+                    },
+                    onClose: () => callbacks?.onComplete?.(),
+                });
+            })
+            .catch((error: unknown) => {
+                const message =
+                    error instanceof Error
+                        ? error.message
+                        : 'Failed to load Midtrans Snap.';
+
+                toast.error(message);
+                dispatchOpenOnlinePayment(payment, callbacks, options);
             });
-        })
-        .catch(() => {
-            callbacks?.onComplete?.();
-        });
+    }, SNAP_OPEN_DELAY_MS);
 }
 
 export function openOnlinePayment(
