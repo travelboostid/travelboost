@@ -2,11 +2,14 @@ import { useQuery } from '@tanstack/react-query';
 
 import { apiInstance } from '../api-instance';
 
+export type PaymentMethodUsageScope = 'booking' | 'platform';
+
 export type PaymentMethodResource = {
     id: number;
     name: string;
     description: string | null;
     provider: string;
+    usage_scope?: PaymentMethodUsageScope | null;
     method: string;
     category: 'banktransfer' | 'creditcard' | 'conveniencestore' | 'qris';
     meta: Record<string, unknown> | null;
@@ -35,18 +38,26 @@ function normalizePaymentMethods(
     return [];
 }
 
-export const getPaymentMethods = (signal?: AbortSignal) => {
+export const getPaymentMethods = (
+    usageScope?: PaymentMethodUsageScope,
+    signal?: AbortSignal,
+) => {
     return apiInstance<PaymentMethodCollectionResponse>({
         url: '/payment-methods',
         method: 'GET',
+        params: usageScope ? { usage_scope: usageScope } : undefined,
         signal,
     });
 };
 
-export const usePaymentMethods = () => {
+export const usePaymentMethods = (
+    usageScope: PaymentMethodUsageScope = 'booking',
+) => {
     return useQuery({
-        queryKey: ['paymentMethods'],
+        queryKey: ['paymentMethods', usageScope],
         queryFn: async ({ signal }) =>
-            normalizePaymentMethods(await getPaymentMethods(signal)),
+            normalizePaymentMethods(
+                await getPaymentMethods(usageScope, signal),
+            ),
     });
 };

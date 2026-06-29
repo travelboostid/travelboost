@@ -70,13 +70,14 @@ function reviewPaymentDetail(
     payment: PaymentReviewItem,
     intl: IntlShape,
 ): PaymentDetail {
-    const receiptType = payment.provider === 'midtrans' ? 'online' : 'manual';
+    const isOnlineProvider =
+        payment.provider === 'midtrans' || payment.provider === 'prismalink';
+    const receiptType = isOnlineProvider ? 'online' : 'manual';
 
     return {
-        method_label:
-            payment.provider === 'midtrans'
-                ? intl.formatMessage({ defaultMessage: 'Online payment' })
-                : intl.formatMessage({ defaultMessage: 'Manual payment' }),
+        method_label: isOnlineProvider
+            ? intl.formatMessage({ defaultMessage: 'Online payment' })
+            : intl.formatMessage({ defaultMessage: 'Manual payment' }),
         receiver_label:
             payment.payment_flow_stage === 'agent_to_vendor'
                 ? intl.formatMessage({ defaultMessage: 'vendor' })
@@ -114,12 +115,13 @@ function PaymentReviewSection({
     const intl = useIntl();
     const amount = reviewPaymentAmount(payment);
     const detail = reviewPaymentDetail(payment, intl);
-    const isOnlinePayment = payment.provider === 'midtrans';
+    const isOnlinePayment =
+        payment.provider === 'midtrans' || payment.provider === 'prismalink';
     const senderLabel = isOnlinePayment
         ? intl.formatMessage({ defaultMessage: 'Payment Channel' })
         : intl.formatMessage({ defaultMessage: 'Sender Bank' });
     const senderValue = isOnlinePayment
-        ? intl.formatMessage({ defaultMessage: 'Midtrans Online Payment' })
+        ? intl.formatMessage({ defaultMessage: 'Online Payment' })
         : (payment.sender_bank_name ?? '—');
     const accountLabel = isOnlinePayment
         ? intl.formatMessage({ defaultMessage: 'Reference' })
@@ -134,7 +136,7 @@ function PaymentReviewSection({
             <div className="flex items-center justify-between gap-4 border-b pb-2">
                 <span className="font-semibold">{title}</span>
                 <Badge variant="outline" className="uppercase">
-                    {payment.provider === 'midtrans'
+                    {isOnlinePayment
                         ? intl.formatMessage({
                               defaultMessage: 'Online payment',
                           })
@@ -608,7 +610,7 @@ export function BookingIndexRowActions({
                 const payload = response.data?.payment?.payload as
                     | Record<string, unknown>
                     | undefined;
-                const provider = payment?.provider ?? 'midtrans';
+                const provider = payment?.provider ?? 'prismalink';
                 const paymentAmount = Number(
                     payment?.amount ?? customerPaymentAmount,
                 );

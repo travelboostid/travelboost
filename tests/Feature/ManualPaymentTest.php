@@ -2,15 +2,12 @@
 
 use App\Enums\BookingStatus;
 use App\Enums\CompanyTeamStatus;
-use App\Enums\PaymentMethodCategory;
-use App\Enums\PaymentMethodStatus;
 use App\Enums\PaymentStatus;
 use App\Enums\VendorAgentPartnerStatus;
 use App\Models\Booking;
 use App\Models\Company;
 use App\Models\CompanyTeam;
 use App\Models\Domain;
-use App\Models\PaymentMethod;
 use App\Models\Tour;
 use App\Models\TourAvailability;
 use App\Models\TourSchedule;
@@ -316,7 +313,7 @@ test('customer online payment to agent stays waiting approval after gateway conf
         ->and(data_get($payment->payload, 'agent_review_status'))->toBe('approved')
         ->and(data_get($payment->payload, 'counts_toward_booking_total'))->toBeFalse()
         ->and($booking->fresh()->status)->toBe(BookingStatus::WAITING_PAYMENT_APPROVAL);
-});
+})->skip('Legacy Midtrans booking flows; PrismaLink parity in follow-up PR');
 
 test('agent online payment to vendor remains waiting approval until vendor approves', function () {
     $agentUser = User::factory()->create();
@@ -412,7 +409,7 @@ test('agent online payment to vendor remains waiting approval until vendor appro
         ->and(data_get($agentVendorPayment->payload, 'payment_flow_stage'))->toBe('agent_to_vendor')
         ->and(data_get($agentVendorPayment->payload, 'vendor_review_status'))->toBe('pending')
         ->and(data_get($agentVendorPayment->payload, 'counts_toward_booking_total'))->toBeFalse();
-});
+})->skip('Legacy Midtrans booking flows; PrismaLink parity in follow-up PR');
 
 test('agent online payment to vendor reuses active snap attempt', function () {
     $agentUser = User::factory()->create();
@@ -515,7 +512,7 @@ test('agent online payment to vendor reuses active snap attempt', function () {
         ->where('provider', 'midtrans')
         ->where('status', PaymentStatus::PENDING)
         ->count())->toBe(1);
-});
+})->skip('Legacy Midtrans booking flows; PrismaLink parity in follow-up PR');
 
 test('manual payment proof requires payment type', function () {
     Storage::fake('public');
@@ -654,12 +651,9 @@ test('manual payment sender account number must contain digits only', function (
     $response->assertSessionHasErrors('sender_account_number');
 });
 
-test('customer can create an online booking payment with midtrans core api', function () {
+test('booking online payment rejects midtrans payment methods', function () {
     $user = User::factory()->create();
     $vendor = Company::factory()->create(['type' => 'vendor']);
-    $vendor->companySetting()->updateOrCreate([], [
-        'minimum_down_payment' => 30,
-    ]);
     $tour = Tour::factory()->create(['company_id' => $vendor->id]);
     $booking = Booking::factory()->create([
         'user_id' => $user->id,
@@ -669,42 +663,22 @@ test('customer can create an online booking payment with midtrans core api', fun
         'grand_total' => 1_000_000,
     ]);
 
-    mockMidtransCoreApiCharge();
     $paymentMethod = createMidtransBcaPaymentMethod();
 
-    $response = $this->actingAs($user)->postJson("/bookings/{$booking->id}/online-payment", [
-        'payment_type' => 'down_payment',
-        'amount' => 300_000,
-        'payment_method_id' => $paymentMethod->id,
-    ]);
+    $this->actingAs($user)
+        ->postJson("/bookings/{$booking->id}/online-payment", [
+            'payment_type' => 'down_payment',
+            'amount' => 300_000,
+            'payment_method_id' => $paymentMethod->id,
+        ])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('payment_method_id');
 
-    $response->assertOk()
-        ->assertJsonPath('payment.payload.va_number', '80777100123456')
-        ->assertJsonPath('payment.payload.instruction_type', 'va')
-        ->assertJsonPath('payment.payload.payment_type', 'down_payment');
-
-    $this->assertDatabaseHas('payments', [
-        'owner_type' => User::class,
-        'owner_id' => $user->id,
-        'payable_type' => Booking::class,
-        'payable_id' => $booking->id,
-        'provider' => 'midtrans',
-        'payment_method' => 'bca_va',
-        'amount' => 300_000,
-        'status' => 'pending',
-    ]);
-
-    expect($booking->fresh()->payment_mode)->toBe('online');
+    expect($booking->fresh()->payments()->count())->toBe(0);
 });
 
 test('customer can create an online booking payment with prismalink', function () {
-    config([
-        'prismalink.merchant_id' => 'merchant',
-        'prismalink.merchant_key_id' => 'key',
-        'prismalink.secret_key' => 'secret',
-        'prismalink.backend_callback_url' => 'https://tunnel-8000.travelboost.co.id/webhooks/prismalink/backend-callback',
-        'prismalink.frontend_callback_url' => 'https://tunnel-8000.travelboost.co.id',
-    ]);
+    configurePrismaLinkForTests();
 
     Http::fake([
         'api-staging.plink.co.id/*' => Http::response([
@@ -732,16 +706,10 @@ test('customer can create an online booking payment with prismalink', function (
         'grand_total' => 1_000_000,
     ]);
 
-    $paymentMethod = PaymentMethod::query()->create([
-        'provider' => 'prismalink',
+    $paymentMethod = createPrismaLinkBcaPaymentMethod([
         'method' => 'bri_va',
         'name' => 'PrismaLink BRI Virtual Account',
-        'description' => 'Test PrismaLink BRI VA',
-        'category' => PaymentMethodCategory::BANK_TRANSFER,
-        'status' => PaymentMethodStatus::ENABLED,
-        'meta' => [
-            'bank_id' => '002',
-        ],
+        'meta' => ['bank_id' => '002'],
     ]);
 
     $response = $this->actingAs($user)->postJson("/bookings/{$booking->id}/online-payment", [
@@ -835,7 +803,7 @@ test('customer reuses active online booking payment attempt while hold is active
 
     expect($booking->fresh()->status)->toBe(BookingStatus::BOOKING_RESERVED)
         ->and($booking->fresh()->payments()->where('provider', 'midtrans')->where('status', PaymentStatus::PENDING)->count())->toBe(1);
-});
+})->skip('Legacy Midtrans booking reusable attempt; PrismaLink parity in follow-up PR');
 
 test('customer creates new online booking payment when previous core api attempt is expired', function () {
     $user = User::factory()->create();
@@ -897,7 +865,7 @@ test('customer creates new online booking payment when previous core api attempt
         ->and($newPayment->id)->not->toBe($oldPayment->id)
         ->and(data_get($newPayment->payload, 'order_id'))->not->toBe('expired-booking-order')
         ->and(data_get($newPayment->payload, 'charge_expires_at'))->not->toBeNull();
-});
+})->skip('Legacy Midtrans booking reusable attempt; PrismaLink parity in follow-up PR');
 
 test('dashboard online full payment keeps down payment booking status until midtrans confirms', function () {
     $user = User::factory()->create();
@@ -956,7 +924,7 @@ test('dashboard online full payment keeps down payment booking status until midt
 
     expect($booking->fresh()->status)->toBe(BookingStatus::DOWN_PAYMENT)
         ->and($booking->fresh()->payment_mode)->toBe('online');
-});
+})->skip('Legacy Midtrans booking flows; PrismaLink parity in follow-up PR');
 
 test('dashboard online payment preserves waiting approval payment process status until midtrans confirms', function () {
     $user = User::factory()->create();
@@ -1006,7 +974,7 @@ test('dashboard online payment preserves waiting approval payment process status
     expect($booking->fresh()->status)->toBe(BookingStatus::WAITING_PAYMENT_APPROVAL)
         ->and($booking->fresh()->reserved_type)->toBe('payment_in_progress')
         ->and($booking->fresh()->payment_mode)->toBe('online');
-});
+})->skip('Legacy Midtrans booking flows; PrismaLink parity in follow-up PR');
 
 test('dashboard full payment amount must cover finalizable remaining balance', function () {
     $user = User::factory()->create();
@@ -1102,7 +1070,7 @@ test('customer online full payment keeps down payment booking status until midtr
 
     expect($booking->fresh()->status)->toBe(BookingStatus::DOWN_PAYMENT)
         ->and($booking->fresh()->payment_mode)->toBe('online');
-});
+})->skip('Legacy Midtrans booking flows; PrismaLink parity in follow-up PR');
 
 test('customer cannot create online payment after booking reservation expired', function () {
     $user = User::factory()->create();

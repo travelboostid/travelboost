@@ -11,6 +11,7 @@ use App\Actions\Booking\SyncAvailabilityAction;
 use App\Enums\BookingAvailabilityContext;
 use App\Enums\BookingStatus;
 use App\Enums\PaymentMethodStatus;
+use App\Enums\PaymentMethodUsageScope;
 use App\Enums\PaymentStatus;
 use App\Enums\VendorAgentPartnerStatus;
 use App\Http\Controllers\Controller;
@@ -45,7 +46,6 @@ use App\Services\MidtransService;
 use App\Services\PaymentGatewayStatusSyncService;
 use App\Services\PrismaLinkException;
 use App\Services\PrismaLinkService;
-use App\Services\ReusableMidtransBookingPaymentAttemptService;
 use App\Support\BookingDeparture;
 use App\Support\BookingReschedulePayment;
 use Illuminate\Database\Eloquent\Builder;
@@ -696,7 +696,7 @@ class DashboardBookingController extends Controller
             'payment_method_id' => ['required', 'exists:payment_methods,id'],
         ]);
 
-        $paymentMethod = $this->resolveEnabledOnlinePaymentMethod((int) $validated['payment_method_id']);
+        $paymentMethod = $this->resolveEnabledBookingOnlinePaymentMethod((int) $validated['payment_method_id']);
 
         $paymentWorkflow = app(BookingPaymentWorkflowService::class);
         $agentVendorCustomerPayment = $paymentWorkflow->agentVendorCustomerPaymentForDashboardPayment($company, $booking);
@@ -717,26 +717,14 @@ class DashboardBookingController extends Controller
             ? $paymentWorkflow->agentVendorPaymentPayload($booking, $agentVendorCustomerPayment, (string) $validated['payment_type'])
             : $paymentWorkflow->initialPaymentPayload($paymentReceiver, (string) $validated['payment_type']);
 
-        if ($paymentMethod->provider === 'prismalink') {
-            return $this->storePrismaLinkOnlinePayment(
-                $company,
-                $request,
-                $booking,
-                $validated,
-                $agentVendorCustomerPayment !== null,
-                $paymentWorkflowPayload,
-                $paymentMethod,
-            );
-        }
-
-        $reusableAttemptService = app(ReusableMidtransBookingPaymentAttemptService::class);
-        $reusablePayment = $reusableAttemptService->findReusableAttempt(
+        return $this->storePrismaLinkOnlinePayment(
+            $company,
+            $request,
             $booking,
-            get_class($request->user()),
-            $request->user()->id,
-            (string) $validated['payment_type'],
-            (float) $validated['amount'],
+            $validated,
+            $agentVendorCustomerPayment !== null,
             $paymentWorkflowPayload,
+            $paymentMethod,
         );
 
         if ($reusablePayment) {
@@ -954,14 +942,15 @@ class DashboardBookingController extends Controller
         ]);
     }
 
-    private function resolveEnabledOnlinePaymentMethod(int $paymentMethodId): PaymentMethod
+    private function resolveEnabledBookingOnlinePaymentMethod(int $paymentMethodId): PaymentMethod
     {
         $paymentMethod = PaymentMethod::query()->find($paymentMethodId);
 
         if (
             ! $paymentMethod instanceof PaymentMethod
             || $paymentMethod->status !== PaymentMethodStatus::ENABLED
-            || ! in_array($paymentMethod->provider, ['midtrans', 'prismalink'], true)
+            || $paymentMethod->provider !== 'prismalink'
+            || $paymentMethod->usage_scope !== PaymentMethodUsageScope::Booking
         ) {
             throw ValidationException::withMessages([
                 'payment_method_id' => 'Selected payment method is not available.',
