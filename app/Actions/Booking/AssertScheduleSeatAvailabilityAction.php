@@ -7,6 +7,7 @@ use App\Enums\BookingStatus;
 use App\Models\Booking;
 use App\Models\TourAvailability;
 use App\Models\TourSchedule;
+use App\Support\BookingAvailabilityMessages;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -16,6 +17,12 @@ class AssertScheduleSeatAvailabilityAction
     public function assertForBooking(Booking $booking, BookingAvailabilityContext $context = BookingAvailabilityContext::Finalization): void
     {
         if (! $booking->tour_id || ! $booking->vendor_id || ! $booking->departure_date) {
+            if ($context === BookingAvailabilityContext::Reserve) {
+                return;
+            }
+
+            $this->throwMissingSchedule($context);
+
             return;
         }
 
@@ -67,11 +74,7 @@ class AssertScheduleSeatAvailabilityAction
             $availability = $this->lockAvailability($tourId, $companyId, $departureDate, $context);
 
             if (! $availability) {
-                if ($context === BookingAvailabilityContext::Reserve) {
-                    throw ValidationException::withMessages([
-                        $context->validationField() => $context->message(),
-                    ]);
-                }
+                $this->throwMissingSchedule($context);
 
                 return;
             }
@@ -134,6 +137,8 @@ class AssertScheduleSeatAvailabilityAction
             $availability = $this->lockAvailability($tourId, $companyId, $departureDate, $context);
 
             if (! $availability) {
+                $this->throwMissingSchedule($context);
+
                 return;
             }
 
@@ -204,6 +209,13 @@ class AssertScheduleSeatAvailabilityAction
         }
 
         return ($booking->created_at ?? now())->format('Y-m-d H:i:s.u');
+    }
+
+    private function throwMissingSchedule(BookingAvailabilityContext $context): void
+    {
+        throw ValidationException::withMessages([
+            $context->validationField() => BookingAvailabilityMessages::missingSchedule(),
+        ]);
     }
 
     private function lockAvailability(
