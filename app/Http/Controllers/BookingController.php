@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\Booking\AssertBookingOnlinePaymentStartAllowedAction;
 use App\Actions\Booking\AssertScheduleSeatAvailabilityAction;
 use App\Actions\Booking\ExpireBookingReservationsAction;
 use App\Actions\Booking\FinalizeBookingPaymentAction;
@@ -818,7 +819,6 @@ class BookingController extends Controller
         $booking = $booking ?? $usernameOrBooking;
         abort_unless($booking instanceof Booking, 404);
         abort_unless($request->user()?->id === $booking->user_id, 403);
-        $booking = $this->ensureBookingNotExpired($booking);
 
         $validated = $request->validate([
             'payment_type' => ['required', 'string', 'in:down_payment,full_payment'],
@@ -828,23 +828,34 @@ class BookingController extends Controller
 
         $paymentMethod = $this->resolveEnabledBookingOnlinePaymentMethod((int) $validated['payment_method_id']);
 
-        $this->assertCustomerCanStartPayment(
-            $booking,
-            (float) $validated['amount'],
-            (string) $validated['payment_type']
-        );
+        return DB::transaction(function () use ($request, $booking, $validated, $paymentMethod): JsonResponse {
+            $booking = Booking::query()
+                ->whereKey($booking->id)
+                ->lockForUpdate()
+                ->firstOrFail();
 
-        $paymentReceiver = app(BookingPaymentReceiverService::class)->resolveForBooking($booking);
-        $paymentWorkflowPayload = app(BookingPaymentWorkflowService::class)
-            ->initialPaymentPayload($paymentReceiver, (string) $validated['payment_type']);
+            $booking = $this->ensureBookingNotExpired($booking);
 
-        return $this->storePrismaLinkOnlinePayment(
-            $request,
-            $booking,
-            $validated,
-            $paymentWorkflowPayload,
-            $paymentMethod,
-        );
+            app(AssertBookingOnlinePaymentStartAllowedAction::class)->assert($booking);
+
+            $this->assertCustomerCanStartPayment(
+                $booking,
+                (float) $validated['amount'],
+                (string) $validated['payment_type']
+            );
+
+            $paymentReceiver = app(BookingPaymentReceiverService::class)->resolveForBooking($booking);
+            $paymentWorkflowPayload = app(BookingPaymentWorkflowService::class)
+                ->initialPaymentPayload($paymentReceiver, (string) $validated['payment_type']);
+
+            return $this->storePrismaLinkOnlinePayment(
+                $request,
+                $booking,
+                $validated,
+                $paymentWorkflowPayload,
+                $paymentMethod,
+            );
+        });
     }
 
     /**
@@ -858,7 +869,7 @@ class BookingController extends Controller
         array $paymentWorkflowPayload,
         PaymentMethod $paymentMethod,
     ): JsonResponse {
-        $payment = DB::transaction(function () use ($request, $booking, $validated, $paymentWorkflowPayload, $paymentMethod): Payment {
+        $payment = $this->runPrismaLinkOnlinePaymentTransaction(function () use ($request, $booking, $validated, $paymentWorkflowPayload, $paymentMethod): Payment {
             $payment = $booking->payments()->create([
                 'owner_type' => get_class($request->user()),
                 'owner_id' => $request->user()->id,
@@ -909,6 +920,21 @@ class BookingController extends Controller
             'reserved_type' => 'payment_in_progress',
             'reserved_expires_at' => null,
         ]);
+    }
+
+    /**
+     * @template TReturn
+     *
+     * @param  callable(): TReturn  $callback
+     * @return TReturn
+     */
+    private function runPrismaLinkOnlinePaymentTransaction(callable $callback): mixed
+    {
+        if (DB::transactionLevel() > 0) {
+            return $callback();
+        }
+
+        return DB::transaction($callback);
     }
 
     private function markBookingManualPaymentInProgress(Booking $booking): void
