@@ -13,13 +13,15 @@ class TourAddOnController extends Controller
     public function store(Request $request, Company $company)
     {
         $data = $request->validate([
-            'add_ons' => ['required', 'array'],
+            'add_ons' => ['present', 'array'],
             'add_ons.*.tour_id' => ['required', 'integer', 'exists:tours,id'],
             'add_ons.*.schedule_id' => ['required', 'integer', 'exists:tour_schedules,id'],
             'add_ons.*.description' => ['required', 'string', 'max:255'],
             'add_ons.*.price' => ['nullable', 'numeric'],
             'add_ons.*.edit_status' => ['boolean'],
             'add_ons.*.is_taxable' => ['boolean'],
+            'schedule_ids' => ['nullable', 'array'],
+            'schedule_ids.*' => ['integer', 'exists:tour_schedules,id'],
         ]);
 
         $companyId = $company->id;
@@ -34,19 +36,30 @@ class TourAddOnController extends Controller
             |--------------------------------------------------------------------------
             */
 
-            $scheduleIds = $incoming->pluck('schedule_id')->unique();
+            $scheduleIds = collect($data['schedule_ids'] ?? [])
+                ->merge($incoming->pluck('schedule_id'))
+                ->unique()
+                ->values();
 
             foreach ($scheduleIds as $scheduleId) {
-
                 $descriptions = $incoming
                     ->where('schedule_id', $scheduleId)
                     ->pluck('description')
-                    ->toArray();
+                    ->filter()
+                    ->values()
+                    ->all();
 
-                TourAddOn::where('company_id', $companyId)
-                    ->where('schedule_id', $scheduleId)
-                    ->whereNotIn('description', $descriptions)
-                    ->delete();
+                $query = TourAddOn::query()
+                    ->where('company_id', $companyId)
+                    ->where('schedule_id', $scheduleId);
+
+                if ($descriptions === []) {
+                    $query->delete();
+
+                    continue;
+                }
+
+                $query->whereNotIn('description', $descriptions)->delete();
             }
 
             /*
