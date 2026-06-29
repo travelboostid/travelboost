@@ -2,9 +2,12 @@
 
 namespace App\Http\Controllers\Webhooks;
 
+use App\Actions\Booking\FinalizeBookingPaymentAction;
 use App\Enums\PaymentStatus;
 use App\Http\Controllers\Controller;
+use App\Models\Booking;
 use App\Models\Payment;
+use App\Services\BookingPaymentWorkflowService;
 use App\Services\OnlinePaymentSettlementService;
 use App\Services\PrismaLinkService;
 use Illuminate\Http\JsonResponse;
@@ -55,6 +58,21 @@ class PrismaLinkWebhookController extends Controller
         );
 
         DB::transaction(function () use ($payment, $payload, $newStatus): void {
+            $paymentWorkflow = app(BookingPaymentWorkflowService::class);
+
+            if (
+                $newStatus === PaymentStatus::PAID
+                && $payment->payable_type === Booking::class
+                && ! $paymentWorkflow->isCustomerToAgentPayment($payment)
+                && ! $paymentWorkflow->isAgentToVendorPayment($payment)
+            ) {
+                $booking = $payment->payable;
+                if ($booking instanceof Booking) {
+                    app(FinalizeBookingPaymentAction::class)
+                        ->assertCanFinalizeIncomingPaidPayment($booking->fresh(), $payment->fresh());
+                }
+            }
+
             $payment->update([
                 'status' => $newStatus,
                 'payload' => Payment::mergePrismaLinkPayload($payment->payload ?? [], $payload),
