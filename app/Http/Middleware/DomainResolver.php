@@ -68,6 +68,10 @@ class DomainResolver
         $domainObject = $this->resolveDomain();
 
         if ($domainObject === null) {
+            if ($this->shouldAllowDomainlessOnboarding($request)) {
+                return $this->continueOnboardingWithoutTenant($request, $next);
+            }
+
             return Inertia::render('errors/invalid-tenant-domain')
                 ->toResponse($request)
                 ->setStatusCode(404);
@@ -79,6 +83,10 @@ class DomainResolver
             : (bool) $domainObject->domain_enabled;
 
         if (! $isAllowed) {
+            if ($this->shouldAllowDomainlessOnboarding($request)) {
+                return $this->continueOnboardingWithoutTenant($request, $next, $domainObject);
+            }
+
             return Inertia::render('errors/invalid-tenant-domain')
                 ->toResponse($request)
                 ->setStatusCode(404);
@@ -135,5 +143,25 @@ class DomainResolver
         }
 
         return false;
+    }
+
+    private function shouldAllowDomainlessOnboarding($request): bool
+    {
+        return $request->is('me/onboarding*');
+    }
+
+    private function continueOnboardingWithoutTenant($request, Closure $next, ?Domain $domainObject = null)
+    {
+        $request->attributes->set('tenant', null);
+
+        if ($domainObject !== null) {
+            Context::add('domain', $domainObject);
+
+            if ($domainObject->owner instanceof AffiliateProfile) {
+                Context::add('affiliate', $domainObject->owner);
+            }
+        }
+
+        return $next($request);
     }
 }

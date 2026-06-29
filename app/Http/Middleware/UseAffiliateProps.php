@@ -2,10 +2,9 @@
 
 namespace App\Http\Middleware;
 
-use App\Models\AffiliateProfile;
+use App\Support\AffiliateReferralContext;
 use Closure;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Context;
 use Inertia\Inertia;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -16,12 +15,11 @@ class UseAffiliateProps
      *
      * @param  Closure(Request): (Response)  $next
      */
-    public function handle(Request $request, Closure $next)
+    public function handle(Request $request, Closure $next, AffiliateReferralContext $affiliateReferralContext)
     {
-        /** @var AffiliateProfile | null */
-        $affiliate = Context::get('affiliate');
+        $affiliate = $affiliateReferralContext->visibleAffiliatePayload($request);
 
-        if ($affiliate == null) {
+        if ($affiliate === null) {
             return $next($request);
         }
 

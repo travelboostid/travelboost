@@ -137,6 +137,7 @@ Route::prefix('companies')->middleware(['can:access-company-pages', 'use-analyti
         Route::middleware(['company.type:vendor', 'company.permission:room-listings.mutation'])->group(function () {
             Route::get('reports/room-listings/export/excel', [RoomListingController::class, 'exportExcel'])->name('reports.room-listings.export.excel');
             Route::get('reports/room-listings/export/pdf', [RoomListingController::class, 'exportPdf'])->name('reports.room-listings.export.pdf');
+            Route::get('reports/room-listings/export/documents', [RoomListingController::class, 'exportDocuments'])->name('reports.room-listings.export.documents');
         });
 
         Route::middleware(['company.type:vendor', 'company.permission:seat-availability.query'])->group(function () {

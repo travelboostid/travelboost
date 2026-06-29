@@ -9,17 +9,18 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Companies\AcceptTeamInvitationRequest;
 use App\Http\Requests\Companies\LoginRequest;
 use App\Http\Requests\Companies\RegisterRequest;
-use App\Models\AffiliateProfile;
 use App\Models\CompanyTeam;
 use App\Models\User;
+use App\Support\AffiliateReferralContext;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Context;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 use Inertia\Response;
+use Throwable;
 
 class AuthController extends Controller
 {
@@ -61,23 +62,10 @@ class AuthController extends Controller
         return redirect()->route('companies.dashboard.index', ['company' => $team->company->username]);
     }
 
-    public function showRegister(Request $request): Response
+    public function showRegister(Request $request, AffiliateReferralContext $affiliateReferralContext): Response
     {
-        $domain = Context::get('domain');
-
-        $affiliate = null;
-        if ($domain?->owner instanceof AffiliateProfile) {
-            $profile = $domain->owner;
-            $user = $profile->user;
-            $affiliate = [
-                'id' => $profile->user_id,
-                'name' => $user->name,
-                'username' => $domain->subdomain,
-            ];
-        }
-
         return Inertia::render('companies/auth/register', [
-            'affiliate' => $affiliate,
+            'affiliate' => $affiliateReferralContext->visibleAffiliatePayload($request),
         ]);
     }
 
@@ -97,11 +85,27 @@ class AuthController extends Controller
             return $user;
         });
 
-        event(new Registered($user));
+        $this->dispatchRegisteredEventSafely($user);
         Auth::login($user);
         $request->session()->regenerate();
 
         return redirect()->route('me.index');
+    }
+
+    private function dispatchRegisteredEventSafely(User $user): void
+    {
+        try {
+            event(new Registered($user));
+        } catch (Throwable $exception) {
+            report($exception);
+
+            Log::warning('Unable to send company registration verification email.', [
+                'user_id' => $user->id,
+                'email' => $user->email,
+                'exception' => $exception::class,
+                'message' => $exception->getMessage(),
+            ]);
+        }
     }
 
     public function showAcceptTeamInvitation(Request $request): Response

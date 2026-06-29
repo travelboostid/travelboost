@@ -13,6 +13,29 @@ class ProductionAffiliateSeeder extends Seeder
 {
     public function run(): void
     {
+        $tbPartner = $this->affiliateAccount(
+            username: 'tb-partner',
+            name: 'tb-partner',
+            email: 'tb-partner@travelboost.co.id',
+            tier: 'partner',
+        );
+
+        $tbMasterAffiliate = $this->affiliateAccount(
+            username: 'tb-ma',
+            name: 'tb-ma',
+            email: 'tb-ma@travelboost.co.id',
+            tier: 'master_affiliate',
+            upline: $tbPartner,
+        );
+
+        $this->affiliateAccount(
+            username: 'tb-affiliate',
+            name: 'tb-affiliate',
+            email: 'tb-affiliate@travelboost.co.id',
+            tier: 'affiliate',
+            upline: $tbMasterAffiliate,
+        );
+
         $partnerSatu = $this->affiliateAccount(
             username: 'partner-satu',
             name: 'Partner Satu',
