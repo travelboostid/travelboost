@@ -14,10 +14,9 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
-import { loadMidtransSnapScript } from '@/lib/midtrans-snap';
 import { findPaymentMethodById } from '@/lib/payment-method-ui';
 import { CreditCardIcon, ShieldCheckIcon } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 
 type PaymentMethodDialogProps = {
     open: boolean;
@@ -46,16 +45,6 @@ export function PaymentMethodDialog({
     const paymentMethods = usePaymentMethods(usageScope);
     const methods = paymentMethods.data ?? [];
     const selectedMethod = findPaymentMethodById(methods, selectedMethodId);
-
-    useEffect(() => {
-        if (!open || usageScope !== 'platform') {
-            return;
-        }
-
-        void loadMidtransSnapScript().catch(() => {
-            // Snap preload is best-effort; failures are surfaced when payment opens.
-        });
-    }, [open, usageScope]);
 
     const handleOpenChange = (nextOpen: boolean) => {
         onOpenChange(nextOpen);

@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Middleware\CheckUserStatus;
+use App\Http\Middleware\ContentSecurityPolicy;
 use App\Http\Middleware\DomainResolver;
 use App\Http\Middleware\EnsureAgentSubscriptionIsActive;
 use App\Http\Middleware\EnsureCompanyPermission;
@@ -84,6 +85,7 @@ return Application::configure(basePath: dirname(__DIR__))
             DomainResolver::class,
             HandleAppearance::class,
             HandleInertiaRequests::class,
+            ContentSecurityPolicy::class,
             AddLinkHeadersForPreloadedAssets::class,
         ]);
         $middleware->priority([

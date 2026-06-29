@@ -1,7 +1,7 @@
 import { useOpenChatRoom } from '@/api/chat-room/chat-room';
 import type { ChatMessageResource, ChatRoomResource } from '@/api/model';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
-import { CHAT_ECHO_READY_EVENT, isEchoDeferredPath } from '@/lib/echo-paths';
+import { CHAT_ECHO_READY_EVENT } from '@/lib/echo-paths';
 import {
     selectChatRooms,
     selectMessage,
@@ -157,9 +157,7 @@ export function ChatContextProvider({
     const { auth } = usePageSharedDataProps();
     const setActor = useChatStore((state) => state.setActor);
     const reset = useChatStore((state) => state.reset);
-    const [echoListenersReady, setEchoListenersReady] = useState(
-        () => !isEchoDeferredPath(),
-    );
+    const [echoListenersReady, setEchoListenersReady] = useState(false);
 
     useLayoutEffect(() => {
         setActor(actor);

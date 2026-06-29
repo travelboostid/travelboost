@@ -5,6 +5,8 @@
 	}
 }
 
+(security_headers) {
+	header Content-Security-Policy "default-src 'self'; base-uri 'self'; form-action 'self'; object-src 'none'; frame-ancestors 'self'; script-src 'self' https://www.googletagmanager.com https://pay.google.com https://gwk.gopayapi.com 'sha256-DueWcbxgRVJl6J5x2OBGlMjJ0RI9aTrwDoqaA4GHDhs=' https://app.sandbox.midtrans.com https://snap-assets.sandbox.midtrans.com https://api.sandbox.midtrans.com; style-src 'self' 'unsafe-inline' https://fonts.bunny.net; font-src 'self' data: https://fonts.bunny.net; img-src 'self' data: blob: https:; connect-src 'self' https://www.google-analytics.com https://www.googletagmanager.com https://fonts.bunny.net https://app.sandbox.midtrans.com https://snap-assets.sandbox.midtrans.com https://api.sandbox.midtrans.com wss://reverb.dev.travelboost.co.id https://reverb.dev.travelboost.co.id; frame-src 'self' https://app.sandbox.midtrans.com; worker-src 'self' blob:"
 (cache_static) {
 	@vite_assets path /build/assets/*
 	header @vite_assets Cache-Control "public, max-age=31536000, immutable"
@@ -30,6 +32,7 @@ reverb.dev.travelboost.co.id {
 }
 
 dev.travelboost.co.id {
+	import security_headers
 	root * /home/travelboost/travelboost/public
 	encode zstd gzip
 	import cache_static

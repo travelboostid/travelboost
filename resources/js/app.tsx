@@ -13,19 +13,10 @@ import { LocaleProvider } from './components/locale-context';
 import { Toaster } from './components/ui/sonner';
 import { TooltipProvider } from './components/ui/tooltip';
 import { initializeTheme } from './hooks/use-appearance';
-import { configureEchoIfNeeded } from './lib/configure-echo';
 import { syncMidtransPublicConfig } from './lib/midtrans-public-config';
 import { NuqsAdapter } from './lib/nuqs-inertia-adapter';
 
 dayjs.extend(relativeTime);
-
-configureEchoIfNeeded();
-
-router.on('start', (event) => {
-    configureEchoIfNeeded(
-        new URL(event.detail.visit.url, window.location.origin).pathname,
-    );
-});
 
 router.on('navigate', (event) => {
     syncMidtransPublicConfig(event.detail.page.props);

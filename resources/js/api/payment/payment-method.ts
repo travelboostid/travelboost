@@ -59,5 +59,8 @@ export const usePaymentMethods = (
             normalizePaymentMethods(
                 await getPaymentMethods(usageScope, signal),
             ),
+        staleTime: 5 * 60 * 1000,
+        refetchOnReconnect: false,
+        refetchOnWindowFocus: false,
     });
 };
