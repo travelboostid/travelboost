@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\Booking\AssertScheduleSeatAvailabilityAction;
 use App\Actions\Booking\ExpireBookingReservationsAction;
 use App\Actions\Booking\FinalizeBookingPaymentAction;
 use App\Actions\Booking\NotifyBookingPaymentEventAction;
 use App\Actions\Booking\ReconcileBookingPaymentAfterRepriceAction;
 use App\Actions\Booking\SyncAvailabilityAction;
+use App\Enums\BookingAvailabilityContext;
 use App\Enums\BookingStatus;
 use App\Enums\PaymentMethodStatus;
 use App\Enums\PaymentMethodUsageScope;
@@ -470,21 +472,24 @@ class BookingController extends Controller
                 ->lockForUpdate()
                 ->first();
 
-            $bookingSeatLimit = ($availability ? (int) $availability->available : 0)
-                + $this->heldSeatCountForBooking(
-                    $existingBooking,
-                    $tour->id,
-                    $this->normalizeDateString($schedule->departure_date),
-                    $vendorId
-                );
+            if (! $availability) {
+                throw ValidationException::withMessages([
+                    'availability' => BookingAvailabilityContext::Reserve->message(),
+                ]);
+            }
+
             $requestedSeatCount = (int) $data['pax_adult']
                 + (int) $data['pax_child'];
 
-            if ($requestedSeatCount > $bookingSeatLimit) {
-                throw ValidationException::withMessages([
-                    'availability' => "This booking can include up to {$bookingSeatLimit} guests for this schedule.",
-                ]);
-            }
+            app(AssertScheduleSeatAvailabilityAction::class)->assertWithLockedAvailability(
+                $availability,
+                $tour->id,
+                $vendorId,
+                $this->normalizeDateString($schedule->departure_date),
+                $requestedSeatCount,
+                $existingBooking?->id,
+                BookingAvailabilityContext::Reserve,
+            );
 
             $taxRate = (float) (($existingBooking && $existingBooking->tax_rate !== null)
                 ? $existingBooking->tax_rate
@@ -555,10 +560,10 @@ class BookingController extends Controller
                 $booking->addons()->createMany($quote['addons']);
             }
 
+            app(SyncAvailabilityAction::class)->syncSchedule($schedule, $vendorId);
+
             return $booking;
         });
-
-        app(SyncAvailabilityAction::class)->executeForBooking($booking->fresh());
 
         return back();
     }
@@ -795,11 +800,7 @@ class BookingController extends Controller
                 'file_size' => $proof->getSize(),
             ]);
 
-            $booking->update([
-                'status' => BookingStatus::WAITING_PAYMENT_APPROVAL,
-                'payment_mode' => 'manual',
-                'reserved_expires_at' => null,
-            ]);
+            $this->markBookingManualPaymentInProgress($booking);
 
             return $payment;
         });
@@ -844,6 +845,74 @@ class BookingController extends Controller
             $paymentWorkflowPayload,
             $paymentMethod,
         );
+
+        if ($reusablePayment) {
+            $this->markBookingOnlinePaymentInProgress($booking);
+
+            return response()->json([
+                'payment' => $this->onlinePaymentResponsePayload($reusablePayment->fresh(), true),
+                'bookingPaymentResult' => $this->buildBookingPaymentResult($booking->fresh(), $reusablePayment->fresh()),
+            ]);
+        }
+
+        $payment = DB::transaction(function () use ($request, $booking, $validated, $paymentWorkflowPayload, $reusableAttemptService, $paymentMethod) {
+            $payment = $booking->payments()->create([
+                'owner_type' => get_class($request->user()),
+                'owner_id' => $request->user()->id,
+                'provider' => 'midtrans',
+                'payment_method' => $paymentMethod->method,
+                'amount' => $validated['amount'],
+                'status' => 'unpaid',
+                'payload' => $paymentWorkflowPayload,
+            ]);
+
+            $chargeExpiresAt = $reusableAttemptService->newChargeExpiresAt();
+
+            try {
+                $chargePayload = $this->midtransService->charge(
+                    $payment,
+                    $paymentMethod,
+                    $request->user(),
+                    url('/mybookings'),
+                );
+            } catch (Throwable $exception) {
+                Log::warning('Midtrans Core API charge failed', [
+                    'booking_id' => $booking->id,
+                    'payment_id' => $payment->id,
+                    'payment_type' => $validated['payment_type'],
+                    'payment_method' => $paymentMethod->method,
+                    'amount' => (float) $payment->amount,
+                    'midtrans_environment' => $this->midtransEnvironment(),
+                    'message' => $exception->getMessage(),
+                ]);
+
+                throw ValidationException::withMessages([
+                    'payment' => self::ONLINE_PAYMENT_UNAVAILABLE_MESSAGE,
+                ]);
+            }
+
+            $payment->update([
+                'status' => 'pending',
+                'payload' => [
+                    ...$paymentWorkflowPayload,
+                    ...$chargePayload,
+                    'charge_expires_at' => $chargeExpiresAt->toISOString(),
+                ],
+                'expired_at' => $chargeExpiresAt,
+            ]);
+
+            $this->markBookingOnlinePaymentInProgress($booking);
+
+            return $payment;
+        });
+
+        app(SyncAvailabilityAction::class)->executeForBooking($booking->fresh());
+        app(NotifyBookingPaymentEventAction::class)->execute($booking->fresh(), 'online_payment_pending', $payment->fresh());
+
+        return response()->json([
+            'payment' => $this->onlinePaymentResponsePayload($payment->fresh(), false),
+            'bookingPaymentResult' => $this->buildBookingPaymentResult($booking->fresh(), $payment->fresh()),
+        ]);
     }
 
     /**
@@ -886,10 +955,7 @@ class BookingController extends Controller
                 ]);
             }
 
-            $booking->update([
-                'status' => $this->pendingOnlinePaymentBookingStatus($booking),
-                'payment_mode' => 'online',
-            ]);
+            $this->markBookingOnlinePaymentInProgress($booking);
 
             return $payment;
         });
@@ -900,6 +966,26 @@ class BookingController extends Controller
         return response()->json([
             'payment' => $this->onlinePaymentResponsePayload($payment->fresh(), false),
             'bookingPaymentResult' => $this->buildBookingPaymentResult($booking->fresh(), $payment->fresh()),
+        ]);
+    }
+
+    private function markBookingOnlinePaymentInProgress(Booking $booking): void
+    {
+        $booking->update([
+            'status' => $this->pendingOnlinePaymentBookingStatus($booking),
+            'payment_mode' => 'online',
+            'reserved_type' => 'payment_in_progress',
+            'reserved_expires_at' => null,
+        ]);
+    }
+
+    private function markBookingManualPaymentInProgress(Booking $booking): void
+    {
+        $booking->update([
+            'status' => BookingStatus::WAITING_PAYMENT_APPROVAL,
+            'payment_mode' => 'manual',
+            'reserved_type' => 'payment_in_progress',
+            'reserved_expires_at' => null,
         ]);
     }
 
@@ -1420,8 +1506,18 @@ class BookingController extends Controller
 
         try {
             app(FinalizeBookingPaymentAction::class)
-                ->assertCanFinalizeIncomingAmount($booking->fresh(), $incomingAmount);
-        } catch (ValidationException) {
+                ->assertCanFinalizeIncomingAmount(
+                    $booking->fresh(),
+                    $incomingAmount,
+                    seatContext: BookingAvailabilityContext::Payment,
+                );
+        } catch (ValidationException $exception) {
+            $paymentMessage = $exception->errors()['payment'][0] ?? null;
+
+            if ($paymentMessage !== null) {
+                throw $exception;
+            }
+
             throw ValidationException::withMessages([
                 'payment' => self::CUSTOMER_PAYMENT_UNAVAILABLE_MESSAGE,
             ]);
@@ -1491,11 +1587,17 @@ class BookingController extends Controller
 
         try {
             app(FinalizeBookingPaymentAction::class)
-                ->assertCanFinalizeIncomingAmount($booking->fresh(), $incomingAmount);
+                ->assertCanFinalizeIncomingAmount(
+                    $booking->fresh(),
+                    $incomingAmount,
+                    seatContext: BookingAvailabilityContext::Payment,
+                );
 
             return [true, null];
-        } catch (ValidationException) {
-            return [false, self::CUSTOMER_PAYMENT_UNAVAILABLE_MESSAGE];
+        } catch (ValidationException $exception) {
+            $paymentMessage = $exception->errors()['payment'][0] ?? null;
+
+            return [false, $paymentMessage ?? self::CUSTOMER_PAYMENT_UNAVAILABLE_MESSAGE];
         }
     }
 

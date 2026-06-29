@@ -9,6 +9,7 @@ use App\Actions\Booking\ReactivateBookingAction;
 use App\Actions\Booking\ReconcileBookingPaymentAfterRepriceAction;
 use App\Actions\Booking\RescheduleBookingAction;
 use App\Actions\Booking\SyncAvailabilityAction;
+use App\Enums\BookingAvailabilityContext;
 use App\Enums\BookingStatus;
 use App\Enums\PaymentStatus;
 use App\Http\Controllers\Controller;
@@ -3088,11 +3089,17 @@ class BookingIndexController extends Controller
 
         try {
             app(FinalizeBookingPaymentAction::class)
-                ->assertCanFinalizeIncomingAmount($booking->fresh(), $incomingAmount);
+                ->assertCanFinalizeIncomingAmount(
+                    $booking->fresh(),
+                    $incomingAmount,
+                    seatContext: BookingAvailabilityContext::Payment,
+                );
 
             return [true, null];
-        } catch (ValidationException) {
-            return [false, 'Payment is temporarily unavailable. Please try again later or contact customer support.'];
+        } catch (ValidationException $exception) {
+            $paymentMessage = $exception->errors()['payment'][0] ?? null;
+
+            return [false, $paymentMessage ?? 'Payment is temporarily unavailable. Please try again later or contact customer support.'];
         }
     }
 

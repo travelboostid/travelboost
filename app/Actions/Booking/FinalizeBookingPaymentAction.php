@@ -3,6 +3,7 @@
 namespace App\Actions\Booking;
 
 use App\Actions\WaitingList\FulfillTourWaitingListFromBookingAction;
+use App\Enums\BookingAvailabilityContext;
 use App\Enums\BookingStatus;
 use App\Models\Booking;
 use App\Models\Payment;
@@ -45,6 +46,11 @@ class FinalizeBookingPaymentAction
             if ($paidAmount <= 0) {
                 return $lockedBooking;
             }
+
+            app(AssertScheduleSeatAvailabilityAction::class)->assertForBooking(
+                $lockedBooking,
+                BookingAvailabilityContext::Finalization,
+            );
 
             $reschedulePayment = app(BookingReschedulePayment::class);
             $targetStatus = $reschedulePayment->isFullyPaid($lockedBooking, $paidAmount)
@@ -102,13 +108,23 @@ class FinalizeBookingPaymentAction
         $this->assertCanFinalizeIncomingAmount($booking, (float) $payment->amount, (int) $payment->id);
     }
 
-    public function assertCanFinalizeIncomingAmount(Booking $booking, float $incomingAmount, ?int $exceptPaymentId = null): void
-    {
+    public function assertCanFinalizeIncomingAmount(
+        Booking $booking,
+        float $incomingAmount,
+        ?int $exceptPaymentId = null,
+        BookingAvailabilityContext $seatContext = BookingAvailabilityContext::Finalization,
+    ): void {
         $booking->loadMissing(['payments', 'tour.company.companySetting', 'passengers', 'addons']);
         $quote = $this->pricingService->quoteForBooking($booking);
 
         $paidAmount = $this->paymentWorkflowService->finalizablePaidAmount($booking, $exceptPaymentId);
         $paidAmount += $incomingAmount;
+
+        if ($paidAmount <= 0) {
+            return;
+        }
+
+        app(AssertScheduleSeatAvailabilityAction::class)->assertForBooking($booking, $seatContext);
 
         if (! app(BookingReschedulePayment::class)->isFullyPaid($booking, $paidAmount)) {
             return;

@@ -41,14 +41,32 @@ enum BookingStatus: string
      */
     public function reducesAvailability(): bool
     {
-        return match ($this) {
+        return in_array($this, self::reducingAvailabilityCases(), true);
+    }
+
+    /**
+     * @return list<self>
+     */
+    public static function reducingAvailabilityCases(): array
+    {
+        return [
             self::DOWN_PAYMENT,
             self::FULL_PAYMENT,
             self::RESERVED,
             self::MANUAL_RESERVED,
             self::BOOKING_RESERVED,
-            self::WAITING_PAYMENT_APPROVAL => true,
-            default => false,
-        };
+            self::WAITING_PAYMENT_APPROVAL,
+        ];
+    }
+
+    /**
+     * @return list<string>
+     */
+    public static function reducingAvailabilityValues(): array
+    {
+        return array_map(
+            fn (self $status): string => $status->value,
+            self::reducingAvailabilityCases(),
+        );
     }
 }

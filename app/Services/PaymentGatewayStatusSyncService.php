@@ -2,7 +2,9 @@
 
 namespace App\Services;
 
+use App\Actions\Booking\FinalizeBookingPaymentAction;
 use App\Enums\PaymentStatus;
+use App\Models\Booking;
 use App\Models\Payment;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -56,6 +58,20 @@ class PaymentGatewayStatusSyncService
         $newStatus = $this->mapGatewayStatus($payment, $gatewayData);
 
         DB::transaction(function () use ($payment, $gatewayData, $newStatus): void {
+            if ($newStatus === PaymentStatus::PAID && $payment->payable_type === Booking::class) {
+                $paymentWorkflow = app(BookingPaymentWorkflowService::class);
+                $payment->load('payable');
+
+                if (
+                    $payment->payable instanceof Booking
+                    && ! $paymentWorkflow->isCustomerToAgentPayment($payment)
+                    && ! $paymentWorkflow->isAgentToVendorPayment($payment)
+                ) {
+                    app(FinalizeBookingPaymentAction::class)
+                        ->assertCanFinalizeIncomingPaidPayment($payment->payable->fresh(), $payment->fresh());
+                }
+            }
+
             $mergedPayload = match ($payment->provider) {
                 'prismalink' => $this->mergePrismaLinkPayloadWithInstructions($payment, $gatewayData),
                 default => Payment::mergeMidtransPayload($payment->payload ?? [], $gatewayData),
