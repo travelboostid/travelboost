@@ -269,3 +269,58 @@ test('waiting list offer notification job does not fail when mail delivery is re
         ->and($booking->fresh()->reserved_expires_at?->toDateTimeString())
         ->toBe($offerExpiresAt->toDateTimeString());
 });
+
+test('sync availability auto offers vendor submitted waiting list when seats become available', function () {
+    Notification::fake();
+
+    ['vendor' => $vendor, 'tour' => $tour] = waitingListTourFixture();
+    $schedule = waitingListScheduleFixture($tour, available: 0, departureInDays: 30);
+    $vendorUser = User::factory()->create();
+    attachWaitingListUserToCompany($vendorUser, $vendor);
+
+    $booking = Booking::factory()->create([
+        'tour_id' => $tour->id,
+        'departure_date' => $schedule->departure_date,
+        'vendor_id' => $vendor->id,
+        'status' => BookingStatus::FULL_PAYMENT,
+        'pax_adult' => 10,
+        'pax_child' => 0,
+        'pax_infant' => 0,
+    ]);
+
+    app(SyncAvailabilityAction::class)->execute(
+        (int) $tour->id,
+        (string) $schedule->departure_date,
+        (int) $vendor->id,
+    );
+
+    createVendorWaitingList($tour, $vendor, $vendorUser, $schedule->id, adult: 2, contactEmail: 'guest-without-account@example.test');
+
+    $booking->update(['status' => BookingStatus::CANCELLED]);
+
+    app(SyncAvailabilityAction::class)->executeForBooking($booking->fresh());
+
+    $offeredEntry = TourWaitingListSchedule::query()
+        ->where('tour_schedule_id', $schedule->id)
+        ->where('status', TourWaitingListScheduleStatus::OFFERED)
+        ->first();
+
+    expect($offeredEntry)->not->toBeNull()
+        ->and($offeredEntry?->booking_id)->not->toBeNull()
+        ->and(Booking::query()->find($offeredEntry?->booking_id)?->user_id)->toBe($vendorUser->id);
+});
+
+test('vendor can open tour edit page when waiting list without linked customer exists', function () {
+    ['vendor' => $vendor, 'tour' => $tour] = waitingListTourFixture();
+    $schedule = waitingListScheduleFixture($tour, available: 2, departureInDays: 30);
+    $vendorUser = User::factory()->create();
+    attachWaitingListUserToCompany($vendorUser, $vendor);
+
+    createVendorWaitingList($tour, $vendor, $vendorUser, $schedule->id, adult: 2, contactEmail: 'guest-without-account@example.test');
+
+    $this->withoutVite()
+        ->actingAs($vendorUser)
+        ->get("/companies/{$vendor->username}/dashboard/tours/{$tour->id}/edit")
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page->component('companies/dashboard/tours/edit'));
+});

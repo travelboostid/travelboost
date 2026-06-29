@@ -427,3 +427,23 @@ test('vendor waiting list submission stores schedule queue status', function () 
 
     expect(TourWaitingList::query()->sole()->schedules->first()->status->value)->toBe('queued');
 });
+
+test('vendor waiting list submission links customer account when contact email matches', function () {
+    ['vendor' => $vendor, 'tour' => $tour] = waitingListTourFixture();
+    $schedule = waitingListScheduleFixture($tour, available: 0);
+    $vendorUser = User::factory()->create();
+    attachWaitingListUserToCompany($vendorUser, $vendor);
+    $customer = User::factory()->create(['email' => 'matched-customer@example.test']);
+
+    $payload = waitingListRequestPayload([$schedule->id], adult: 2);
+    $payload['contact_email'] = $customer->email;
+
+    $this->actingAs($vendorUser)->post(
+        "/companies/{$vendor->username}/dashboard/tours/{$tour->id}/waiting-lists",
+        $payload,
+    )->assertSessionHasNoErrors();
+
+    $waitingList = TourWaitingList::query()->sole();
+
+    expect($waitingList->customer_user_id)->toBe($customer->id);
+});

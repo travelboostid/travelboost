@@ -828,6 +828,7 @@ class BookingController extends Controller
         ]);
 
         $paymentMethod = $this->resolveEnabledBookingOnlinePaymentMethod((int) $validated['payment_method_id']);
+        $booking = $this->ensureBookingNotExpired($booking->fresh());
 
         return DB::transaction(function () use ($request, $booking, $validated, $paymentMethod): JsonResponse {
             $booking = Booking::query()
@@ -835,7 +836,11 @@ class BookingController extends Controller
                 ->lockForUpdate()
                 ->firstOrFail();
 
-            $booking = $this->ensureBookingNotExpired($booking);
+            if ($booking->status === BookingStatus::EXPIRED) {
+                throw ValidationException::withMessages([
+                    'booking' => 'This booking reservation has expired. Please start a new booking.',
+                ]);
+            }
 
             app(AssertBookingOnlinePaymentStartAllowedAction::class)->assert($booking);
 

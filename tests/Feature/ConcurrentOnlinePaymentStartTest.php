@@ -37,6 +37,7 @@ test('customer cannot start a second online payment while checkout is in progres
         'status' => 'reserved',
         'grand_total' => 1_000_000,
         'reserved_type' => 'payment_in_progress',
+        'payment_mode' => 'online',
     ]);
 
     $paymentMethod = createPrismaLinkBcaPaymentMethod([
@@ -97,6 +98,7 @@ test('dashboard cannot start a second online payment while checkout is in progre
         'status' => 'reserved',
         'grand_total' => 1_000_000,
         'reserved_type' => 'payment_in_progress',
+        'payment_mode' => 'online',
     ]);
 
     $paymentMethod = createPrismaLinkBcaPaymentMethod([
@@ -137,6 +139,7 @@ test('customer cannot start another online payment when checkout is already in p
         'status' => 'reserved',
         'grand_total' => 1_000_000,
         'reserved_type' => 'payment_in_progress',
+        'payment_mode' => 'online',
     ]);
 
     $paymentMethod = createPrismaLinkBcaPaymentMethod([

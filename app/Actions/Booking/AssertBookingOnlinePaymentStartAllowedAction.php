@@ -11,7 +11,10 @@ class AssertBookingOnlinePaymentStartAllowedAction
 
     public function assert(Booking $booking): void
     {
-        if ($booking->reserved_type === 'payment_in_progress') {
+        if (
+            $booking->reserved_type === 'payment_in_progress'
+            && $booking->payment_mode === 'online'
+        ) {
             throw ValidationException::withMessages([
                 'payment' => self::PAYMENT_IN_PROGRESS_MESSAGE,
             ]);

@@ -15,6 +15,7 @@ use App\Models\TourWaitingListSchedule;
 use App\Models\User;
 use App\Services\TourScheduleDisplayPriceService;
 use App\Support\CustomerActiveWaitingListResolver;
+use App\Support\ResolveWaitingListBookingOwner;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -25,6 +26,7 @@ class CreateTourWaitingListAction
     public function __construct(
         private readonly TourScheduleDisplayPriceService $displayPriceService,
         private readonly CustomerActiveWaitingListResolver $activeWaitingListResolver,
+        private readonly ResolveWaitingListBookingOwner $bookingOwnerResolver,
     ) {}
 
     /**
@@ -119,13 +121,22 @@ class CreateTourWaitingListAction
                 );
             }
 
+            $customerUserId = $isCustomerSubmission
+                ? $creator->id
+                : $this->bookingOwnerResolver->resolveCustomerUserId($data['contact_email'] ?? null);
+            $agentCompanyId = $isCustomerSubmission
+                ? $tenantAgent?->id
+                : (($creatorCompany?->type->value ?? $creatorCompany?->type) === CompanyType::AGENT->value
+                    ? $creatorCompany?->id
+                    : null);
+
             $waitingList = TourWaitingList::query()->create([
                 'tour_id' => $tour->id,
                 'vendor_id' => $tour->company_id,
                 'created_by_user_id' => $creator->id,
                 'created_by_company_id' => $creatorCompany?->id,
-                'customer_user_id' => $isCustomerSubmission ? $creator->id : null,
-                'agent_company_id' => $isCustomerSubmission ? $tenantAgent?->id : null,
+                'customer_user_id' => $customerUserId,
+                'agent_company_id' => $agentCompanyId,
                 'contact_name' => trim($data['contact_name']),
                 'contact_phone' => trim($data['contact_phone']),
                 'contact_email' => mb_strtolower(trim($data['contact_email'])),

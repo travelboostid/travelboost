@@ -48,6 +48,8 @@ expect()->extend('toBeOne', function () {
 |
 */
 
+require_once __DIR__.'/Support/BookingTestHelpers.php';
+
 use App\Enums\PaymentMethodCategory;
 use App\Enums\PaymentMethodStatus;
 use App\Enums\PaymentMethodUsageScope;

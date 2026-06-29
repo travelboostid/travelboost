@@ -149,11 +149,26 @@ class AssertScheduleSeatAvailabilityAction
                 (int) $availability->max_pax,
             );
 
-            if (! in_array((int) $booking->id, $allowedBookingIds, true)) {
-                throw ValidationException::withMessages([
-                    $context->validationField() => $context->message(),
-                ]);
+            if (in_array((int) $booking->id, $allowedBookingIds, true)) {
+                return;
             }
+
+            $requiredSeats = $booking->seatTakingPaxCount();
+            $occupiedSeats = $this->occupiedSeatCount(
+                $tourId,
+                $companyId,
+                $departureDate,
+                (int) $booking->id,
+            );
+            $freeSeats = max(0, (int) $availability->max_pax - $occupiedSeats);
+
+            if ($requiredSeats <= 0 || $requiredSeats <= $freeSeats) {
+                return;
+            }
+
+            throw ValidationException::withMessages([
+                $context->validationField() => $context->message(),
+            ]);
         });
     }
 

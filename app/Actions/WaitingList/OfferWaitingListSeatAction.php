@@ -4,13 +4,16 @@ namespace App\Actions\WaitingList;
 
 use App\Actions\Booking\SyncAvailabilityAction;
 use App\Enums\BookingStatus;
+use App\Enums\CompanyType;
 use App\Enums\TourWaitingListScheduleStatus;
 use App\Enums\TourWaitingListStatus;
 use App\Jobs\SendWaitingListOfferNotificationJob;
 use App\Models\Booking;
 use App\Models\TourAvailability;
+use App\Models\TourWaitingList;
 use App\Models\TourWaitingListSchedule;
 use App\Services\BookingNumberService;
+use App\Support\ResolveWaitingListBookingOwner;
 use App\Support\WaitingListBookingDeadline;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -49,10 +52,14 @@ class OfferWaitingListSeatAction
                 ]);
             }
 
-            if ($waitingList->customer_user_id === null) {
-                throw ValidationException::withMessages([
-                    'schedule' => 'A linked customer account is required before sending a seat offer.',
+            $bookingOwnerResolver = app(ResolveWaitingListBookingOwner::class);
+            $bookingOwner = $bookingOwnerResolver->execute($waitingList);
+
+            if ($waitingList->customer_user_id === null && $bookingOwnerResolver->isCustomerAccount($bookingOwner, $waitingList)) {
+                $waitingList->update([
+                    'customer_user_id' => $bookingOwner->id,
                 ]);
+                $waitingList->refresh();
             }
 
             $availability = TourAvailability::query()
@@ -76,9 +83,13 @@ class OfferWaitingListSeatAction
             $offerHours = (int) config('waiting-list.offer_hours', 24);
             $expiresAt = now()->addHours($offerHours);
 
+            $inputByRole = $bookingOwnerResolver->isCustomerAccount($bookingOwner, $waitingList)
+                ? 'customer'
+                : $this->resolveStaffInputRole($waitingList);
+
             $booking = Booking::query()->create([
                 'booking_number' => $bookingNumber,
-                'user_id' => $waitingList->customer_user_id,
+                'user_id' => $bookingOwner->id,
                 'tour_id' => $waitingList->tour_id,
                 'departure_date' => $tourSchedule->departure_date,
                 'vendor_id' => $waitingList->vendor_id,
@@ -98,8 +109,9 @@ class OfferWaitingListSeatAction
                 'platform_fee' => 0,
                 'commission_amount' => 0,
                 'grand_total' => 0,
-                'input_by_user_id' => $waitingList->customer_user_id,
-                'input_by_role' => 'customer',
+                'input_by_user_id' => $waitingList->created_by_user_id ?? $bookingOwner->id,
+                'input_by_company_id' => $waitingList->created_by_company_id,
+                'input_by_role' => $inputByRole,
             ]);
 
             app(SyncAvailabilityAction::class)->executeForBooking($booking);
@@ -128,5 +140,15 @@ class OfferWaitingListSeatAction
 
             return $schedule->fresh(['waitingList', 'tourSchedule', 'booking']);
         });
+    }
+
+    private function resolveStaffInputRole(TourWaitingList $waitingList): string
+    {
+        $waitingList->loadMissing('createdByCompany');
+
+        $companyType = $waitingList->createdByCompany?->type->value
+            ?? $waitingList->createdByCompany?->type;
+
+        return $companyType === CompanyType::AGENT->value ? 'agent' : 'vendor';
     }
 }

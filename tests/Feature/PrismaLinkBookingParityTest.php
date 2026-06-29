@@ -4,48 +4,16 @@ use App\Enums\BookingStatus;
 use App\Enums\CompanyTeamStatus;
 use App\Enums\PaymentStatus;
 use App\Enums\VendorAgentPartnerStatus;
-use App\Models\Booking;
 use App\Models\Company;
 use App\Models\CompanyTeam;
 use App\Models\Tour;
-use App\Models\TourAvailability;
-use App\Models\TourSchedule;
 use App\Models\User;
 use App\Models\VendorAgentPartner;
 use App\Services\BookingPaymentWorkflowService;
 use App\Services\PrismaLinkService;
 use Illuminate\Support\Facades\Http;
 
-/**
- * @param  array<string, mixed>  $overrides
- */
-function createScheduledBooking(Company $vendor, Tour $tour, array $overrides = []): Booking
-{
-    $schedule = TourSchedule::create([
-        'tour_id' => $tour->id,
-        'tour_code' => $tour->code,
-        'company_id' => $vendor->id,
-        'departure_date' => now()->addDays(30)->toDateString(),
-        'return_date' => now()->addDays(35)->toDateString(),
-        'is_active' => true,
-    ]);
-
-    TourAvailability::create([
-        'company_id' => $vendor->id,
-        'tour_id' => $tour->id,
-        'schedule_id' => $schedule->id,
-        'max_pax' => 20,
-        'available' => 20,
-    ]);
-
-    return Booking::factory()->create(array_merge([
-        'vendor_id' => $vendor->id,
-        'tour_id' => $tour->id,
-        'departure_date' => $schedule->departure_date,
-        'pax_adult' => 1,
-        'pax_child' => 0,
-    ], $overrides));
-}
+require_once __DIR__.'/../Support/BookingTestHelpers.php';
 
 test('customer online payment to agent stays waiting approval after prismalink confirmation', function () {
     configurePrismaLinkForTests();
