@@ -1,3 +1,4 @@
+import { activateChatStack } from '@/lib/activate-chat-stack';
 import { cn } from '@/lib/utils';
 import { MessageCircleIcon, XIcon } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
@@ -21,6 +22,16 @@ export default function FloatingChatWidget({
 
     const [isExpanded, setIsExpanded] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        activateChatStack();
+    }, []);
+
+    useEffect(() => {
+        if (open) {
+            activateChatStack();
+        }
+    }, [open]);
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
