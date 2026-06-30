@@ -79,15 +79,18 @@ class TourController extends Controller
     #[Authorize('create', Tour::class)]
     public function store(StoreTourRequest $request, Company $company): RedirectResponse
     {
-        $data = $request->validated();
+        $data = array_merge($request->validated(), [
+            'code' => $request->code,
+            'user_id' => $request->user_id,
+        ]);
 
         $data['showprice'] = (int) ($data['showprice'] ?? 0);
         $data['promote_price'] = (int) ($data['promote_price'] ?? 0);
-        $data['category_id'] = $data['category_id'] ?: null;
+        $data['category_id'] = ($data['category_id'] ?? null) ?: null;
         $data['product_commission_category_id'] = ($data['product_commission_category_id'] ?? null) ?: null;
         $data['visa_category_id'] = ($data['visa_category_id'] ?? null) ?: null;
-        $data['image_id'] = $data['image_id'] ?: null;
-        $data['document_id'] = $data['document_id'] ?: null;
+        $data['image_id'] = ($data['image_id'] ?? null) ?: null;
+        $data['document_id'] = ($data['document_id'] ?? null) ?: null;
 
         DB::beginTransaction();
 
