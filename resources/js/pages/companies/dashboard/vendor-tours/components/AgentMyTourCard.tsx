@@ -1,3 +1,4 @@
+import { MediaPicker } from '@/components/media-picker';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 import {
@@ -5,14 +6,17 @@ import {
     TooltipContent,
     TooltipTrigger,
 } from '@/components/ui/tooltip';
+import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
 import { extractDocumentUrl } from '@/lib/utils';
+import { router } from '@inertiajs/react';
 import {
     IconBrandFacebook,
     IconCalendarEvent,
     IconPdf,
 } from '@tabler/icons-react';
-import { MessageSquareIcon } from 'lucide-react';
+import { MessageSquareIcon, Trash2Icon, UploadCloudIcon } from 'lucide-react';
 import { FormattedMessage } from 'react-intl';
+import { toast } from 'sonner';
 import BaseTourCard from './BaseTourCard';
 
 export default function AgentMyTourCard({
@@ -26,6 +30,7 @@ export default function AgentMyTourCard({
     onBook,
     startingChat,
 }: any) {
+    const { company } = usePageSharedDataProps();
     const handleBookClick = () => {
         const normalizedTour = Array.isArray(tour?.schedules)
             ? {
@@ -106,8 +111,37 @@ export default function AgentMyTourCard({
         tour.vendor_document_url ||
         (tour.document ? extractDocumentUrl(tour.document) : '');
     const itineraryDocumentUrl =
-        tour.itinerary_document_url || agentDocumentUrl || vendorDocumentUrl;
+        tour.itinerary_document_url ||
+        (tour.itinerary_document_source === 'agent'
+            ? agentDocumentUrl
+            : vendorDocumentUrl || agentDocumentUrl);
     const hasItinerary = Boolean(itineraryDocumentUrl);
+    const isAgentUploadEnabled = tour.agent_itinerary_upload_enabled ?? false;
+    const canReplaceAgentDocument = Boolean(
+        tour.agent_tour_id && isAgentUploadEnabled,
+    );
+
+    const updateDocument = (media: any) => {
+        if (!tour.agent_tour_id) {
+            return;
+        }
+
+        router.put(
+            `/companies/${company.username}/dashboard/agent-tours/${tour.agent_tour_id}`,
+            { agent_document_id: media?.id ?? null },
+            {
+                preserveScroll: true,
+                preserveState: true,
+                onSuccess: () =>
+                    toast.success(
+                        media
+                            ? 'Agent itinerary uploaded successfully'
+                            : 'Agent itinerary removed successfully',
+                    ),
+            },
+        );
+    };
+
     const handleViewItinerary = () => {
         if (itineraryDocumentUrl) {
             window.open(itineraryDocumentUrl, '_blank', 'noopener,noreferrer');
@@ -149,82 +183,134 @@ export default function AgentMyTourCard({
             }
             footerSection={
                 <>
-                    <Tooltip delayDuration={200}>
-                        <TooltipTrigger asChild>
+                    <div className="flex w-full flex-wrap gap-2">
+                        <Tooltip delayDuration={200}>
+                            <TooltipTrigger asChild>
+                                <Button
+                                    variant="default"
+                                    size="sm"
+                                    type="button"
+                                    className="h-9 flex-1 rounded-xl bg-primary text-primary-foreground shadow-sm hover:scale-105 active:scale-95"
+                                    onClick={handleBookClick}
+                                >
+                                    <IconCalendarEvent size={18} />
+                                </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                                <p>
+                                    <FormattedMessage defaultMessage="Book Tour" />
+                                </p>
+                            </TooltipContent>
+                        </Tooltip>
+                        <Tooltip delayDuration={200}>
+                            <TooltipTrigger asChild>
+                                <Button
+                                    variant="secondary"
+                                    size="sm"
+                                    className="h-9 flex-1 rounded-xl border-none bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300"
+                                    disabled={!hasItinerary}
+                                    onClick={handleViewItinerary}
+                                >
+                                    <IconPdf size={18} />
+                                </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                                <p>
+                                    <FormattedMessage defaultMessage="Itinerary" />
+                                </p>
+                            </TooltipContent>
+                        </Tooltip>
+                        <Tooltip delayDuration={200}>
+                            <TooltipTrigger asChild>
+                                <Button
+                                    variant="secondary"
+                                    size="sm"
+                                    className="h-9 flex-1 rounded-xl border-none bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300"
+                                    disabled={startingChat}
+                                    onClick={onChat}
+                                >
+                                    {startingChat ? (
+                                        <Spinner />
+                                    ) : (
+                                        <MessageSquareIcon size={18} />
+                                    )}
+                                </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                                <p>
+                                    <FormattedMessage defaultMessage="Ask AI" />
+                                </p>
+                            </TooltipContent>
+                        </Tooltip>
+                        <Tooltip delayDuration={200}>
+                            <TooltipTrigger asChild>
+                                <Button
+                                    variant="secondary"
+                                    size="sm"
+                                    className="h-9 flex-1 rounded-xl border-none bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300"
+                                    disabled={!hasItinerary}
+                                    onClick={onShareFB}
+                                >
+                                    <IconBrandFacebook size={18} />
+                                </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                                <p>
+                                    <FormattedMessage defaultMessage="Share to Facebook" />
+                                </p>
+                            </TooltipContent>
+                        </Tooltip>
+                    </div>
+                    {agentDocument ? (
+                        <div className="flex w-full items-center gap-2">
+                            {canReplaceAgentDocument ? (
+                                <MediaPicker
+                                    type="document"
+                                    defaultValue={agentDocument}
+                                    onChange={updateDocument}
+                                    params={{
+                                        owner_type: 'company',
+                                        owner_id: company.id,
+                                    }}
+                                    uploadParams={{
+                                        owner_type: 'company',
+                                        owner_id: company.id,
+                                        subtype: 'agent-itinerary',
+                                    }}
+                                >
+                                    {(_, change) => (
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            className="h-8 flex-1 rounded-xl border-slate-200 bg-white text-xs font-semibold shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                                            onClick={change}
+                                        >
+                                            <UploadCloudIcon
+                                                size={14}
+                                                className="mr-1.5"
+                                            />
+                                            <FormattedMessage defaultMessage="Replace Agent PDF" />
+                                        </Button>
+                                    )}
+                                </MediaPicker>
+                            ) : (
+                                <div className="flex-1 text-[11px] text-slate-500 dark:text-slate-400">
+                                    <FormattedMessage defaultMessage="Agent PDF is stored. Vendor PDF is currently used for display." />
+                                </div>
+                            )}
                             <Button
-                                variant="default"
-                                size="sm"
                                 type="button"
-                                className="h-9 flex-1 rounded-xl bg-primary text-primary-foreground shadow-sm hover:scale-105 active:scale-95"
-                                onClick={handleBookClick}
-                            >
-                                <IconCalendarEvent size={18} />
-                            </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                            <p>
-                                <FormattedMessage defaultMessage="Book Tour" />
-                            </p>
-                        </TooltipContent>
-                    </Tooltip>
-                    <Tooltip delayDuration={200}>
-                        <TooltipTrigger asChild>
-                            <Button
-                                variant="secondary"
+                                variant="ghost"
                                 size="sm"
-                                className="h-9 flex-1 rounded-xl border-none bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300"
-                                disabled={!hasItinerary}
-                                onClick={handleViewItinerary}
+                                className="h-8 rounded-xl px-2 text-red-500 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/30"
+                                onClick={() => updateDocument(null)}
                             >
-                                <IconPdf size={18} />
+                                <Trash2Icon size={14} className="mr-1.5" />
+                                <FormattedMessage defaultMessage="Delete" />
                             </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                            <p>
-                                <FormattedMessage defaultMessage="Itinerary" />
-                            </p>
-                        </TooltipContent>
-                    </Tooltip>
-                    <Tooltip delayDuration={200}>
-                        <TooltipTrigger asChild>
-                            <Button
-                                variant="secondary"
-                                size="sm"
-                                className="h-9 flex-1 rounded-xl border-none bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300"
-                                disabled={startingChat}
-                                onClick={onChat}
-                            >
-                                {startingChat ? (
-                                    <Spinner />
-                                ) : (
-                                    <MessageSquareIcon size={18} />
-                                )}
-                            </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                            <p>
-                                <FormattedMessage defaultMessage="Ask AI" />
-                            </p>
-                        </TooltipContent>
-                    </Tooltip>
-                    <Tooltip delayDuration={200}>
-                        <TooltipTrigger asChild>
-                            <Button
-                                variant="secondary"
-                                size="sm"
-                                className="h-9 flex-1 rounded-xl border-none bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300"
-                                disabled={!hasItinerary}
-                                onClick={onShareFB}
-                            >
-                                <IconBrandFacebook size={18} />
-                            </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                            <p>
-                                <FormattedMessage defaultMessage="Share to Facebook" />
-                            </p>
-                        </TooltipContent>
-                    </Tooltip>
+                        </div>
+                    ) : null}
                 </>
             }
         />

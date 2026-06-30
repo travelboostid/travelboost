@@ -26,7 +26,7 @@ class CreateCompanyRequest extends FormRequest
         $email = strtolower((string) $this->input('email', ''));
 
         $this->merge([
-            'username' => $username,
+            'username' => $username ?: $subdomain,
             'subdomain' => $subdomain ?: $username,
             'email' => $email,
         ]);
@@ -41,7 +41,7 @@ class CreateCompanyRequest extends FormRequest
     {
         return [
             'username' => [
-                'nullable',
+                'required',
                 'string',
                 'max:255',
                 Rule::unique('companies', 'username'),

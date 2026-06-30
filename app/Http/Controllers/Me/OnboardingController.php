@@ -14,30 +14,25 @@ use App\Models\AgentSubscriptionPackage;
 use App\Models\AppConfig;
 use App\Models\Company;
 use App\Models\CompanyTeam;
+use App\Models\User;
 use App\Notifications\AgentJoinedAffiliateNetworkNotification;
 use App\Notifications\AgentOnboardingWelcomeNotification;
+use App\Support\AffiliateReferralContext;
+use Illuminate\Http\Request;
+use Illuminate\Notifications\Notification;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Context;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
+use Throwable;
 
 class OnboardingController extends Controller
 {
-    public function index()
+    public function index(AffiliateReferralContext $affiliateReferralContext)
     {
         $user = Auth::user();
-        $domain = Context::get('domain');
-
-        $affiliate = null;
-        if ($domain && $domain->owner_type === AffiliateProfile::class) {
-            $profile = $domain->owner;
-            $affiliate = [
-                'id' => $profile->user_id,
-                'name' => $profile->user->name ?? '',
-                'username' => $domain->subdomain,
-            ];
-        }
+        $affiliate = $affiliateReferralContext->visibleAffiliatePayload();
 
         $invitations = CompanyTeam::where('invite_email', $user->email)
             ->where('status', CompanyTeamStatus::PENDING)
@@ -50,19 +45,19 @@ class OnboardingController extends Controller
         ]);
     }
 
-    public function createCompany(CreateCompanyRequest $request)
+    public function createCompany(CreateCompanyRequest $request, AffiliateReferralContext $affiliateReferralContext)
     {
         $user = Auth::user();
 
         $validated = $request->validated();
 
-        $company = DB::transaction(function () use ($user, $validated): Company {
+        $company = DB::transaction(function () use ($user, $validated, $affiliateReferralContext): Company {
             $validatedCompanyDto = Arr::except($validated, ['subdomain']);
             $validatedCompanyDto['type'] = CompanyType::AGENT;
 
-            $domain = Context::get('domain');
-            if ($domain && $domain->owner_type === AffiliateProfile::class) {
-                $validatedCompanyDto['referred_by'] = $domain->owner->user_id;
+            $affiliate = $affiliateReferralContext->currentReferralAffiliate();
+            if ($affiliate instanceof AffiliateProfile) {
+                $validatedCompanyDto['referred_by'] = $affiliate->user_id;
             }
 
             $company = Company::forceCreate($validatedCompanyDto);
@@ -112,13 +107,25 @@ class OnboardingController extends Controller
             return $company;
         });
 
-        $user->notify(new AgentOnboardingWelcomeNotification($company, $user));
+        $this->dispatchOnboardingNotifications($user, $company);
+
+        return Inertia::location($this->companyDashboardUrl($request, $company));
+    }
+
+    private function dispatchOnboardingNotifications(User $user, Company $company): void
+    {
+        $this->notifySafely(
+            $user,
+            new AgentOnboardingWelcomeNotification($company, $user),
+            'Unable to send agent onboarding welcome notification.',
+            [
+                'company_id' => $company->id,
+                'user_id' => $user->id,
+                'email' => $user->email,
+            ],
+        );
 
         $this->notifyAffiliateNetwork($company);
-
-        return Inertia::location(route('companies.dashboard.index', [
-            'company' => $company->username,
-        ]));
     }
 
     private function notifyAffiliateNetwork(Company $company): void
@@ -160,12 +167,21 @@ class OnboardingController extends Controller
                 continue;
             }
 
-            $profile->user->notify(new AgentJoinedAffiliateNetworkNotification(
-                company: $company,
-                affiliateProfile: $affiliateProfile,
-                maProfile: $maProfile,
-                recipientRole: $role,
-            ));
+            $this->notifySafely(
+                $profile->user,
+                new AgentJoinedAffiliateNetworkNotification(
+                    company: $company,
+                    affiliateProfile: $affiliateProfile,
+                    maProfile: $maProfile,
+                    recipientRole: $role,
+                ),
+                'Unable to send affiliate network onboarding notification.',
+                [
+                    'company_id' => $company->id,
+                    'recipient_user_id' => $profile->user->id,
+                    'recipient_role' => $role,
+                ],
+            );
         }
     }
 
@@ -181,7 +197,33 @@ class OnboardingController extends Controller
         return $profileStatus === 'approved' && $userStatus === UserStatus::ACTIVE->value;
     }
 
-    public function acceptInvitation(CompanyTeam $invitation)
+    private function companyDashboardUrl(Request $request, Company $company): string
+    {
+        $port = $request->getPort();
+        $portSuffix = in_array($port, [80, 443], true) ? '' : ':'.$port;
+        $path = route('companies.dashboard.index', [
+            'company' => $company->username,
+        ], false);
+
+        return $request->getScheme().'://'.env('APP_HOST', 'localhost').$portSuffix.$path;
+    }
+
+    private function notifySafely(object $notifiable, Notification $notification, string $message, array $context = []): void
+    {
+        try {
+            $notifiable->notify($notification);
+        } catch (Throwable $exception) {
+            report($exception);
+
+            Log::warning($message, [
+                ...$context,
+                'exception' => $exception::class,
+                'message' => $exception->getMessage(),
+            ]);
+        }
+    }
+
+    public function acceptInvitation(Request $request, CompanyTeam $invitation)
     {
         $user = Auth::user();
 
@@ -208,9 +250,7 @@ class OnboardingController extends Controller
             ->where('id', '!=', $invitation->id)
             ->update(['status' => CompanyTeamStatus::REJECTED]);
 
-        return Inertia::location(route('companies.dashboard.index', [
-            'company' => $invitation->company->username,
-        ]));
+        return Inertia::location($this->companyDashboardUrl($request, $invitation->company));
     }
 
     public function declineInvitations()

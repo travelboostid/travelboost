@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\UserStatus;
 use App\Models\User;
 
 test('inertia shares midtrans public config from server environment', function () {
@@ -8,9 +9,9 @@ test('inertia shares midtrans public config from server environment', function (
         'midtrans.is_production' => false,
     ]);
 
-    $user = User::factory()->create();
+    $user = User::factory()->create(['status' => UserStatus::ACTIVE]);
 
-    $response = $this->actingAs($user)->get('/me/onboarding');
+    $response = $this->actingAs($user)->get('/me');
 
     $response->assertOk();
     $response->assertInertia(fn ($page) => $page

@@ -85,6 +85,22 @@ class VendorTourCatalogController extends Controller
             ->pluck('tour')
             ->filter();
 
+        $catalogPartnershipPermissions = collect();
+
+        if ($company->type === CompanyType::AGENT) {
+            $catalogVendorIds = $tours
+                ->pluck('company_id')
+                ->merge($agentTours->pluck('company_id'))
+                ->filter()
+                ->unique()
+                ->values();
+
+            $catalogPartnershipPermissions = VendorAgentPartner::query()
+                ->where('agent_id', $company->id)
+                ->whereIn('vendor_id', $catalogVendorIds)
+                ->pluck('agent_itinerary_upload_enabled', 'vendor_id');
+        }
+
         $copiedAgentTours = $this->resolveCopiedAgentTours($company, $context);
         $copiedTourIds = $copiedAgentTours->keys();
 
@@ -99,6 +115,7 @@ class VendorTourCatalogController extends Controller
                 $company,
                 $copiedAgentTours,
                 $username,
+                $catalogPartnershipPermissions,
             ) {
                 $tour->has_copied = $copiedTourIds->contains($tour->id);
                 $bookingDeadlineDays = (int) ($tour->company?->companySetting?->booking_deadline ?? 0);
@@ -113,20 +130,29 @@ class VendorTourCatalogController extends Controller
 
                 if (
                     $company->type === CompanyType::AGENT
-                    && $company->username === $username
+                    && $company->username !== $username
                 ) {
                     $agentDocument = $copiedAgentTour?->agentDocument;
-                    $vendorDocumentUrl = $tour->document['data']['url'] ?? null;
-                    $agentDocumentUrl = $agentDocument['data']['url'] ?? null;
+                    $vendorDocumentUrl = data_get($tour->document, 'data.url');
+                    $agentDocumentUrl = data_get($agentDocument, 'data.url');
+                    $isUploadEnabled = (bool) ($catalogPartnershipPermissions->get($tour->company_id) ?? false);
 
                     if ($agentDocument) {
                         $tour->setRelation('agentDocument', $agentDocument);
                     }
 
+                    $tour->setAttribute('agent_tour_id', $copiedAgentTour?->id);
+                    $tour->setAttribute('agent_itinerary_upload_enabled', $isUploadEnabled);
                     $tour->setAttribute('vendor_document_url', $vendorDocumentUrl);
                     $tour->setAttribute('agent_document_url', $agentDocumentUrl);
-                    $tour->setAttribute('itinerary_document_url', $agentDocumentUrl ?: $vendorDocumentUrl);
-                    $tour->setAttribute('itinerary_document_source', $agentDocumentUrl ? 'agent' : ($vendorDocumentUrl ? 'vendor' : null));
+                    $tour->setAttribute(
+                        'itinerary_document_url',
+                        $isUploadEnabled && $agentDocumentUrl ? $agentDocumentUrl : $vendorDocumentUrl,
+                    );
+                    $tour->setAttribute(
+                        'itinerary_document_source',
+                        $isUploadEnabled && $agentDocumentUrl ? 'agent' : ($vendorDocumentUrl ? 'vendor' : null),
+                    );
                 }
 
                 return $tour;
@@ -285,7 +311,9 @@ class VendorTourCatalogController extends Controller
                 ->latest('updated_at')
                 ->first();
 
-            if ($agentTour?->agentDocument) {
+            $isUploadEnabled = $this->isAgentItineraryUploadEnabled($company, $catalogOwner, $tour);
+
+            if ($isUploadEnabled && $agentTour?->agentDocument) {
                 $tour->setRelation('agentDocument', $agentTour->agentDocument);
                 $tour->setRelation('agent_document', $agentTour->agentDocument);
                 $tour->setRelation('document', $agentTour->agentDocument);
@@ -345,7 +373,9 @@ class VendorTourCatalogController extends Controller
                 ->latest('updated_at')
                 ->first();
 
-            if ($agentTour?->agentDocument) {
+            $isUploadEnabled = $this->isAgentItineraryUploadEnabled($tenant, $tour->company, $tour);
+
+            if ($isUploadEnabled && $agentTour?->agentDocument) {
                 $tour->setRelation('agentDocument', $agentTour->agentDocument);
                 $tour->setRelation('agent_document', $agentTour->agentDocument);
                 $tour->setRelation('document', $agentTour->agentDocument);
@@ -363,5 +393,19 @@ class VendorTourCatalogController extends Controller
         }
 
         return redirect($url);
+    }
+
+    private function isAgentItineraryUploadEnabled(Company $agent, ?Company $vendor, Tour $tour): bool
+    {
+        $vendorId = $vendor?->id ?? $tour->company_id;
+
+        if (! $vendorId) {
+            return false;
+        }
+
+        return (bool) VendorAgentPartner::query()
+            ->where('agent_id', $agent->id)
+            ->where('vendor_id', $vendorId)
+            ->value('agent_itinerary_upload_enabled');
     }
 }

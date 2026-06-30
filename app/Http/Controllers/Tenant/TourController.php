@@ -109,13 +109,24 @@ class TourController extends Controller
 
             $partnership = $partnerships->get($agentTour->tour->company_id);
             $showVendor = $partnership ? (bool) $partnership->show_vendor_name : true;
+            $isUploadEnabled = $partnership ? (bool) $partnership->agent_itinerary_upload_enabled : false;
+            $vendorDocumentUrl = data_get($agentTour->tour->document, 'data.url');
+            $agentDocumentUrl = data_get($agentTour->agentDocument, 'data.url');
 
             $agentTour->tour->show_vendor_name = $showVendor;
+            $agentTour->tour->agent_itinerary_upload_enabled = $isUploadEnabled;
+            $agentTour->tour->agent_document_url = $agentDocumentUrl;
+            $agentTour->tour->vendor_document_url = $vendorDocumentUrl;
+            $agentTour->tour->itinerary_document_url = $isUploadEnabled && $agentDocumentUrl
+                ? $agentDocumentUrl
+                : $vendorDocumentUrl;
+            $agentTour->tour->itinerary_document_source = $isUploadEnabled && $agentDocumentUrl
+                ? 'agent'
+                : ($vendorDocumentUrl ? 'vendor' : null);
 
-            if ($agentTour->agentDocument) {
+            if ($isUploadEnabled && $agentTour->agentDocument) {
                 $agentTour->tour->setRelation('agentDocument', $agentTour->agentDocument);
                 $agentTour->tour->setRelation('agent_document', $agentTour->agentDocument);
-                $agentTour->tour->setRelation('document', $agentTour->agentDocument);
             }
 
             $agentTour->show_vendor_name = $showVendor;

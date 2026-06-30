@@ -156,7 +156,16 @@ return [
     |
     */
 
-    'domain' => env('SESSION_DOMAIN'),
+    'domain' => env('SESSION_DOMAIN') ?: (function (): ?string {
+        $appHost = (string) env('APP_HOST', '');
+        $appEnv = (string) env('APP_ENV', 'production');
+
+        if ($appEnv !== 'local' || $appHost === '' || $appHost === 'localhost' || ! str_contains($appHost, '.')) {
+            return null;
+        }
+
+        return '.'.ltrim($appHost, '.');
+    })(),
 
     /*
     |--------------------------------------------------------------------------

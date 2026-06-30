@@ -30,6 +30,12 @@ class DomainResolver
 
     public function handle($request, Closure $next)
     {
+        if ($this->shouldBypassTenantResolution($request)) {
+            $request->attributes->set('tenant', null);
+
+            return $next($request);
+        }
+
         // Redirect to main domain if accessing company dashboard or other non-guest routes on a subdomain
         if (! $this->isMainHost && ! $this->isInternalSubdomain() && $request->is('companies*')) {
             $allowedPatterns = [
@@ -68,6 +74,10 @@ class DomainResolver
         $domainObject = $this->resolveDomain();
 
         if ($domainObject === null) {
+            if ($this->shouldAllowDomainlessOnboarding($request)) {
+                return $this->continueOnboardingWithoutTenant($request, $next);
+            }
+
             return Inertia::render('errors/invalid-tenant-domain')
                 ->toResponse($request)
                 ->setStatusCode(404);
@@ -79,6 +89,10 @@ class DomainResolver
             : (bool) $domainObject->domain_enabled;
 
         if (! $isAllowed) {
+            if ($this->shouldAllowDomainlessOnboarding($request)) {
+                return $this->continueOnboardingWithoutTenant($request, $next, $domainObject);
+            }
+
             return Inertia::render('errors/invalid-tenant-domain')
                 ->toResponse($request)
                 ->setStatusCode(404);
@@ -135,5 +149,53 @@ class DomainResolver
         }
 
         return false;
+    }
+
+    private function shouldAllowDomainlessOnboarding($request): bool
+    {
+        return $request->is('me/onboarding*');
+    }
+
+    private function shouldBypassTenantResolution($request): bool
+    {
+        return $request->is([
+            'build/*',
+            'storage/*',
+            'images/*',
+            'favicon.ico',
+            'robots.txt',
+            'site.webmanifest',
+            'sitemap*',
+            '*.css',
+            '*.js',
+            '*.map',
+            '*.png',
+            '*.jpg',
+            '*.jpeg',
+            '*.gif',
+            '*.svg',
+            '*.webp',
+            '*.avif',
+            '*.ico',
+            '*.woff',
+            '*.woff2',
+            '*.ttf',
+            '*.eot',
+        ]);
+    }
+
+    private function continueOnboardingWithoutTenant($request, Closure $next, ?Domain $domainObject = null)
+    {
+        $request->attributes->set('tenant', null);
+
+        if ($domainObject !== null) {
+            Context::add('domain', $domainObject);
+
+            if ($domainObject->owner instanceof AffiliateProfile) {
+                Context::add('affiliate', $domainObject->owner);
+            }
+        }
+
+        return $next($request);
     }
 }

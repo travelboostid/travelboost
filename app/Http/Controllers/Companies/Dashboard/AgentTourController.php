@@ -54,9 +54,24 @@ class AgentTourController extends Controller
                 });
 
                 $vendorId = $agentTour->tour?->company_id;
+                $vendorDocumentUrl = data_get($agentTour->tour?->document, 'data.url');
+                $agentDocumentUrl = data_get($agentTour->agentDocument, 'data.url');
+                $isUploadEnabled = (bool) ($partnershipPermissions->get($vendorId) ?? false);
+
                 $agentTour->setAttribute(
                     'agent_itinerary_upload_enabled',
-                    (bool) ($partnershipPermissions->get($vendorId) ?? false),
+                    $isUploadEnabled,
+                );
+                $agentTour->setAttribute('agent_tour_id', $agentTour->id);
+                $agentTour->setAttribute('vendor_document_url', $vendorDocumentUrl);
+                $agentTour->setAttribute('agent_document_url', $agentDocumentUrl);
+                $agentTour->setAttribute(
+                    'itinerary_document_url',
+                    $isUploadEnabled && $agentDocumentUrl ? $agentDocumentUrl : $vendorDocumentUrl,
+                );
+                $agentTour->setAttribute(
+                    'itinerary_document_source',
+                    $isUploadEnabled && $agentDocumentUrl ? 'agent' : ($vendorDocumentUrl ? 'vendor' : null),
                 );
             });
 

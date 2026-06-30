@@ -11,7 +11,6 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
-import { formatIDR } from '@/lib/utils';
 import { Head, router } from '@inertiajs/react';
 import dayjs from 'dayjs';
 import {
@@ -24,6 +23,13 @@ import {
 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { FormattedMessage, useIntl } from 'react-intl';
+
+type BreakdownItem = {
+    label: string;
+    quantity: number;
+    unit_price: number;
+    amount: number;
+};
 
 type SalesReportRow = {
     id: number;
@@ -38,14 +44,22 @@ type SalesReportRow = {
     booking_contact: string;
     booking_date: string | null;
     pax: number;
-    tour_price: number;
-    tour_price_total: number;
-    tax_amount: number;
-    addon_cost: number;
+    base_tour_total: number;
+    base_tour_average: number;
+    taxable_visa_total: number;
+    taxable_addon_total: number;
+    vat_amount: number;
     promo_amount: number;
+    non_taxable_visa_total: number;
+    non_taxable_addon_total: number;
+    platform_fee: number;
     grand_total: number;
     commission_amount: number;
     paid_at: string | null;
+    taxable_visa_items: BreakdownItem[];
+    taxable_addon_items: BreakdownItem[];
+    non_taxable_visa_items: BreakdownItem[];
+    non_taxable_addon_items: BreakdownItem[];
 };
 
 type SalesReportProps = {
@@ -55,6 +69,14 @@ type SalesReportProps = {
         total_pax: number;
         total_sales: number;
         total_commission: number;
+        base_tour_total: number;
+        taxable_visa_total: number;
+        taxable_addon_total: number;
+        vat_total: number;
+        promo_total: number;
+        non_taxable_visa_total: number;
+        non_taxable_addon_total: number;
+        platform_fee_total: number;
     };
     filters: {
         period_from?: string | null;
@@ -76,6 +98,89 @@ const dateLabel = (date?: string | null) =>
 
 const dateTimeLabel = (date?: string | null) =>
     date ? dayjs(date).format('DD MMM YYYY HH:mm') : '-';
+
+const formatFullIDR = (value: number) =>
+    new Intl.NumberFormat('id-ID', {
+        style: 'currency',
+        currency: 'IDR',
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0,
+    }).format(value);
+
+function BreakdownCell({
+    items,
+    total,
+    emptyLabel = '-',
+}: {
+    items: BreakdownItem[];
+    total: number;
+    emptyLabel?: string;
+}) {
+    if (items.length === 0) {
+        return <span className="text-xs text-slate-400">{emptyLabel}</span>;
+    }
+
+    return (
+        <div className="space-y-1">
+            {items.map((item, index) => (
+                <div
+                    key={`${item.label}-${item.unit_price}-${index}`}
+                    className="flex items-start justify-between gap-3 text-xs leading-5"
+                >
+                    <span className="min-w-0 break-words text-slate-600 dark:text-slate-300">
+                        {item.label} x{item.quantity}
+                    </span>
+                    <span className="shrink-0 font-medium text-slate-950 dark:text-slate-100">
+                        {formatFullIDR(item.amount)}
+                    </span>
+                </div>
+            ))}
+            <div className="border-t border-dashed border-slate-200 pt-1 text-right text-xs font-semibold text-slate-950 dark:border-slate-700 dark:text-slate-100">
+                {formatFullIDR(total)}
+            </div>
+        </div>
+    );
+}
+
+function CombinedNonTaxableCell({
+    visaItems,
+    addonItems,
+    total,
+}: {
+    visaItems: BreakdownItem[];
+    addonItems: BreakdownItem[];
+    total: number;
+}) {
+    const items = [
+        ...visaItems.map((item) => ({ ...item, prefix: 'Visa' })),
+        ...addonItems.map((item) => ({ ...item, prefix: 'Add-on' })),
+    ];
+
+    if (items.length === 0) {
+        return <span className="text-xs text-slate-400">-</span>;
+    }
+
+    return (
+        <div className="space-y-1">
+            {items.map((item, index) => (
+                <div
+                    key={`${item.prefix}-${item.label}-${item.unit_price}-${index}`}
+                    className="flex items-start justify-between gap-3 text-xs leading-5"
+                >
+                    <span className="min-w-0 break-words text-slate-600 dark:text-slate-300">
+                        {item.prefix}: {item.label} x{item.quantity}
+                    </span>
+                    <span className="shrink-0 font-medium text-slate-950 dark:text-slate-100">
+                        {formatFullIDR(item.amount)}
+                    </span>
+                </div>
+            ))}
+            <div className="border-t border-dashed border-slate-200 pt-1 text-right text-xs font-semibold text-slate-950 dark:border-slate-700 dark:text-slate-100">
+                {formatFullIDR(total)}
+            </div>
+        </div>
+    );
+}
 
 export default function SalesReportPage({
     rows,
@@ -152,7 +257,7 @@ export default function SalesReportPage({
             {
                 id: 'sales',
                 label: <FormattedMessage defaultMessage="Total Sales" />,
-                value: formatIDR(Number(summary.total_sales || 0)),
+                value: formatFullIDR(Number(summary.total_sales || 0)),
                 icon: Wallet,
             },
             {
@@ -162,7 +267,7 @@ export default function SalesReportPage({
                 ) : (
                     <FormattedMessage defaultMessage="Commission Earned" />
                 ),
-                value: formatIDR(Number(summary.total_commission || 0)),
+                value: formatFullIDR(Number(summary.total_commission || 0)),
                 icon: HandCoins,
             },
         ],
@@ -199,14 +304,14 @@ export default function SalesReportPage({
                 })}
             />
 
-            <div className="mx-auto max-w-[1500px] space-y-5 p-4">
+            <div className="mx-auto max-w-[1800px] space-y-5 p-4">
                 <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
                     <div>
                         <h1 className="text-2xl font-semibold tracking-tight text-slate-950 dark:text-slate-100">
                             <FormattedMessage defaultMessage="Sales Report" />
                         </h1>
                         <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                            <FormattedMessage defaultMessage="Full payment sales recap with booking, tour, and commission details." />
+                            <FormattedMessage defaultMessage="Completed sales are grouped by final full payment date, with tax-ready booking breakdowns." />
                         </p>
                     </div>
                     <Button
@@ -290,7 +395,7 @@ export default function SalesReportPage({
                             className="h-11 rounded-md border border-input bg-background px-3 text-sm shadow-xs outline-none transition-colors focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
                         >
                             <option value="">
-                                <FormattedMessage defaultMessage="All Tour Codes" />
+                                <FormattedMessage defaultMessage="All Tours" />
                             </option>
                             {options.tourCodes.map((tour) => (
                                 <option key={tour.code} value={tour.code}>
@@ -329,11 +434,14 @@ export default function SalesReportPage({
                         </CardTitle>
                     </CardHeader>
                     <div className="overflow-x-auto">
-                        <Table className="min-w-[1560px]">
+                        <Table className="min-w-[2260px]">
                             <TableHeader className="bg-slate-50 dark:bg-slate-950/40">
                                 <TableRow className="text-xs uppercase tracking-wide">
                                     <TableHead className="w-14 px-5">
                                         <FormattedMessage defaultMessage="No" />
+                                    </TableHead>
+                                    <TableHead className="min-w-36">
+                                        <FormattedMessage defaultMessage="Payment Date" />
                                     </TableHead>
                                     <TableHead className="min-w-32">
                                         {isVendor ? (
@@ -342,50 +450,56 @@ export default function SalesReportPage({
                                             <FormattedMessage defaultMessage="Vendor" />
                                         )}
                                     </TableHead>
-                                    <TableHead className="min-w-56">
+                                    <TableHead className="min-w-48">
                                         {isVendor ? (
                                             <FormattedMessage defaultMessage="Agent Name" />
                                         ) : (
                                             <FormattedMessage defaultMessage="Vendor Name" />
                                         )}
                                     </TableHead>
-                                    <TableHead className="min-w-32">
+                                    <TableHead className="min-w-28">
                                         <FormattedMessage defaultMessage="Tour Code" />
                                     </TableHead>
                                     <TableHead className="min-w-64">
                                         <FormattedMessage defaultMessage="Tour Name" />
                                     </TableHead>
-                                    <TableHead className="min-w-52">
-                                        <FormattedMessage defaultMessage="Departure Date" />
+                                    <TableHead className="min-w-44">
+                                        <FormattedMessage defaultMessage="Departure" />
                                     </TableHead>
-                                    <TableHead className="min-w-40">
+                                    <TableHead className="min-w-36">
                                         <FormattedMessage defaultMessage="Booking Number" />
                                     </TableHead>
-                                    <TableHead className="min-w-52">
+                                    <TableHead className="min-w-44">
                                         <FormattedMessage defaultMessage="Customer" />
-                                    </TableHead>
-                                    <TableHead className="min-w-36 text-right">
-                                        <FormattedMessage defaultMessage="Tour Price" />
                                     </TableHead>
                                     <TableHead className="min-w-20 text-center">
                                         <FormattedMessage defaultMessage="Pax" />
                                     </TableHead>
-                                    <TableHead className="min-w-40 text-right">
-                                        <FormattedMessage defaultMessage="Tour Price x Pax" />
+                                    <TableHead className="min-w-36 text-right">
+                                        <FormattedMessage defaultMessage="Base Tour" />
+                                    </TableHead>
+                                    <TableHead className="min-w-64">
+                                        <FormattedMessage defaultMessage="Taxable Visa" />
+                                    </TableHead>
+                                    <TableHead className="min-w-64">
+                                        <FormattedMessage defaultMessage="Taxable Add-ons" />
                                     </TableHead>
                                     <TableHead className="min-w-32 text-right">
                                         <FormattedMessage defaultMessage="VAT" />
                                     </TableHead>
                                     <TableHead className="min-w-32 text-right">
-                                        <FormattedMessage defaultMessage="Add On" />
-                                    </TableHead>
-                                    <TableHead className="min-w-32 text-right">
                                         <FormattedMessage defaultMessage="Promo" />
                                     </TableHead>
-                                    <TableHead className="min-w-40 text-right">
-                                        <FormattedMessage defaultMessage="Total" />
+                                    <TableHead className="min-w-72">
+                                        <FormattedMessage defaultMessage="Non-taxable Items" />
                                     </TableHead>
-                                    <TableHead className="min-w-44 pr-5 text-right">
+                                    <TableHead className="min-w-32 text-right">
+                                        <FormattedMessage defaultMessage="Platform Fee" />
+                                    </TableHead>
+                                    <TableHead className="min-w-36 pr-5 text-right">
+                                        <FormattedMessage defaultMessage="Grand Total" />
+                                    </TableHead>
+                                    <TableHead className="min-w-36 pr-5 text-right">
                                         {isVendor ? (
                                             <FormattedMessage defaultMessage="Commission Paid" />
                                         ) : (
@@ -398,84 +512,203 @@ export default function SalesReportPage({
                                 {rows.length === 0 ? (
                                     <TableRow>
                                         <TableCell
-                                            colSpan={16}
+                                            colSpan={19}
                                             className="h-40 text-center text-slate-500"
                                         >
                                             <FormattedMessage defaultMessage="No full payment sales found." />
                                         </TableCell>
                                     </TableRow>
                                 ) : (
-                                    rows.map((row, index) => (
-                                        <TableRow
-                                            key={row.id}
-                                            className="align-top hover:bg-slate-50/70 dark:hover:bg-slate-800/50"
-                                        >
-                                            <TableCell className="px-5 text-slate-500">
-                                                {index + 1}
-                                            </TableCell>
-                                            <TableCell className="whitespace-nowrap font-mono text-xs text-slate-600 dark:text-slate-300">
-                                                {isVendor
-                                                    ? row.agent_code
-                                                    : row.vendor_name}
-                                            </TableCell>
-                                            <TableCell className="font-medium text-slate-950 dark:text-slate-100">
-                                                {isVendor
-                                                    ? row.agent_name
-                                                    : row.vendor_name}
-                                            </TableCell>
-                                            <TableCell className="whitespace-nowrap font-mono text-xs">
-                                                {row.tour_code}
-                                            </TableCell>
-                                            <TableCell className="font-medium text-slate-950 dark:text-slate-100">
-                                                {row.tour_name}
-                                            </TableCell>
-                                            <TableCell className="whitespace-nowrap text-slate-600 dark:text-slate-300">
-                                                {dateLabel(row.departure_date)}{' '}
-                                                - {dateLabel(row.return_date)}
-                                            </TableCell>
-                                            <TableCell className="whitespace-nowrap font-mono text-xs">
-                                                {row.booking_code}
-                                            </TableCell>
-                                            <TableCell>
-                                                <div className="font-medium text-slate-950 dark:text-slate-100">
-                                                    {row.booking_contact}
-                                                </div>
-                                                <div className="mt-1 whitespace-nowrap text-xs text-slate-500">
-                                                    {dateTimeLabel(
-                                                        row.booking_date,
+                                    <>
+                                        {rows.map((row, index) => (
+                                            <TableRow
+                                                key={row.id}
+                                                className="align-top hover:bg-slate-50/70 dark:hover:bg-slate-800/50"
+                                            >
+                                                <TableCell className="px-5 text-slate-500">
+                                                    {index + 1}
+                                                </TableCell>
+                                                <TableCell className="whitespace-nowrap">
+                                                    <div className="font-medium text-slate-950 dark:text-slate-100">
+                                                        {dateLabel(row.paid_at)}
+                                                    </div>
+                                                    <div className="mt-1 text-xs text-slate-500">
+                                                        {dateTimeLabel(
+                                                            row.paid_at,
+                                                        )}
+                                                    </div>
+                                                </TableCell>
+                                                <TableCell className="whitespace-nowrap font-mono text-xs text-slate-600 dark:text-slate-300">
+                                                    {isVendor
+                                                        ? row.agent_code
+                                                        : row.vendor_name}
+                                                </TableCell>
+                                                <TableCell className="font-medium text-slate-950 dark:text-slate-100">
+                                                    {isVendor
+                                                        ? row.agent_name
+                                                        : row.vendor_name}
+                                                </TableCell>
+                                                <TableCell className="whitespace-nowrap font-mono text-xs">
+                                                    {row.tour_code}
+                                                </TableCell>
+                                                <TableCell className="font-medium text-slate-950 dark:text-slate-100">
+                                                    {row.tour_name}
+                                                </TableCell>
+                                                <TableCell className="whitespace-nowrap text-slate-600 dark:text-slate-300">
+                                                    {dateLabel(
+                                                        row.departure_date,
+                                                    )}{' '}
+                                                    -{' '}
+                                                    {dateLabel(row.return_date)}
+                                                </TableCell>
+                                                <TableCell className="whitespace-nowrap font-mono text-xs">
+                                                    {row.booking_code}
+                                                </TableCell>
+                                                <TableCell>
+                                                    <div className="font-medium text-slate-950 dark:text-slate-100">
+                                                        {row.booking_contact}
+                                                    </div>
+                                                    <div className="mt-1 whitespace-nowrap text-xs text-slate-500">
+                                                        {dateTimeLabel(
+                                                            row.booking_date,
+                                                        )}
+                                                    </div>
+                                                </TableCell>
+                                                <TableCell className="text-center font-medium text-slate-950 dark:text-slate-100">
+                                                    {row.pax}
+                                                </TableCell>
+                                                <TableCell className="text-right">
+                                                    <div className="font-semibold text-slate-950 dark:text-slate-100">
+                                                        {formatFullIDR(
+                                                            row.base_tour_total,
+                                                        )}
+                                                    </div>
+                                                    <div className="mt-1 text-xs text-slate-500">
+                                                        Avg{' '}
+                                                        {formatFullIDR(
+                                                            row.base_tour_average,
+                                                        )}
+                                                    </div>
+                                                </TableCell>
+                                                <TableCell>
+                                                    <BreakdownCell
+                                                        items={
+                                                            row.taxable_visa_items
+                                                        }
+                                                        total={
+                                                            row.taxable_visa_total
+                                                        }
+                                                    />
+                                                </TableCell>
+                                                <TableCell>
+                                                    <BreakdownCell
+                                                        items={
+                                                            row.taxable_addon_items
+                                                        }
+                                                        total={
+                                                            row.taxable_addon_total
+                                                        }
+                                                    />
+                                                </TableCell>
+                                                <TableCell className="whitespace-nowrap text-right font-medium">
+                                                    {formatFullIDR(
+                                                        row.vat_amount,
                                                     )}
-                                                </div>
+                                                </TableCell>
+                                                <TableCell className="whitespace-nowrap text-right font-medium text-rose-600 dark:text-rose-300">
+                                                    {row.promo_amount > 0
+                                                        ? `- ${formatFullIDR(row.promo_amount)}`
+                                                        : '-'}
+                                                </TableCell>
+                                                <TableCell>
+                                                    <CombinedNonTaxableCell
+                                                        visaItems={
+                                                            row.non_taxable_visa_items
+                                                        }
+                                                        addonItems={
+                                                            row.non_taxable_addon_items
+                                                        }
+                                                        total={
+                                                            row.non_taxable_visa_total +
+                                                            row.non_taxable_addon_total
+                                                        }
+                                                    />
+                                                </TableCell>
+                                                <TableCell className="whitespace-nowrap text-right font-medium">
+                                                    {formatFullIDR(
+                                                        row.platform_fee,
+                                                    )}
+                                                </TableCell>
+                                                <TableCell className="whitespace-nowrap pr-5 text-right font-semibold text-slate-950 dark:text-slate-100">
+                                                    {formatFullIDR(
+                                                        row.grand_total,
+                                                    )}
+                                                </TableCell>
+                                                <TableCell className="whitespace-nowrap pr-5 text-right font-semibold text-emerald-600 dark:text-emerald-300">
+                                                    {formatFullIDR(
+                                                        row.commission_amount,
+                                                    )}
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                        <TableRow className="bg-slate-100/80 font-semibold dark:bg-slate-800/70">
+                                            <TableCell
+                                                colSpan={9}
+                                                className="px-5 text-slate-950 dark:text-slate-100"
+                                            >
+                                                <FormattedMessage defaultMessage="Total" />
                                             </TableCell>
-                                            <TableCell className="whitespace-nowrap text-right font-medium">
-                                                {formatIDR(row.tour_price)}
+                                            <TableCell className="text-center text-slate-950 dark:text-slate-100">
+                                                {summary.total_pax}
                                             </TableCell>
-                                            <TableCell className="text-center font-medium text-slate-950 dark:text-slate-100">
-                                                {row.pax}
-                                            </TableCell>
-                                            <TableCell className="whitespace-nowrap text-right font-medium">
-                                                {formatIDR(
-                                                    row.tour_price_total,
+                                            <TableCell className="text-right text-slate-950 dark:text-slate-100">
+                                                {formatFullIDR(
+                                                    summary.base_tour_total,
                                                 )}
                                             </TableCell>
-                                            <TableCell className="whitespace-nowrap text-right">
-                                                {formatIDR(row.tax_amount)}
+                                            <TableCell className="text-right text-slate-950 dark:text-slate-100">
+                                                {formatFullIDR(
+                                                    summary.taxable_visa_total,
+                                                )}
                                             </TableCell>
-                                            <TableCell className="whitespace-nowrap text-right">
-                                                {formatIDR(row.addon_cost)}
+                                            <TableCell className="text-right text-slate-950 dark:text-slate-100">
+                                                {formatFullIDR(
+                                                    summary.taxable_addon_total,
+                                                )}
                                             </TableCell>
-                                            <TableCell className="whitespace-nowrap text-right">
-                                                {formatIDR(row.promo_amount)}
+                                            <TableCell className="text-right text-slate-950 dark:text-slate-100">
+                                                {formatFullIDR(
+                                                    summary.vat_total,
+                                                )}
                                             </TableCell>
-                                            <TableCell className="whitespace-nowrap text-right font-semibold text-slate-950 dark:text-slate-100">
-                                                {formatIDR(row.grand_total)}
+                                            <TableCell className="text-right text-rose-600 dark:text-rose-300">
+                                                {summary.promo_total > 0
+                                                    ? `- ${formatFullIDR(summary.promo_total)}`
+                                                    : '-'}
                                             </TableCell>
-                                            <TableCell className="whitespace-nowrap pr-5 text-right font-semibold text-emerald-600 dark:text-emerald-300">
-                                                {formatIDR(
-                                                    row.commission_amount,
+                                            <TableCell className="text-right text-slate-950 dark:text-slate-100">
+                                                {formatFullIDR(
+                                                    summary.non_taxable_visa_total +
+                                                        summary.non_taxable_addon_total,
+                                                )}
+                                            </TableCell>
+                                            <TableCell className="text-right text-slate-950 dark:text-slate-100">
+                                                {formatFullIDR(
+                                                    summary.platform_fee_total,
+                                                )}
+                                            </TableCell>
+                                            <TableCell className="pr-5 text-right text-slate-950 dark:text-slate-100">
+                                                {formatFullIDR(
+                                                    summary.total_sales,
+                                                )}
+                                            </TableCell>
+                                            <TableCell className="pr-5 text-right text-emerald-600 dark:text-emerald-300">
+                                                {formatFullIDR(
+                                                    summary.total_commission,
                                                 )}
                                             </TableCell>
                                         </TableRow>
-                                    ))
+                                    </>
                                 )}
                             </TableBody>
                         </Table>
