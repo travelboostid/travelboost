@@ -370,40 +370,40 @@ export default function RoomListing() {
                             {/* <FormattedMessage defaultMessage="Tour bookings with down payment or full payment status are displayed. Use the payment status column to identify settlement progress." /> */}
                         </p>
                     </div>
-                    <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:justify-end">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:justify-end">
                         <Button
                             variant="outline"
-                            className="h-9 min-w-[90px] justify-center gap-2 rounded-xl border-slate-200 bg-white px-4 shadow-sm transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-white dark:hover:bg-slate-800"
+                            className="h-8 px-3 text-xs justify-center gap-1.5 rounded-xl border-slate-200 bg-white shadow-sm transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-white dark:hover:bg-slate-800"
                             onClick={handlePrintNative}
                             disabled={!hasCompleteFilters || !roomData?.length}
                         >
-                            <PrinterIcon size={16} />{' '}
+                            <PrinterIcon size={14} />{' '}
                             <FormattedMessage defaultMessage="Print" />
                         </Button>
                         <Button
                             variant="outline"
-                            className="h-9 min-w-[90px] justify-center gap-2 rounded-xl border-red-200 bg-red-50 px-4 text-red-600 shadow-sm transition hover:bg-red-100 dark:border-red-900/50 dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/30"
+                            className="h-8 px-3 text-xs justify-center gap-1.5 rounded-xl border-red-200 bg-red-50 text-red-600 shadow-sm transition hover:bg-red-100 dark:border-red-900/50 dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/30"
                             onClick={handleExportPDF}
                             disabled={!hasCompleteFilters || !roomData?.length}
                         >
-                            <DownloadIcon size={16} />{' '}
+                            <DownloadIcon size={14} />{' '}
                             <FormattedMessage defaultMessage="PDF" />
                         </Button>
                         <Button
-                            className="h-9 min-w-[90px] justify-center gap-2 rounded-xl bg-emerald-600 px-4 text-white shadow-sm transition hover:bg-emerald-700"
+                            className="h-8 px-3 text-xs justify-center gap-1.5 rounded-xl bg-emerald-600 text-white shadow-sm transition hover:bg-emerald-700"
                             onClick={handleExportExcel}
                             disabled={!hasCompleteFilters || !roomData?.length}
                         >
-                            <DownloadIcon size={16} />{' '}
+                            <DownloadIcon size={14} />{' '}
                             <FormattedMessage defaultMessage="Excel" />
                         </Button>
                         <Button
-                            className="h-9 min-w-[90px] justify-center gap-2 rounded-xl bg-yellow-600 px-4 text-white shadow-sm transition hover:bg-yellow-700"
+                            className="h-8 px-3 text-xs justify-center gap-1.5 rounded-xl bg-yellow-600 text-white shadow-sm transition hover:bg-yellow-700"
                             onClick={handleExportDocuments}
                             disabled={!hasCompleteFilters || !roomData?.length}
                         >
-                            <DownloadIcon size={16} />{' '}
-                            <FormattedMessage defaultMessage="Travel Documents" />
+                            <DownloadIcon size={14} />{' '}
+                            <FormattedMessage defaultMessage="Documents (ZIP)" />
                         </Button>
                     </div>
                 </div>
@@ -698,7 +698,8 @@ export default function RoomListing() {
                                                                                     '-'}
                                                                             </TableCell>
                                                                             <TableCell className="border-r border-slate-200 p-2 text-[11px] uppercase dark:border-slate-800 dark:text-slate-300 text-center">
-                                                                                -
+                                                                                {row.passport_place_of_issue ||
+                                                                                    '-'}
                                                                             </TableCell>
                                                                             <TableCell className="border-r border-slate-200 p-2 text-center text-[11px] dark:border-slate-800 dark:text-slate-300">
                                                                                 {row.passport_issue_date

@@ -23,6 +23,7 @@ class BookingPassenger extends Model
         'room_type',
         'room_number',
         'passport_number',
+        'passport_place_of_issue',
         'passport_issue_date',
         'passport_expiry_date',
         'visa_number',

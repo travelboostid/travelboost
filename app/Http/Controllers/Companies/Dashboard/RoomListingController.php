@@ -467,6 +467,7 @@ class RoomListingController extends Controller
                             'dob' => $passenger->dob ? $passenger->dob->format('Y-m-d') : null,
                             'pob' => $passenger->pob,
                             'passport_number' => $passenger->passport_number,
+                            'passport_place_of_issue' => $passenger->passport_place_of_issue,
                             'passport_issue_date' => $passenger->passport_issue_date
                                 ? $passenger->passport_issue_date->format('Y-m-d')
                                 : null,

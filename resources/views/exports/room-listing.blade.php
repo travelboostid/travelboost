@@ -424,7 +424,7 @@
                                 <td
                                     style="{{ $cellStyle }} text-transform: uppercase; text-align: center;"
                                 >
-                                    -
+                                    {{ $passenger->passport_place_of_issue ?: '-' }}
                                 </td>
                                 <td
                                     style="{{ $cellStyle }} text-align: center; font-size: 8pt;"
@@ -530,6 +530,7 @@
                                 padding: 4px;
                                 border: 1px solid #cbd5e1;
                                 font-weight: 700;
+                                text-align: center;
                             "
                         >
                             {{ $item['count'] }} {{ $item['unit'] ?? ($item['count'] === 1 ? 'room' : 'rooms') }}
