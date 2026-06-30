@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\UserGender;
 use App\Enums\UserStatus;
+use App\Notifications\QueuedVerifyEmail;
 use App\Traits\HasBankAccounts;
 use Bavix\Wallet\Interfaces\Customer;
 use Bavix\Wallet\Interfaces\Wallet;
@@ -85,6 +86,11 @@ class User extends Authenticatable implements Customer, LaratrustUser, MustVerif
     public function photo()
     {
         return $this->belongsTo(Media::class, 'photo_id');
+    }
+
+    public function sendEmailVerificationNotification(): void
+    {
+        $this->notify(new QueuedVerifyEmail);
     }
 
     public function affiliateProfile()

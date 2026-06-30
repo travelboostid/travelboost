@@ -22,7 +22,6 @@ import { Head, router, usePage } from '@inertiajs/react';
 import dayjs from 'dayjs';
 import {
     DownloadIcon,
-    FileIcon,
     InfoIcon,
     PrinterIcon,
     RotateCcwIcon,
@@ -228,6 +227,10 @@ export default function RoomListing() {
         );
     };
 
+    const handleExportDocuments = () => {
+        window.location.href = `/companies/${company.username}/dashboard/reports/room-listings/export/documents?${buildExportQuery()}`;
+    };
+
     let globalIndex = 1;
     let roomCounter = 0;
     let bookingCounter = 0;
@@ -363,35 +366,44 @@ export default function RoomListing() {
                     <div className="flex max-w-2xl items-start gap-3 rounded-2xl border border-blue-100 bg-blue-50/70 px-4 py-3 text-sm text-blue-900 dark:border-blue-900/40 dark:bg-blue-950/30 dark:text-blue-200">
                         <InfoIcon className="mt-0.5 h-4 w-4 shrink-0" />
                         <p>
-                            <FormattedMessage defaultMessage="Tour bookings with down payment or full payment status are displayed. Use the payment status column to identify settlement progress." />
+                            <FormattedMessage defaultMessage="Tour bookings with down payment or full payment status are displayed." />
+                            {/* <FormattedMessage defaultMessage="Tour bookings with down payment or full payment status are displayed. Use the payment status column to identify settlement progress." /> */}
                         </p>
                     </div>
-                    <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:justify-end">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:justify-end">
                         <Button
                             variant="outline"
-                            className="h-11 min-w-[148px] justify-center gap-2 rounded-xl border-slate-200 bg-white px-5 shadow-sm transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-white dark:hover:bg-slate-800"
+                            className="h-8 px-3 text-xs justify-center gap-1.5 rounded-xl border-slate-200 bg-white shadow-sm transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-white dark:hover:bg-slate-800"
                             onClick={handlePrintNative}
                             disabled={!hasCompleteFilters || !roomData?.length}
                         >
-                            <PrinterIcon size={16} />{' '}
+                            <PrinterIcon size={14} />{' '}
                             <FormattedMessage defaultMessage="Print" />
                         </Button>
                         <Button
                             variant="outline"
-                            className="h-11 min-w-[148px] justify-center gap-2 rounded-xl border-red-200 bg-red-50 px-5 text-red-600 shadow-sm transition hover:bg-red-100 dark:border-red-900/50 dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/30"
+                            className="h-8 px-3 text-xs justify-center gap-1.5 rounded-xl border-red-200 bg-red-50 text-red-600 shadow-sm transition hover:bg-red-100 dark:border-red-900/50 dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/30"
                             onClick={handleExportPDF}
                             disabled={!hasCompleteFilters || !roomData?.length}
                         >
-                            <FileIcon size={16} />{' '}
-                            <FormattedMessage defaultMessage="Export PDF" />
+                            <DownloadIcon size={14} />{' '}
+                            <FormattedMessage defaultMessage="PDF" />
                         </Button>
                         <Button
-                            className="h-11 min-w-[148px] justify-center gap-2 rounded-xl bg-emerald-600 px-5 text-white shadow-sm transition hover:bg-emerald-700"
+                            className="h-8 px-3 text-xs justify-center gap-1.5 rounded-xl bg-emerald-600 text-white shadow-sm transition hover:bg-emerald-700"
                             onClick={handleExportExcel}
                             disabled={!hasCompleteFilters || !roomData?.length}
                         >
-                            <DownloadIcon size={16} />{' '}
-                            <FormattedMessage defaultMessage="Export Excel" />
+                            <DownloadIcon size={14} />{' '}
+                            <FormattedMessage defaultMessage="Excel" />
+                        </Button>
+                        <Button
+                            className="h-8 px-3 text-xs justify-center gap-1.5 rounded-xl bg-yellow-600 text-white shadow-sm transition hover:bg-yellow-700"
+                            onClick={handleExportDocuments}
+                            disabled={!hasCompleteFilters || !roomData?.length}
+                        >
+                            <DownloadIcon size={14} />{' '}
+                            <FormattedMessage defaultMessage="Documents (ZIP)" />
                         </Button>
                     </div>
                 </div>
@@ -480,6 +492,9 @@ export default function RoomListing() {
                                         </TableHead>
                                         <TableHead className="border-r border-slate-200 px-2 py-3 text-[11px] font-bold uppercase text-slate-900 dark:border-slate-800 dark:text-slate-200 print:w-[10%]">
                                             <FormattedMessage defaultMessage="Passport Number" />
+                                        </TableHead>
+                                        <TableHead className="border-r border-slate-200 px-2 py-3 text-center text-[11px] font-bold uppercase text-slate-900 dark:border-slate-800 dark:text-slate-200 print:w-[8%]">
+                                            <FormattedMessage defaultMessage="Place of Issue" />
                                         </TableHead>
                                         <TableHead className="border-r border-slate-200 px-2 py-3 text-center text-[11px] font-bold uppercase text-slate-900 dark:border-slate-800 dark:text-slate-200 print:w-[8%]">
                                             <FormattedMessage defaultMessage="Issue Date" />
@@ -682,12 +697,16 @@ export default function RoomListing() {
                                                                                 {row.passport_number ||
                                                                                     '-'}
                                                                             </TableCell>
+                                                                            <TableCell className="border-r border-slate-200 p-2 text-[11px] uppercase dark:border-slate-800 dark:text-slate-300 text-center">
+                                                                                {row.passport_place_of_issue ||
+                                                                                    '-'}
+                                                                            </TableCell>
                                                                             <TableCell className="border-r border-slate-200 p-2 text-center text-[11px] dark:border-slate-800 dark:text-slate-300">
                                                                                 {row.passport_issue_date
                                                                                     ? dayjs(
                                                                                           row.passport_issue_date,
                                                                                       ).format(
-                                                                                          'DD/MM/YYYY',
+                                                                                          'DD MMMM YYYY',
                                                                                       )
                                                                                     : '-'}
                                                                             </TableCell>
@@ -696,7 +715,7 @@ export default function RoomListing() {
                                                                                     ? dayjs(
                                                                                           row.passport_expiry_date,
                                                                                       ).format(
-                                                                                          'DD/MM/YYYY',
+                                                                                          'DD MMMM YYYY',
                                                                                       )
                                                                                     : '-'}
                                                                             </TableCell>
@@ -709,7 +728,7 @@ export default function RoomListing() {
                                                                                     ? dayjs(
                                                                                           row.dob,
                                                                                       ).format(
-                                                                                          'DD/MM/YYYY',
+                                                                                          'DD MMMM YYYY',
                                                                                       )
                                                                                     : '-'}
                                                                             </TableCell>

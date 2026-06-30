@@ -19,6 +19,7 @@ use Illuminate\Support\Facades\Context;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Vite;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
 use Intervention\Image\Drivers\Gd\Driver;
@@ -47,6 +48,22 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        $assetBaseUrl = rtrim((string) config('app.url'), '/');
+
+        if ($assetBaseUrl !== '') {
+            Vite::createAssetPathsUsing(function (string $path) use ($assetBaseUrl): string {
+                if (
+                    str_starts_with($path, 'http://')
+                    || str_starts_with($path, 'https://')
+                    || str_starts_with($path, '//')
+                ) {
+                    return $path;
+                }
+
+                return $assetBaseUrl.'/'.ltrim($path, '/');
+            });
+        }
+
         Relation::morphMap([
             'wallet-topup-payment' => WalletTopupPayment::class,
             'agent-subscription-payment' => AgentSubscriptionPayment::class,

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Companies\UpdateProfileRequest;
 use App\Models\Company;
 use App\Models\User;
+use App\Support\AffiliateReferralContext;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
@@ -13,7 +14,7 @@ use Inertia\Inertia;
 
 class ProfileController extends Controller
 {
-    public function show(Request $request, Company $company)
+    public function show(Request $request, Company $company, AffiliateReferralContext $affiliateReferralContext)
     {
         $company->load(['domain', 'photo', 'identityCard', 'referrer.affiliateProfile']);
 
@@ -23,10 +24,11 @@ class ProfileController extends Controller
         $userStatus = $user ? $user->status : 'inactive';
         $statusValue = $userStatus instanceof \BackedEnum ? $userStatus->value : $userStatus;
         $referrer = $company->referrer;
+        $referrerProfile = $referrer?->affiliateProfile;
 
-        $company->setAttribute('invited_by', $referrer ? [
+        $company->setAttribute('invited_by', $referrer && ! $affiliateReferralContext->shouldHideAffiliate($referrerProfile) ? [
             'name' => $referrer->name,
-            'referral_code' => $referrer->affiliateProfile?->referral_code,
+            'referral_code' => $referrerProfile?->referral_code,
         ] : null);
 
         return Inertia::render('companies/dashboard/profile/index', [

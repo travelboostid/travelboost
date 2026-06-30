@@ -98,7 +98,7 @@
                     Tour Product
                 </td>
                 <td
-                    colspan="7"
+                    colspan="9"
                     style="
                         font-size: 10pt;
                         font-weight: 700;
@@ -123,7 +123,7 @@
                     Departure Date
                 </td>
                 <td
-                    colspan="7"
+                    colspan="9"
                     style="
                         font-size: 10pt;
                         font-weight: 700;
@@ -147,10 +147,10 @@
                 >
                     {{ $company->name }}
                 </td>
-                <td colspan="9" style="border-bottom: 2px solid #111827"></td>
+                <td colspan="11" style="border-bottom: 2px solid #111827"></td>
             </tr>
             <tr>
-                <td colspan="18"></td>
+                <td colspan="20"></td>
             </tr>
         </table>
     @else
@@ -253,6 +253,11 @@
                     style="{{ $headerStyle }}"
                     {!! !$isExcel ? 'width="10%"' : '' !!}
                     >Passport Number
+                </th>
+                <th
+                    style="{{ $headerStyle }}"
+                    {!! !$isExcel ? 'width="8%"' : '' !!}
+                    >Place of Issue
                 </th>
                 <th
                     style="{{ $headerStyle }}"
@@ -417,14 +422,19 @@
                                     {{ $passenger->passport_number ?: '-' }}
                                 </td>
                                 <td
+                                    style="{{ $cellStyle }} text-transform: uppercase; text-align: center;"
+                                >
+                                    {{ $passenger->passport_place_of_issue ?: '-' }}
+                                </td>
+                                <td
                                     style="{{ $cellStyle }} text-align: center; font-size: 8pt;"
                                 >
-                                    {{ $passenger->passport_issue_date ? \Carbon\Carbon::parse($passenger->passport_issue_date)->format('d/m/Y') : '-' }}
+                                    {{ $passenger->passport_issue_date ? \Carbon\Carbon::parse($passenger->passport_issue_date)->format('d F Y') : '-' }}
                                 </td>
                                 <td
                                     style="{{ $cellStyle }} text-align: center; font-size: 8pt; font-weight: 700;"
                                 >
-                                    {{ $passenger->passport_expiry_date ? \Carbon\Carbon::parse($passenger->passport_expiry_date)->format('d/m/Y') : '-' }}
+                                    {{ $passenger->passport_expiry_date ? \Carbon\Carbon::parse($passenger->passport_expiry_date)->format('d F Y') : '-' }}
                                 </td>
                                 <td
                                     style="{{ $cellStyle }} text-transform: uppercase;"
@@ -434,7 +444,7 @@
                                 <td
                                     style="{{ $cellStyle }} text-align: center;"
                                 >
-                                    {{ $passenger->dob ? \Carbon\Carbon::parse($passenger->dob)->format('d/m/Y') : '-' }}
+                                    {{ $passenger->dob ? \Carbon\Carbon::parse($passenger->dob)->format('d F Y') : '-' }}
                                 </td>
 
                                 @if ($isFirstInBooking)
@@ -480,42 +490,71 @@
             <tr>
                 @if ($isExcel)
                     <td></td>
+                    <td
+                        colspan="3"
+                        style="
+                            font-weight: 700;
+                            text-transform: uppercase;
+                            color: #0f172a;
+                            padding: 6px 4px;
+                        "
+                    >
+                        Room Recap
+                    </td>
+                @else
+                    <td
+                        colspan="2"
+                        style="
+                            font-weight: 700;
+                            text-transform: uppercase;
+                            color: #0f172a;
+                            padding: 6px 4px;
+                        "
+                    >
+                        Room Recap
+                    </td>
                 @endif
-                <td
-                    colspan="2"
-                    style="
-                        font-weight: 700;
-                        text-transform: uppercase;
-                        color: #0f172a;
-                        padding: 6px 4px;
-                    "
-                >
-                    Room Recap
-                </td>
             </tr>
             @foreach ($roomRecap as $item)
                 <tr>
                     @if ($isExcel)
                         <td></td>
+                        <td
+                            colspan="2"
+                            style="padding: 4px; border: 1px solid #cbd5e1"
+                        >
+                            {{ $item['roomType'] ?? $item['room_type'] ?? '-' }}
+                        </td>
+                        <td
+                            style="
+                                padding: 4px;
+                                border: 1px solid #cbd5e1;
+                                font-weight: 700;
+                                text-align: center;
+                            "
+                        >
+                            {{ $item['count'] }} {{ $item['unit'] ?? ($item['count'] === 1 ? 'room' : 'rooms') }}
+                        </td>
+                    @else
+                        <td
+                            style="
+                                width: 220px;
+                                padding: 4px;
+                                border: 1px solid #cbd5e1;
+                            "
+                        >
+                            {{ $item['roomType'] ?? $item['room_type'] ?? '-' }}
+                        </td>
+                        <td
+                            style="
+                                padding: 4px;
+                                border: 1px solid #cbd5e1;
+                                font-weight: 700;
+                            "
+                        >
+                            {{ $item['count'] }} {{ $item['unit'] ?? ($item['count'] === 1 ? 'room' : 'rooms') }}
+                        </td>
                     @endif
-                    <td
-                        style="
-                            width: 220px;
-                            padding: 4px;
-                            border: 1px solid #cbd5e1;
-                        "
-                    >
-                        {{ $item['roomType'] ?? $item['room_type'] ?? '-' }}
-                    </td>
-                    <td
-                        style="
-                            padding: 4px;
-                            border: 1px solid #cbd5e1;
-                            font-weight: 700;
-                        "
-                    >
-                        {{ $item['count'] }} {{ $item['unit'] ?? ($item['count'] === 1 ? 'room' : 'rooms') }}
-                    </td>
                 </tr>
             @endforeach
         </table>
