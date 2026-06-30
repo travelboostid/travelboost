@@ -59,6 +59,63 @@ test('web responses include content security policy when enabled', function () {
         ->toContain('nonce-');
 });
 
+test('content security policy includes reverb websocket sources at runtime', function () {
+    config([
+        'csp.enabled' => true,
+        'csp.directives' => [
+            'connect-src' => ["'self'"],
+        ],
+        'broadcasting.default' => 'reverb',
+        'broadcasting.connections.reverb.options' => [
+            'host' => 'lvh.me',
+            'port' => 8080,
+            'scheme' => 'http',
+        ],
+    ]);
+
+    expect(ContentSecurityPolicy::reverbConnectSources())
+        ->toContain('ws://lvh.me:8080')
+        ->toContain('http://lvh.me:8080');
+
+    expect(ContentSecurityPolicy::headerValue())
+        ->toContain('ws://lvh.me:8080');
+});
+
+test('web responses include reverb websocket sources in connect-src', function () {
+    $originalHost = getenv('REVERB_HOST');
+    $originalScheme = getenv('REVERB_SCHEME');
+    $originalPort = getenv('REVERB_PORT');
+
+    try {
+        putenv('REVERB_HOST=lvh.me');
+        putenv('REVERB_SCHEME=http');
+        putenv('REVERB_PORT=8080');
+
+        config([
+            'broadcasting.default' => 'reverb',
+            'broadcasting.connections.reverb.options' => [
+                'host' => 'lvh.me',
+                'port' => 8080,
+                'scheme' => 'http',
+            ],
+        ]);
+
+        $response = $this->get('/login');
+
+        $response->assertOk();
+
+        $policy = (string) $response->headers->get('Content-Security-Policy');
+
+        expect($policy)
+            ->toContain('ws://lvh.me:8080')
+            ->toContain('http://lvh.me:8080');
+    } finally {
+        putenv('REVERB_HOST='.($originalHost !== false ? $originalHost : ''));
+        putenv('REVERB_SCHEME='.($originalScheme !== false ? $originalScheme : ''));
+        putenv('REVERB_PORT='.($originalPort !== false ? $originalPort : ''));
+    }
+});
+
 test('content security policy middleware does not override existing header', function () {
     config(['csp.enabled' => true]);
 

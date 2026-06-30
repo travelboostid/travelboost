@@ -166,7 +166,10 @@ export default function ChatSheet() {
 
     return (
         <Sheet open={open} onOpenChange={setOpen}>
-            <SheetContent className="flex w-full min-h-screen flex-col gap-0 p-0 sm:max-w-120">
+            <SheetContent
+                showCloseButton={false}
+                className="flex w-full min-h-screen flex-col gap-0 p-0 sm:max-w-120"
+            >
                 <ChatHeader />
                 <div className="flex min-h-0 flex-1 flex-col">
                     <div className="relative min-h-0 flex-1">

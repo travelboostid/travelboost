@@ -1,7 +1,7 @@
 import { type ChatMessageResource } from '@/api/model';
 import { cn } from '@/lib/utils';
 import { useChatStore } from '@/stores/chat/chat-store';
-import { useCallback, useEffect, useRef } from 'react';
+import { memo, useCallback, useEffect, useRef } from 'react';
 import { useInView } from 'react-intersection-observer';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -21,10 +21,16 @@ import {
     useRoomPagination,
 } from './state';
 
-function ChatMessage({ message }: { message: ChatMessageResource }) {
+const ChatMessage = memo(function ChatMessage({
+    message,
+}: {
+    message: ChatMessageResource;
+}) {
     const actor = useChatActor();
     const mine =
-        message.sender_type === actor?.type && message.sender_id === actor?.id;
+        !message.is_bot &&
+        message.sender_type === actor?.type &&
+        message.sender_id === actor?.id;
 
     return (
         <div className={`flex ${mine ? 'justify-end' : 'justify-start'}`}>
@@ -52,57 +58,74 @@ function ChatMessage({ message }: { message: ChatMessageResource }) {
             </div>
         </div>
     );
-}
+});
 
 export function MessageContentRenderer({
     message,
 }: {
     message: ChatMessageResource;
 }) {
+    if (message.is_streaming && !message.message) {
+        return (
+            <span className="inline-flex items-center gap-1 py-1">
+                <span className="size-1.5 animate-pulse rounded-full bg-current opacity-60" />
+                <span className="size-1.5 animate-pulse rounded-full bg-current opacity-60 [animation-delay:150ms]" />
+                <span className="size-1.5 animate-pulse rounded-full bg-current opacity-60 [animation-delay:300ms]" />
+            </span>
+        );
+    }
+
     return (
-        <ReactMarkdown
-            remarkPlugins={[remarkGfm]}
-            components={{
-                table: ({ children }) => (
-                    <div className="w-full overflow-x-auto border">
-                        <table className="w-full min-w-75 border-collapse text-sm">
+        <>
+            <ReactMarkdown
+                remarkPlugins={[remarkGfm]}
+                components={{
+                    table: ({ children }) => (
+                        <div className="w-full overflow-x-auto border">
+                            <table className="w-full min-w-75 border-collapse text-sm">
+                                {children}
+                            </table>
+                        </div>
+                    ),
+                    thead: ({ children }) => (
+                        <thead className="border-b">{children}</thead>
+                    ),
+                    th: ({ children }) => (
+                        <th className="px-4 py-2 text-left font-medium whitespace-nowrap">
                             {children}
-                        </table>
-                    </div>
-                ),
-                thead: ({ children }) => (
-                    <thead className="border-b">{children}</thead>
-                ),
-                th: ({ children }) => (
-                    <th className="px-4 py-2 text-left font-medium whitespace-nowrap">
-                        {children}
-                    </th>
-                ),
-                td: ({ children }) => (
-                    <td className="px-4 py-2 whitespace-nowrap">{children}</td>
-                ),
-                tr: ({ children }) => (
-                    <tr className="border-b last:border-0 hover:bg-muted/50">
-                        {children}
-                    </tr>
-                ),
-                ul: ({ children }) => (
-                    <ul className="mb-4 bt-2 ml-6 list-disc space-y-2">
-                        {children}
-                    </ul>
-                ),
-                ol: ({ children }) => (
-                    <ol className="my-4 ml-6 list-decimal space-y-2">
-                        {children}
-                    </ol>
-                ),
-                li: ({ children }) => (
-                    <li className="leading-normal">{children}</li>
-                ),
-            }}
-        >
-            {message?.message || ''}
-        </ReactMarkdown>
+                        </th>
+                    ),
+                    td: ({ children }) => (
+                        <td className="px-4 py-2 whitespace-nowrap">
+                            {children}
+                        </td>
+                    ),
+                    tr: ({ children }) => (
+                        <tr className="border-b last:border-0 hover:bg-muted/50">
+                            {children}
+                        </tr>
+                    ),
+                    ul: ({ children }) => (
+                        <ul className="mb-4 bt-2 ml-6 list-disc space-y-2">
+                            {children}
+                        </ul>
+                    ),
+                    ol: ({ children }) => (
+                        <ol className="my-4 ml-6 list-decimal space-y-2">
+                            {children}
+                        </ol>
+                    ),
+                    li: ({ children }) => (
+                        <li className="leading-normal">{children}</li>
+                    ),
+                }}
+            >
+                {message?.message || ''}
+            </ReactMarkdown>
+            {message.is_streaming && (
+                <span className="ml-0.5 inline-block animate-pulse">|</span>
+            )}
+        </>
     );
 }
 
@@ -123,7 +146,8 @@ export default function ChatBox({
     const resetRoomPagination = useChatStore(
         (state) => state.resetRoomPagination,
     );
-    const lastMessageId = messages?.[messages.length - 1]?.id;
+    const lastMessage = messages?.[messages.length - 1];
+    const lastMessageId = lastMessage?.id;
     const isInitialLoading = isLoading && !hasLoaded;
     const isLoadingOlder = isLoading && hasLoaded;
 
@@ -163,9 +187,21 @@ export default function ChatBox({
 
     useEffect(() => {
         if (lastMessageId) {
-            scrollToBottom(hasLoaded ? 'smooth' : 'auto');
+            scrollToBottom(
+                lastMessage?.is_streaming
+                    ? 'auto'
+                    : hasLoaded
+                      ? 'smooth'
+                      : 'auto',
+            );
         }
-    }, [hasLoaded, lastMessageId, scrollToBottom]);
+    }, [
+        hasLoaded,
+        lastMessage?.is_streaming,
+        lastMessage?.message?.length,
+        lastMessageId,
+        scrollToBottom,
+    ]);
 
     const handleRetry = () => {
         clearRoomError(roomId);

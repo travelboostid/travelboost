@@ -21,6 +21,7 @@ class ChatMessageResource extends JsonResource
             'attachment_data' => $this->attachment_data,
             'attachment_type' => $this->attachment_type,
             'is_bot' => $this->is_bot,
+            'is_streaming' => (bool) data_get($this->meta, 'streaming', false),
             'reply_to' => $this->reply_to,
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,

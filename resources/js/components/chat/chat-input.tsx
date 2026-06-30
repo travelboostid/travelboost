@@ -10,6 +10,7 @@ import { Spinner } from '../ui/spinner';
 import RenderAttachment from './render-attachment';
 import {
     useChatActor,
+    useChatDraft,
     useFloatingChatWidgetContext,
     useRoomSending,
     useSendMessage,
@@ -24,8 +25,8 @@ export default function ChatInput({
 }) {
     const sendMessage = useSendMessage();
     const actor = useChatActor();
-    const { message, setMessage, attachment, setAttachment } =
-        useFloatingChatWidgetContext();
+    const { message, setMessage } = useChatDraft();
+    const { attachment, setAttachment } = useFloatingChatWidgetContext();
     const sending = useRoomSending(roomId);
     const [sendError, setSendError] = useState<string | null>(null);
 

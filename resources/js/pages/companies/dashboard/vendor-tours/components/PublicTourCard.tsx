@@ -1,4 +1,4 @@
-import { useFloatingChatWidgetContext } from '@/components/chat/state';
+import { useStartPrivateChat } from '@/components/chat/state';
 import TourBookingModal from '@/components/tours/tour-booking-modal';
 import {
     AlertDialog,
@@ -20,6 +20,7 @@ import {
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
 import { activateChatStack } from '@/lib/activate-chat-stack';
 import { extractDocumentUrl } from '@/lib/utils';
+import { useChatUiStore } from '@/stores/chat/chat-ui-store';
 import { router } from '@inertiajs/react';
 import { IconCalendarEvent, IconPdf } from '@tabler/icons-react';
 import axios from 'axios';
@@ -42,7 +43,8 @@ export default function PublicTourCard({
     imagePriority = false,
 }: any) {
     const { auth, company } = usePageSharedDataProps();
-    const floatingChat = useFloatingChatWidgetContext();
+    const startPrivateChat = useStartPrivateChat();
+    const setAttachment = useChatUiStore((state) => state.setAttachment);
     const activeOwner = catalogOwner || company;
 
     const [internalStartingChat, setInternalStartingChat] = useState(false);
@@ -123,11 +125,11 @@ export default function PublicTourCard({
         try {
             setInternalStartingChat(true);
             activateChatStack();
-            floatingChat?.setAttachment({
+            setAttachment({
                 type: 'tour',
                 data: tour.id.toString(),
             });
-            await floatingChat?.startPrivateChat({
+            await startPrivateChat({
                 type: 'company',
                 id: targetId,
             });

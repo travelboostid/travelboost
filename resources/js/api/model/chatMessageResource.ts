@@ -32,6 +32,7 @@ export interface ChatMessageResource {
     attachment_data: ChatMessageResourceAttachmentData;
     attachment_type: ChatMessageResourceAttachmentType;
     is_bot: boolean;
+    is_streaming: boolean;
     reply_to: ChatMessageResourceReplyTo;
     created_at: ChatMessageResourceCreatedAt;
     updated_at: ChatMessageResourceUpdatedAt;

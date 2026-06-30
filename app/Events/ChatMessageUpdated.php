@@ -8,11 +8,11 @@ use App\Models\ChatMessage;
 use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Broadcasting\PrivateChannel;
-use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
+use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
-class ChatMessageCreated implements ShouldBroadcast
+class ChatMessageUpdated implements ShouldBroadcastNow
 {
     use BroadcastsChatMessageToMembers, Dispatchable, InteractsWithSockets, SerializesModels;
 
@@ -28,7 +28,7 @@ class ChatMessageCreated implements ShouldBroadcast
 
     public function broadcastAs(): string
     {
-        return 'ChatMessageCreated';
+        return 'ChatMessageUpdated';
     }
 
     /**

@@ -3,7 +3,7 @@ import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
 import { register } from '@/routes/companies/dashboard/vendor-registrations';
 import { router } from '@inertiajs/react';
 
-import { useFloatingChatWidgetContext } from '@/components/chat/state';
+import { useStartPrivateChat } from '@/components/chat/state';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import {
     AlertDialog,
@@ -31,7 +31,7 @@ export default function VendorPartnershipRegistrationButton({
     const { company } = usePageSharedDataProps();
     const [showRegistrationDetails, setShowRegistrationDetails] =
         useState(false);
-    const floatingChat = useFloatingChatWidgetContext();
+    const startPrivateChat = useStartPrivateChat();
 
     const handleRegister = () => {
         router.post(
@@ -49,7 +49,7 @@ export default function VendorPartnershipRegistrationButton({
     };
 
     const handleFollowup = () => {
-        floatingChat.startPrivateChat({
+        startPrivateChat({
             type: 'company',
             id: vendor.id,
         });

@@ -28,7 +28,8 @@ class ChatMessageController extends Controller
 
         $messages = ChatMessage::where('room_id', $roomId)
             ->with(['sender', 'room', 'replyTo'])
-            ->orderBy('created_at', 'desc') // oldest first
+            ->orderByDesc('created_at')
+            ->orderByDesc('id')
             ->cursorPaginate($perPage)
             ->withQueryString();
 
