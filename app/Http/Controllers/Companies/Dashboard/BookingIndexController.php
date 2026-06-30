@@ -939,6 +939,7 @@ class BookingIndexController extends Controller
         $booking->loadMissing(['vendor.companySetting', 'tour.company.companySetting']);
         $requiredSeats = (int) ($booking->pax_adult ?? 0) + (int) ($booking->pax_child ?? 0);
         $currentDeparture = Carbon::parse($booking->departure_date)->toDateString();
+        $currentGrandTotal = (float) $booking->grand_total;
         $rescheduleAction = app(RescheduleBookingAction::class);
 
         $deadlineDays = (int) (
@@ -970,7 +971,7 @@ class BookingIndexController extends Controller
                 return $rescheduleAction->canReschedule($booking);
             })
             ->values()
-            ->map(function (TourSchedule $schedule) use ($booking, $rescheduleAction): array {
+            ->map(function (TourSchedule $schedule) use ($booking, $currentGrandTotal, $rescheduleAction): array {
                 $departureDate = Carbon::parse($schedule->departure_date)->toDateString();
                 $prices = $schedule->prices ?? collect();
                 $priceFrom = $prices->isNotEmpty()
@@ -987,12 +988,24 @@ class BookingIndexController extends Controller
                     'available' => (int) ($schedule->availability?->available ?? 0),
                     'price_from' => $priceFrom,
                     'is_current' => false,
-                    'price_preview' => $pricePreview,
+                    'price_preview' => [
+                        'price_before' => $currentGrandTotal,
+                        'grand_total' => $pricePreview['grand_total'],
+                        'price_difference' => $pricePreview['price_difference'],
+                    ],
                 ];
             });
 
         return response()->json([
             'current_departure_date' => $currentDeparture,
+            'current_grand_total' => $currentGrandTotal,
+            'tour' => $booking->tour
+                ? [
+                    'id' => (int) $booking->tour->id,
+                    'name' => (string) $booking->tour->name,
+                    'code' => (string) ($booking->tour->code ?? ''),
+                ]
+                : null,
             'required_seats' => $requiredSeats,
             'schedules' => $schedules,
         ]);
