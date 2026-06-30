@@ -1,4 +1,3 @@
-import { useGetTourCategories } from '@/api/tour-category/tour-category';
 import CompanyDashboardLayout from '@/components/layouts/company-dashboard';
 import { MediaPicker } from '@/components/media-picker';
 import { TourMediaImage } from '@/components/tours/tour-media-image';
@@ -62,6 +61,7 @@ import {
     type SortingState,
     type VisibilityState,
 } from '@tanstack/react-table';
+import axios from 'axios';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import {
@@ -83,6 +83,7 @@ import {
 import * as React from 'react';
 import { FormattedMessage, useIntl, type IntlShape } from 'react-intl';
 import { toast } from 'sonner';
+import type { AgentTour } from './type';
 
 dayjs.extend(relativeTime);
 
@@ -325,12 +326,18 @@ function RowActions({ row }: { row: any }) {
     );
 }
 
-function CategoryCell({ row }: { row: any }) {
+function CategoryCell({
+    row,
+    categories,
+    isSaving,
+    onChange,
+}: {
+    row: any;
+    categories: AgentTourCategoryOption[];
+    isSaving: boolean;
+    onChange: (agentTour: AgentTour, value: string) => void;
+}) {
     const intl = useIntl();
-    const { company } = usePageSharedDataProps();
-    const { data, isLoading } = useGetTourCategories({
-        company_id: company.id,
-    });
     const agentTour = row.original;
 
     const [value, setValue] = React.useState(
@@ -343,20 +350,7 @@ function CategoryCell({ row }: { row: any }) {
 
     const handleChange = (val: string) => {
         setValue(val);
-        router.put(
-            `/companies/${company.username}/dashboard/agent-tours/${agentTour.id}`,
-            { category_id: val === 'none' ? null : Number(val) },
-            {
-                preserveScroll: true,
-                preserveState: true,
-                onSuccess: () =>
-                    toast.success(
-                        intl.formatMessage({
-                            defaultMessage: 'Category updated successfully',
-                        }),
-                    ),
-            },
-        );
+        onChange(agentTour, val);
     };
 
     return (
@@ -364,7 +358,7 @@ function CategoryCell({ row }: { row: any }) {
             <Select
                 value={value}
                 onValueChange={handleChange}
-                disabled={isLoading}
+                disabled={isSaving}
             >
                 <SelectTrigger className="w-[140px] h-9 text-xs border-slate-200 bg-white rounded-lg shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100">
                     <SelectValue
@@ -377,7 +371,7 @@ function CategoryCell({ row }: { row: any }) {
                     <SelectItem value="none">
                         <FormattedMessage defaultMessage="No Category" />
                     </SelectItem>
-                    {data?.data.map((cat: any) => (
+                    {categories.map((cat) => (
                         <SelectItem key={cat.id} value={cat.id.toString()}>
                             {cat.name}
                         </SelectItem>
@@ -388,9 +382,16 @@ function CategoryCell({ row }: { row: any }) {
     );
 }
 
-function StatusCell({ row }: { row: any }) {
+function StatusCell({
+    row,
+    isSaving,
+    onChange,
+}: {
+    row: any;
+    isSaving: boolean;
+    onChange: (agentTour: AgentTour, value: string) => void;
+}) {
     const intl = useIntl();
-    const { company } = usePageSharedDataProps();
     const agentTour = row.original;
     const vendorStatus = agentTour.tour?.status;
 
@@ -402,20 +403,7 @@ function StatusCell({ row }: { row: any }) {
 
     const handleChange = (val: string) => {
         setValue(val);
-        router.put(
-            `/companies/${company.username}/dashboard/agent-tours/${agentTour.id}`,
-            { status: val },
-            {
-                preserveScroll: true,
-                preserveState: true,
-                onSuccess: () =>
-                    toast.success(
-                        intl.formatMessage({
-                            defaultMessage: 'Status updated successfully',
-                        }),
-                    ),
-            },
-        );
+        onChange(agentTour, val);
     };
 
     const isActive = value.toLowerCase() === 'active';
@@ -428,7 +416,7 @@ function StatusCell({ row }: { row: any }) {
             <Select
                 value={value}
                 onValueChange={handleChange}
-                disabled={vendorStatus === 'inactive'}
+                disabled={vendorStatus === 'inactive' || isSaving}
             >
                 <SelectTrigger
                     className={`w-[120px] h-9 text-xs font-bold uppercase tracking-wider rounded-lg shadow-sm ${
@@ -667,7 +655,60 @@ const getStickyActionColumnClassName = (columnId: string) =>
         ? 'sticky right-0 z-20 w-16 bg-white/95 shadow-[-12px_0_18px_-18px_rgba(15,23,42,0.7)] backdrop-blur dark:bg-slate-950/95 dark:shadow-[-12px_0_18px_-18px_rgba(0,0,0,0.9)]'
         : '';
 
-function getColumns(intl: IntlShape): ColumnDef<any>[] {
+type AgentTourCategoryOption = {
+    id: number;
+    name: string;
+};
+
+type AgentTourUpdateResponse = {
+    message?: string;
+    data?: {
+        id: number;
+        category_id: number | null;
+        category: AgentTourCategoryOption | null;
+        status: string;
+        agent_document_id: number | null;
+    };
+};
+
+type SavingState = Record<number, boolean>;
+
+async function updateAgentTour(
+    companyUsername: string,
+    agentTourId: number,
+    payload: {
+        category_id?: number | null;
+        status?: string;
+        agent_document_id?: number | null;
+    },
+): Promise<AgentTourUpdateResponse> {
+    const { data } = await axios.put<AgentTourUpdateResponse>(
+        `/companies/${companyUsername}/dashboard/agent-tours/${agentTourId}`,
+        payload,
+        {
+            headers: {
+                Accept: 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+        },
+    );
+
+    return data;
+}
+
+function getColumns({
+    intl,
+    categories,
+    savingState,
+    onCategoryChange,
+    onStatusChange,
+}: {
+    intl: IntlShape;
+    categories: AgentTourCategoryOption[];
+    savingState: SavingState;
+    onCategoryChange: (agentTour: AgentTour, value: string) => void;
+    onStatusChange: (agentTour: AgentTour, value: string) => void;
+}): ColumnDef<any>[] {
     return [
         // {
         //   id: 'select',
@@ -801,7 +842,14 @@ function getColumns(intl: IntlShape): ColumnDef<any>[] {
                     title={<FormattedMessage defaultMessage="Category" />}
                 />
             ),
-            cell: ({ row }) => <CategoryCell row={row} />,
+            cell: ({ row }) => (
+                <CategoryCell
+                    row={row}
+                    categories={categories}
+                    isSaving={Boolean(savingState[row.original.id])}
+                    onChange={onCategoryChange}
+                />
+            ),
         },
         {
             id: 'seats',
@@ -855,7 +903,13 @@ function getColumns(intl: IntlShape): ColumnDef<any>[] {
                     title={<FormattedMessage defaultMessage="Status" />}
                 />
             ),
-            cell: ({ row }) => <StatusCell row={row} />,
+            cell: ({ row }) => (
+                <StatusCell
+                    row={row}
+                    isSaving={Boolean(savingState[row.original.id])}
+                    onChange={onStatusChange}
+                />
+            ),
         },
         {
             id: 'added_at',
@@ -883,11 +937,13 @@ function getColumns(intl: IntlShape): ColumnDef<any>[] {
 }
 
 type PageProps = {
-    data: any;
+    data: AgentTour[];
+    categories: AgentTourCategoryOption[];
 };
 
-export default function Page({ data }: PageProps) {
+export default function Page({ data, categories }: PageProps) {
     const intl = useIntl();
+    const { company } = usePageSharedDataProps();
     const [sorting, setSorting] = React.useState<SortingState>([
         { id: 'added_at', desc: true },
     ]);
@@ -897,9 +953,15 @@ export default function Page({ data }: PageProps) {
         React.useState<VisibilityState>({ image: false });
     const [activeTab, setActiveTab] = React.useState('active');
     const [globalFilter, setGlobalFilter] = React.useState('');
+    const [tableData, setTableData] = React.useState<AgentTour[]>(data);
+    const [savingState, setSavingState] = React.useState<SavingState>({});
+
+    React.useEffect(() => {
+        setTableData(data);
+    }, [data]);
 
     const filteredData = React.useMemo(() => {
-        let result = data;
+        let result = tableData;
         if (activeTab !== 'all') {
             result = result.filter(
                 (agentTour: any) =>
@@ -908,7 +970,157 @@ export default function Page({ data }: PageProps) {
             );
         }
         return result;
-    }, [data, activeTab]);
+    }, [tableData, activeTab]);
+
+    const setRowSaving = React.useCallback(
+        (agentTourId: number, value: boolean) => {
+            setSavingState((current) => ({
+                ...current,
+                [agentTourId]: value,
+            }));
+        },
+        [],
+    );
+
+    const handleCategoryChange = React.useCallback(
+        async (agentTour: AgentTour, value: string) => {
+            const nextCategoryId = value === 'none' ? null : Number(value);
+            const nextCategory =
+                nextCategoryId === null
+                    ? null
+                    : (categories.find(
+                          (category) => category.id === nextCategoryId,
+                      ) ?? null);
+            const previousCategoryId = agentTour.category_id ?? null;
+            const previousCategory = agentTour.category ?? null;
+
+            setTableData((current) =>
+                current.map((item) =>
+                    item.id === agentTour.id
+                        ? {
+                              ...item,
+                              category_id: nextCategoryId,
+                              category: nextCategory as AgentTour['category'],
+                          }
+                        : item,
+                ),
+            );
+            setRowSaving(agentTour.id, true);
+
+            try {
+                const response = await updateAgentTour(
+                    company.username,
+                    agentTour.id,
+                    {
+                        category_id: nextCategoryId,
+                    },
+                );
+
+                if (response.data) {
+                    setTableData((current) =>
+                        current.map((item) =>
+                            item.id === agentTour.id
+                                ? {
+                                      ...item,
+                                      category_id:
+                                          response.data?.category_id ?? null,
+                                      category: (response.data?.category ??
+                                          null) as AgentTour['category'],
+                                  }
+                                : item,
+                        ),
+                    );
+                }
+
+                toast.success(
+                    intl.formatMessage({
+                        defaultMessage: 'Category updated successfully',
+                    }),
+                );
+            } catch {
+                setTableData((current) =>
+                    current.map((item) =>
+                        item.id === agentTour.id
+                            ? {
+                                  ...item,
+                                  category_id: previousCategoryId,
+                                  category:
+                                      previousCategory as AgentTour['category'],
+                              }
+                            : item,
+                    ),
+                );
+                toast.error(
+                    intl.formatMessage({
+                        defaultMessage: 'Failed to update category',
+                    }),
+                );
+            } finally {
+                setRowSaving(agentTour.id, false);
+            }
+        },
+        [categories, company.username, intl, setRowSaving],
+    );
+
+    const handleStatusChange = React.useCallback(
+        async (agentTour: AgentTour, value: string) => {
+            const previousStatus = agentTour.status || 'inactive';
+
+            setTableData((current) =>
+                current.map((item) =>
+                    item.id === agentTour.id
+                        ? { ...item, status: value }
+                        : item,
+                ),
+            );
+            setRowSaving(agentTour.id, true);
+
+            try {
+                const response = await updateAgentTour(
+                    company.username,
+                    agentTour.id,
+                    {
+                        status: value,
+                    },
+                );
+
+                if (response.data) {
+                    setTableData((current) =>
+                        current.map((item) =>
+                            item.id === agentTour.id
+                                ? {
+                                      ...item,
+                                      status: response.data?.status ?? value,
+                                  }
+                                : item,
+                        ),
+                    );
+                }
+
+                toast.success(
+                    intl.formatMessage({
+                        defaultMessage: 'Status updated successfully',
+                    }),
+                );
+            } catch {
+                setTableData((current) =>
+                    current.map((item) =>
+                        item.id === agentTour.id
+                            ? { ...item, status: previousStatus }
+                            : item,
+                    ),
+                );
+                toast.error(
+                    intl.formatMessage({
+                        defaultMessage: 'Failed to update status',
+                    }),
+                );
+            } finally {
+                setRowSaving(agentTour.id, false);
+            }
+        },
+        [company.username, intl, setRowSaving],
+    );
 
     const globalFilterFn = (
         row: any,
@@ -933,9 +1145,24 @@ export default function Page({ data }: PageProps) {
         );
     };
 
-    const columns = React.useMemo(() => getColumns(intl), [intl]);
+    const columns = React.useMemo(
+        () =>
+            getColumns({
+                intl,
+                categories,
+                savingState,
+                onCategoryChange: handleCategoryChange,
+                onStatusChange: handleStatusChange,
+            }),
+        [
+            categories,
+            handleCategoryChange,
+            handleStatusChange,
+            intl,
+            savingState,
+        ],
+    );
 
-    // eslint-disable-next-line react-hooks/incompatible-library
     const table = useReactTable({
         data: filteredData,
         columns,

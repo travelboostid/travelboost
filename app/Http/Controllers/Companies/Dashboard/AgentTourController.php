@@ -45,6 +45,11 @@ class AgentTourController extends Controller
             ->whereIn('vendor_id', $vendorIds)
             ->pluck('agent_itinerary_upload_enabled', 'vendor_id');
 
+        $categories = $company->tourCategories()
+            ->select(['id', 'name'])
+            ->orderBy('name')
+            ->get();
+
         $tours = $tours
             ->each(function (AgentTour $agentTour) use ($partnershipPermissions): void {
                 $bookingDeadlineDays = (int) ($agentTour->tour?->company?->companySetting?->booking_deadline ?? 0);
@@ -77,6 +82,7 @@ class AgentTourController extends Controller
 
         return Inertia::render('companies/dashboard/agent-tours/index', [
             'data' => $tours,
+            'categories' => $categories,
         ]);
     }
 
@@ -91,6 +97,26 @@ class AgentTourController extends Controller
         $data = $request->only(['category_id', 'status', 'agent_document_id']);
 
         $agent_tour->update($data);
+
+        $agent_tour->loadMissing('category');
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => 'Agent tour updated successfully.',
+                'data' => [
+                    'id' => $agent_tour->id,
+                    'category_id' => $agent_tour->category_id,
+                    'category' => $agent_tour->category
+                        ? [
+                            'id' => $agent_tour->category->id,
+                            'name' => $agent_tour->category->name,
+                        ]
+                        : null,
+                    'status' => $agent_tour->status,
+                    'agent_document_id' => $agent_tour->agent_document_id,
+                ],
+            ]);
+        }
 
         return back();
     }
