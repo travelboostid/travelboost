@@ -121,20 +121,27 @@ export function Footer() {
                                 <p className="text-xs uppercase tracking-[0.22em] text-background/50">
                                     Supported by
                                 </p>
-                                <div className="mt-4 flex flex-wrap items-center gap-6">
+                                <div className="mt-4 flex flex-wrap items-center gap-x-6 gap-y-4">
                                     <OptimizedImage
                                         src="/images/logo/partner/astindo.png"
                                         alt="ASTINDO"
-                                        width={120}
-                                        height={36}
-                                        className="h-9 w-auto object-contain"
+                                        width={140}
+                                        height={42}
+                                        className="h-8 w-auto max-w-[140px] object-contain sm:h-9"
                                     />
                                     <OptimizedImage
                                         src="/images/logo/partner/prismalink.png"
                                         alt="Prismalink"
-                                        width={120}
-                                        height={32}
-                                        className="h-8 w-auto object-contain"
+                                        width={148}
+                                        height={40}
+                                        className="h-7 w-auto max-w-[148px] object-contain sm:h-8"
+                                    />
+                                    <OptimizedImage
+                                        src="/images/logo/partner/gct.webp"
+                                        alt="GCT"
+                                        width={150}
+                                        height={46}
+                                        className="h-9 w-auto max-w-[150px] object-contain sm:h-10"
                                     />
                                 </div>
                             </div>

@@ -18,10 +18,23 @@ export function CTASection() {
         {
             name: 'ASTINDO',
             src: '/images/logo/partner/astindo.png',
+            width: 148,
+            height: 44,
+            className: 'h-9 sm:h-10 w-auto max-w-[148px]',
         },
         {
             name: 'Prismalink',
             src: '/images/logo/partner/prismalink.png',
+            width: 156,
+            height: 42,
+            className: 'h-8 sm:h-9 w-auto max-w-[156px]',
+        },
+        {
+            name: 'GCT',
+            src: '/images/logo/partner/gct.webp',
+            width: 156,
+            height: 48,
+            className: 'h-10 sm:h-11 w-auto max-w-[156px]',
         },
     ];
 
@@ -274,14 +287,14 @@ export function CTASection() {
                                     ].map((partner, index) => (
                                         <div
                                             key={`${partner.name}-${index}`}
-                                            className="flex h-20 min-w-[220px] items-center justify-center rounded-2xl border border-border/60 bg-card px-8 shadow-sm"
+                                            className="flex h-20 min-w-[220px] items-center justify-center rounded-2xl border border-border/60 bg-card px-6 shadow-sm sm:px-8"
                                         >
                                             <OptimizedImage
                                                 src={partner.src}
                                                 alt={partner.name}
-                                                width={150}
-                                                height={40}
-                                                className="h-10 w-auto max-w-[150px] object-contain"
+                                                width={partner.width}
+                                                height={partner.height}
+                                                className={`${partner.className} object-contain`}
                                             />
                                         </div>
                                     ))}
