@@ -1175,8 +1175,20 @@ export function BookingIndexRowActions({
                     }
                 }}
             >
-                <DialogContent className="w-full max-w-lg">
-                    <DialogHeader>
+                <DialogContent className="flex max-h-[min(92dvh,42rem)] w-full max-w-[min(92vw,32rem)] flex-col gap-4 overflow-hidden p-4 sm:p-6">
+                    <DialogHeader className="shrink-0 gap-1.5 text-left">
+                        {actionDialog === 'reschedule' && booking.tour && (
+                            <div className="mb-1 rounded-md border bg-muted/40 px-3 py-2 text-left">
+                                <p className="truncate text-sm font-semibold text-foreground">
+                                    {booking.tour.name}
+                                </p>
+                                {booking.tour.code ? (
+                                    <p className="mt-0.5 truncate font-mono text-[11px] text-muted-foreground">
+                                        {booking.tour.code}
+                                    </p>
+                                ) : null}
+                            </div>
+                        )}
                         <DialogTitle className="capitalize">
                             {isAgent
                                 ? intl.formatMessage({
@@ -1227,7 +1239,7 @@ export function BookingIndexRowActions({
                                         })}
                         </DialogDescription>
                     </DialogHeader>
-                    <div className="grid gap-3">
+                    <div className="grid min-h-0 flex-1 gap-3 overflow-y-auto pr-1">
                         {isAgent && (
                             <RadioGroup
                                 value={correctionAction}
@@ -1391,7 +1403,7 @@ export function BookingIndexRowActions({
                             />
                         </div>
                     </div>
-                    <DialogFooter>
+                    <DialogFooter className="shrink-0">
                         <Button
                             type="button"
                             size="sm"

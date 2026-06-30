@@ -1,7 +1,9 @@
 <?php
 
 use App\Enums\CompanyTeamStatus;
+use App\Enums\CompanyType;
 use App\Enums\TourStatus;
+use App\Enums\UserStatus;
 use App\Models\Company;
 use App\Models\CompanyTeam;
 use App\Models\ProductCommissionCategory;
@@ -11,10 +13,16 @@ use App\Models\User;
 use Database\Seeders\Common\RolePermissionSeeder;
 
 test('vendor can store a new inactive tour from dashboard', function () {
+    $this->withoutVite();
     $this->seed(RolePermissionSeeder::class);
 
-    $user = User::factory()->create();
-    $company = Company::factory()->create(['type' => 'vendor', 'username' => 'storetourvendor']);
+    $user = User::factory()->create([
+        'status' => UserStatus::ACTIVE,
+    ]);
+    $company = Company::factory()->create([
+        'type' => CompanyType::VENDOR,
+        'username' => 'storetourvendor',
+    ]);
     $roleName = "company:{$company->id}:superadmin";
     Role::query()->updateOrCreate(
         ['name' => $roleName],
@@ -24,15 +32,16 @@ test('vendor can store a new inactive tour from dashboard', function () {
         ],
     );
 
-    $companyTeam = CompanyTeam::create([
+    CompanyTeam::create([
         'company_id' => $company->id,
         'user_id' => $user->id,
+        'invite_email' => $user->email,
         'invite_role' => $roleName,
+        'invited_at' => now(),
         'status' => CompanyTeamStatus::ACTIVE,
         'is_owner' => true,
         'accepted_at' => now(),
     ]);
-
     $user->addRoles(['user:vendor', $roleName]);
 
     $commissionCategory = ProductCommissionCategory::create([

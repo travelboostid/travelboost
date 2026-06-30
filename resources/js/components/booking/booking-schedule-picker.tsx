@@ -15,13 +15,22 @@ export type RescheduleScheduleOption = {
     price_from: number;
     is_current: boolean;
     price_preview: {
+        price_before: number;
         grand_total: number;
         price_difference: number;
     };
 };
 
+export type RescheduleTourInfo = {
+    id: number;
+    name: string;
+    code: string;
+};
+
 type RescheduleOptionsResponse = {
     current_departure_date: string;
+    current_grand_total: number;
+    tour: RescheduleTourInfo | null;
     required_seats: number;
     schedules: RescheduleScheduleOption[];
 };
@@ -155,10 +164,12 @@ export default function BookingSchedulePicker({
                     }}
                 />
             </p>
-            <div className="grid max-h-56 gap-2 overflow-y-auto pr-1 sm:grid-cols-2">
+            <div className="grid max-h-72 gap-2 overflow-y-auto pr-1 sm:grid-cols-2">
                 {options.schedules.map((schedule) => {
                     const isSelected = selectedScheduleId === schedule.id;
                     const priceDiff = schedule.price_preview.price_difference;
+                    const priceBefore = schedule.price_preview.price_before;
+                    const priceAfter = schedule.price_preview.grand_total;
 
                     return (
                         <button
@@ -207,25 +218,42 @@ export default function BookingSchedulePicker({
                                     />
                                 </Badge>
                             </div>
-                            <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
-                                <span className="font-medium text-foreground">
-                                    {formatIDR(
-                                        schedule.price_preview.grand_total,
-                                    )}
-                                </span>
-                                {priceDiff !== 0 && (
+                            <div className="mt-2 space-y-1 text-xs">
+                                <div className="flex items-center justify-between gap-2 text-muted-foreground">
+                                    <span>
+                                        <FormattedMessage defaultMessage="Current total" />
+                                    </span>
+                                    <span className="font-medium tabular-nums text-foreground">
+                                        {formatIDR(priceBefore)}
+                                    </span>
+                                </div>
+                                <div className="flex items-center justify-between gap-2 text-muted-foreground">
+                                    <span>
+                                        <FormattedMessage defaultMessage="New total" />
+                                    </span>
+                                    <span className="font-semibold tabular-nums text-foreground">
+                                        {formatIDR(priceAfter)}
+                                    </span>
+                                </div>
+                                <div className="flex items-center justify-between gap-2">
+                                    <span className="text-muted-foreground">
+                                        <FormattedMessage defaultMessage="Difference" />
+                                    </span>
                                     <span
                                         className={cn(
-                                            'rounded-full px-2 py-0.5 font-medium',
+                                            'rounded-full px-2 py-0.5 font-medium tabular-nums',
                                             priceDiff > 0
                                                 ? 'bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300'
-                                                : 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300',
+                                                : priceDiff < 0
+                                                  ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300'
+                                                  : 'bg-muted text-muted-foreground',
                                         )}
                                     >
-                                        {priceDiff > 0 ? '+' : ''}
-                                        {formatIDR(priceDiff)}
+                                        {priceDiff === 0
+                                            ? formatIDR(0)
+                                            : `${priceDiff > 0 ? '+' : ''}${formatIDR(priceDiff)}`}
                                     </span>
-                                )}
+                                </div>
                             </div>
                         </button>
                     );

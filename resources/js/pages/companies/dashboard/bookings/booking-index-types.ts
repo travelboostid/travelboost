@@ -125,7 +125,7 @@ type BookingResource = {
     departure_date: string | null;
     was_rescheduled?: boolean;
     created_at: string;
-    tour: { id: number; name: string } | null;
+    tour: { id: number; name: string; code?: string | null } | null;
     vendor: { id: number; name: string } | null;
     agent: { id: number; name: string } | null;
     user: { id: number; name: string } | null;
