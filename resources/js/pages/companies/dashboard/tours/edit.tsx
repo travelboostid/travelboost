@@ -1483,21 +1483,12 @@ export default function Page({ tour }: Props) {
             return;
         }
 
-        // VALIDASI ADD ONS
-        const sourceAddonsValid =
+        const sourceAddons =
             source.add_ons?.length > 0
                 ? source.add_ons
-                : addOnsFromDb?.[source.id] || [];
-
-        if (!sourceAddonsValid || sourceAddonsValid.length === 0) {
-            toast.error(
-                intl.formatMessage({
-                    defaultMessage:
-                        'Cannot copy schedule because add-ons data has not been set',
-                }),
-            );
-            return;
-        }
+                : addOns[source.id]?.length
+                  ? addOns[source.id]
+                  : addOnsFromDb?.[source.id] || [];
 
         const validDates = selectedDates
             .map((d) => format(d, 'yyyy-MM-dd'))
@@ -1526,11 +1517,6 @@ export default function Page({ tour }: Props) {
             );
             return;
         }
-
-        const sourceAddons =
-            source.add_ons?.length > 0
-                ? source.add_ons
-                : addOnsFromDb?.[source.id] || [];
 
         const newRows = filteredDates.map((date) => ({
             id: null,
@@ -1649,36 +1635,39 @@ export default function Page({ tour }: Props) {
                 },
             );
 
-            // ADD ONS
-            await axios.post(
-                `/companies/${company.username}/dashboard/tour-add-ons`,
-                {
-                    add_ons: createdSchedules.flatMap((s) =>
-                        sourceAddons.map((a) => ({
-                            schedule_id: s.id,
-                            tour_id: tour.id,
-                            description: a.description,
-                            price: a.price ?? 0,
-                            edit_status: a.edit_status ?? false,
-                            is_taxable: a.is_taxable ?? false,
-                        })),
-                    ),
-                },
-            );
+            if (sourceAddons.length > 0) {
+                await axios.post(
+                    `/companies/${company.username}/dashboard/tour-add-ons`,
+                    {
+                        add_ons: createdSchedules.flatMap((s) =>
+                            sourceAddons.map((a) => ({
+                                schedule_id: s.id,
+                                tour_id: tour.id,
+                                description: a.description,
+                                price: a.price ?? 0,
+                                edit_status: a.edit_status ?? false,
+                                is_taxable: a.is_taxable ?? false,
+                            })),
+                        ),
+                    },
+                );
+            }
 
             // UPDATE LOCAL STATE
             const copiedAddOns = {};
 
-            createdSchedules.forEach((s) => {
-                copiedAddOns[s.id] = sourceAddons.map((a) => ({
-                    id: null,
-                    schedule_id: s.id,
-                    description: a.description,
-                    price: a.price ?? 0,
-                    edit_status: a.edit_status ?? false,
-                    is_taxable: a.is_taxable ?? false,
-                }));
-            });
+            if (sourceAddons.length > 0) {
+                createdSchedules.forEach((s) => {
+                    copiedAddOns[s.id] = sourceAddons.map((a) => ({
+                        id: null,
+                        schedule_id: s.id,
+                        description: a.description,
+                        price: a.price ?? 0,
+                        edit_status: a.edit_status ?? false,
+                        is_taxable: a.is_taxable ?? false,
+                    }));
+                });
+            }
 
             setAddOns((prev) => ({
                 ...prev,

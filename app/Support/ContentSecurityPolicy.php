@@ -29,6 +29,12 @@ class ContentSecurityPolicy
         /** @var array<string, list<string>> $directives */
         $directives = config('csp.directives', []);
 
+        $mediaFrameOrigin = MediaCdn::preconnectOrigin();
+
+        if ($mediaFrameOrigin !== null) {
+            $directives['frame-src'][] = $mediaFrameOrigin;
+        }
+
         if (self::$nonce !== null) {
             $directives['script-src'][] = "'nonce-".self::$nonce."'";
         }

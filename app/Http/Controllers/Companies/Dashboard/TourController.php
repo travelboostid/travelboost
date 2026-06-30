@@ -81,14 +81,22 @@ class TourController extends Controller
     {
         $data = $request->validated();
 
+        $data['showprice'] = (int) ($data['showprice'] ?? 0);
+        $data['promote_price'] = (int) ($data['promote_price'] ?? 0);
+        $data['category_id'] = $data['category_id'] ?: null;
+        $data['product_commission_category_id'] = ($data['product_commission_category_id'] ?? null) ?: null;
+        $data['visa_category_id'] = ($data['visa_category_id'] ?? null) ?: null;
+        $data['image_id'] = $data['image_id'] ?: null;
+        $data['document_id'] = $data['document_id'] ?: null;
+
         DB::beginTransaction();
 
         try {
+            $tour = $company->tours()->create($data);
+
             if (array_key_exists('status', $data)) {
                 $this->assertActiveTourHasSchedule($tour, (string) $data['status']);
             }
-
-            $tour = $company->tours()->create($data);
 
             DB::commit();
 
