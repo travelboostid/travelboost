@@ -7,6 +7,7 @@ use App\Ai\Agents\Concerns\SummarizesChatbotConversation;
 use App\Ai\Tools\Chatbot\GetBookingDetailTool;
 use App\Ai\Tools\Chatbot\GetCompanyContactTool;
 use App\Ai\Tools\Chatbot\GetTourDetailTool;
+use App\Ai\Tools\Chatbot\GetTourSchedulesTool;
 use App\Ai\Tools\Chatbot\SearchBookingsTool;
 use App\Ai\Tools\Chatbot\SearchKnowledgeBaseTool;
 use App\Ai\Tools\Chatbot\SearchToursTool;
@@ -72,6 +73,7 @@ class ChatbotAgent implements Agent, Conversational, HasTools
         return [
             new SearchToursTool($this),
             new GetTourDetailTool($this),
+            new GetTourSchedulesTool($this),
             new SearchBookingsTool($this),
             new GetBookingDetailTool($this),
             new SearchKnowledgeBaseTool($this),

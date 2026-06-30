@@ -18,6 +18,8 @@ use App\Models\CompanySettings;
 use App\Models\KnowledgeBase;
 use App\Models\Media;
 use App\Models\Tour;
+use App\Models\TourSchedule;
+use App\Services\TourScheduleDisplayPriceService;
 use App\Support\NumericStringConfig;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
@@ -46,6 +48,8 @@ trait ProvidesChatbotContext
     private const KNOWLEDGE_BASE_RESULT_LIMIT = 2;
 
     private const BOOKING_QUERY_RESULT_LIMIT = 5;
+
+    private const TOUR_SCHEDULE_QUERY_RESULT_LIMIT = 8;
 
     private const KNOWLEDGE_BASE_CHUNK_MAX_CHARS = 400;
 
@@ -174,6 +178,65 @@ trait ProvidesChatbotContext
                 $tour->showprice,
             ])
             .$knowledge;
+    }
+
+    /**
+     * @param  array<string, mixed>  $args
+     */
+    public function retrieveTourSchedulesContext(array $args): string
+    {
+        $tourId = $args['tour_id'] ?? null;
+
+        if (! $tourId && $this->message->attachment_type === 'tour') {
+            $tourId = (int) $this->message->attachment_data;
+        }
+
+        if (! $tourId) {
+            return '';
+        }
+
+        $tour = $this->availableToursQuery()->whereKey($tourId)->first();
+
+        if (! $tour) {
+            return 'No tour matched.';
+        }
+
+        $upcomingOnly = filter_var($args['upcoming_only'] ?? true, FILTER_VALIDATE_BOOL);
+        $departureFrom = trim((string) ($args['departure_from'] ?? ''));
+        $departureTo = trim((string) ($args['departure_to'] ?? ''));
+
+        $schedules = TourSchedule::query()
+            ->where('tour_id', $tour->id)
+            ->where('is_active', true)
+            ->when($upcomingOnly, fn (Builder $query) => $query->whereDate('departure_date', '>=', now()->toDateString()))
+            ->when($departureFrom !== '', fn (Builder $query) => $query->whereDate('departure_date', '>=', $departureFrom))
+            ->when($departureTo !== '', fn (Builder $query) => $query->whereDate('departure_date', '<=', $departureTo))
+            ->with(['availability', 'prices.priceCategory'])
+            ->orderBy('departure_date')
+            ->orderBy('id')
+            ->limit(self::TOUR_SCHEDULE_QUERY_RESULT_LIMIT)
+            ->get();
+
+        if ($schedules->isEmpty()) {
+            return 'No schedules matched.';
+        }
+
+        $priceService = app(TourScheduleDisplayPriceService::class);
+
+        $header = "tour:{$tour->id}|{$tour->code}|{$tour->name}\n"
+            ."schedules:id|departure|return|available|price\n";
+
+        $rows = $schedules
+            ->map(fn (TourSchedule $schedule): string => implode('|', [
+                $schedule->id,
+                $schedule->departure_date,
+                $schedule->return_date ?? '',
+                $schedule->availability?->available ?? '',
+                $priceService->resolve($schedule, $tour),
+            ]))
+            ->implode("\n");
+
+        return $header.$rows;
     }
 
     /**
