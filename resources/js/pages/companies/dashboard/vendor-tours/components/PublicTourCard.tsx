@@ -61,13 +61,18 @@ export default function PublicTourCard({
     const vendorNameVisible =
         isVendorNameVisible !== undefined ? isVendorNameVisible : true;
     const agentDocument = tour.agent_document || tour.agentDocument;
-    const agentDocumentUrl = agentDocument
-        ? extractDocumentUrl(agentDocument)
-        : '';
-    const vendorDocumentUrl = tour.document
-        ? extractDocumentUrl(tour.document)
-        : '';
-    const hasItinerary = Boolean(agentDocumentUrl || vendorDocumentUrl);
+    const agentDocumentUrl =
+        tour.agent_document_url ||
+        (agentDocument ? extractDocumentUrl(agentDocument) : '');
+    const vendorDocumentUrl =
+        tour.vendor_document_url ||
+        (tour.document ? extractDocumentUrl(tour.document) : '');
+    const itineraryDocumentUrl =
+        tour.itinerary_document_url ||
+        (tour.itinerary_document_source === 'agent'
+            ? agentDocumentUrl
+            : vendorDocumentUrl || agentDocumentUrl);
+    const hasItinerary = Boolean(itineraryDocumentUrl);
 
     const handleLike = useCallback(async () => {
         try {
@@ -141,14 +146,18 @@ export default function PublicTourCard({
 
     const handleViewBrochureInternal = () => {
         if (!hasItinerary) return;
+        if (itineraryDocumentUrl) {
+            window.open(itineraryDocumentUrl, '_blank', 'noopener,noreferrer');
+            return;
+        }
         const url = `/brochure/${tour.company?.username}/${tour.id}`;
         window.open(url, '_blank', 'noopener,noreferrer');
     };
 
     const handleViewBrochureClick = () => {
         if (!hasItinerary) return;
-        if (agentDocumentUrl) {
-            window.open(agentDocumentUrl, '_blank', 'noopener,noreferrer');
+        if (itineraryDocumentUrl) {
+            window.open(itineraryDocumentUrl, '_blank', 'noopener,noreferrer');
             return;
         }
 

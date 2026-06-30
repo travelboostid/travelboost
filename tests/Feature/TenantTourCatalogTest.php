@@ -1,14 +1,17 @@
 <?php
 
+use App\Enums\VendorAgentPartnerStatus;
 use App\Models\AgentTour;
 use App\Models\Company;
 use App\Models\Domain;
+use App\Models\Media;
 use App\Models\PriceCategory;
 use App\Models\Tour;
 use App\Models\TourAvailability;
 use App\Models\TourPrice;
 use App\Models\TourSchedule;
 use App\Models\User;
+use App\Models\VendorAgentPartner;
 use Database\Seeders\Common\RolePermissionSeeder;
 use Illuminate\Support\Facades\DB;
 
@@ -279,4 +282,113 @@ test('customer can open booking create wizard from agent subdomain schedule', fu
         ->where('tenant.id', $agent->id)
         ->where('vendor.id', $vendor->id)
         ->where('tourPrices.0.commission', 500_000));
+});
+
+test('agent subdomain catalog prefers vendor itinerary when agent upload is disabled', function () {
+    $agent = Company::factory()->create([
+        'type' => 'agent',
+        'username' => 'disableditineraryagent',
+    ]);
+    $vendor = Company::factory()->create([
+        'type' => 'vendor',
+    ]);
+    $vendor->companySetting()->updateOrCreate([], [
+        'booking_deadline' => 0,
+    ]);
+
+    Domain::create([
+        'subdomain' => $agent->username,
+        'owner_type' => Company::class,
+        'owner_id' => $agent->id,
+        'subdomain_enabled' => true,
+    ]);
+
+    $vendorDocument = Media::create([
+        'owner_type' => Company::class,
+        'owner_id' => $vendor->id,
+        'name' => 'vendor-itinerary.pdf',
+        'type' => 'document',
+        'subtype' => 'tour-document',
+        'data' => [
+            'url' => '/storage/media/documents/vendor-itinerary.pdf',
+            'mediaType' => 'application/pdf',
+        ],
+    ]);
+
+    $agentDocument = Media::create([
+        'owner_type' => Company::class,
+        'owner_id' => $agent->id,
+        'name' => 'agent-itinerary.pdf',
+        'type' => 'document',
+        'subtype' => 'agent-itinerary',
+        'data' => [
+            'url' => '/storage/media/documents/agent-itinerary.pdf',
+            'mediaType' => 'application/pdf',
+        ],
+    ]);
+
+    $tour = Tour::factory()->create([
+        'company_id' => $vendor->id,
+        'status' => 'active',
+        'document_id' => $vendorDocument->id,
+    ]);
+
+    AgentTour::create([
+        'company_id' => $agent->id,
+        'tour_id' => $tour->id,
+        'status' => 'active',
+        'agent_document_id' => $agentDocument->id,
+    ]);
+
+    VendorAgentPartner::create([
+        'vendor_id' => $vendor->id,
+        'agent_id' => $agent->id,
+        'status' => VendorAgentPartnerStatus::ACTIVE,
+        'accepted_at' => now(),
+        'agent_itinerary_upload_enabled' => false,
+    ]);
+
+    $schedule = TourSchedule::create([
+        'tour_id' => $tour->id,
+        'tour_code' => $tour->code,
+        'company_id' => $vendor->id,
+        'departure_date' => now()->addDays(30)->toDateString(),
+        'return_date' => now()->addDays(34)->toDateString(),
+        'is_active' => true,
+    ]);
+
+    TourAvailability::create([
+        'company_id' => $vendor->id,
+        'tour_id' => $tour->id,
+        'schedule_id' => $schedule->id,
+        'max_pax' => 10,
+        'available' => 10,
+    ]);
+
+    $adultTwin = PriceCategory::create([
+        'company_id' => $vendor->id,
+        'name' => 'Adult Twin',
+        'room_type' => 'twin',
+    ]);
+
+    TourPrice::create([
+        'company_id' => $vendor->id,
+        'tour_code' => $tour->code,
+        'schedule_id' => $schedule->id,
+        'price_category_id' => $adultTwin->id,
+        'currency' => 'IDR',
+        'price' => 5_000_000,
+    ]);
+
+    $appHost = env('APP_HOST', 'localhost');
+
+    $response = $this->get("http://{$agent->username}.{$appHost}/tours");
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->component('companies/agent-tours')
+        ->where('data.0.tour.vendor_document_url', '/storage/media/documents/vendor-itinerary.pdf')
+        ->where('data.0.tour.agent_document_url', '/storage/media/documents/agent-itinerary.pdf')
+        ->where('data.0.tour.itinerary_document_source', 'vendor')
+        ->where('data.0.tour.itinerary_document_url', '/storage/media/documents/vendor-itinerary.pdf'));
 });

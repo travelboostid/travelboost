@@ -215,12 +215,18 @@ export default function TourCard({
     };
 
     const agentDocument = tour.agent_document || tour.agentDocument;
-    const hasTourItinerary = Boolean(agentDocument || tour.document);
+    const vendorDocumentUrl =
+        tour.vendor_document_url ||
+        (tour.document ? extractDocumentUrl(tour.document) : '');
     const agentDocumentUrl =
         tour.agent_document_url ||
         (agentDocument ? extractDocumentUrl(agentDocument) : '');
     const preferredItineraryDocumentUrl =
-        tour.itinerary_document_url || agentDocumentUrl;
+        tour.itinerary_document_url ||
+        (tour.itinerary_document_source === 'agent'
+            ? agentDocumentUrl
+            : vendorDocumentUrl || agentDocumentUrl);
+    const hasTourItinerary = Boolean(preferredItineraryDocumentUrl);
 
     const handleViewBrochure = (isPublic: boolean) => {
         if (!hasTourItinerary) return;

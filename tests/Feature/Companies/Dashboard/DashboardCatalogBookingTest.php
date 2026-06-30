@@ -9,6 +9,7 @@ use App\Models\AgentTour;
 use App\Models\Booking;
 use App\Models\Company;
 use App\Models\CompanyTeam;
+use App\Models\Media;
 use App\Models\PriceCategory;
 use App\Models\ProductCommissionCategory;
 use App\Models\Role;
@@ -383,6 +384,69 @@ test('agent tours expose itinerary upload permission per vendor partnership', fu
     $response->assertInertia(fn ($page) => $page
         ->component('companies/dashboard/agent-tours/index')
         ->where('data.0.agent_itinerary_upload_enabled', false));
+});
+
+test('agent dashboard catalog prefers vendor itinerary when agent upload is disabled', function () {
+    ['vendor' => $vendor, 'tour' => $tour] = createPricedDashboardTour();
+
+    $vendorDocument = Media::create([
+        'owner_type' => Company::class,
+        'owner_id' => $vendor->id,
+        'name' => 'vendor-itinerary.pdf',
+        'type' => 'document',
+        'subtype' => 'tour-document',
+        'data' => [
+            'url' => '/storage/media/documents/vendor-itinerary.pdf',
+            'mediaType' => 'application/pdf',
+        ],
+    ]);
+
+    $agent = Company::factory()->create(['type' => 'agent']);
+    $agentUser = User::factory()->create();
+    attachDashboardUserToCompany($agentUser, $agent);
+
+    $agentDocument = Media::create([
+        'owner_type' => Company::class,
+        'owner_id' => $agent->id,
+        'name' => 'agent-itinerary.pdf',
+        'type' => 'document',
+        'subtype' => 'agent-itinerary',
+        'data' => [
+            'url' => '/storage/media/documents/agent-itinerary.pdf',
+            'mediaType' => 'application/pdf',
+        ],
+    ]);
+
+    $tour->update([
+        'document_id' => $vendorDocument->id,
+    ]);
+
+    VendorAgentPartner::create([
+        'vendor_id' => $vendor->id,
+        'agent_id' => $agent->id,
+        'status' => VendorAgentPartnerStatus::ACTIVE,
+        'accepted_at' => now(),
+        'agent_itinerary_upload_enabled' => false,
+    ]);
+
+    AgentTour::create([
+        'company_id' => $agent->id,
+        'tour_id' => $tour->id,
+        'status' => 'active',
+        'agent_document_id' => $agentDocument->id,
+    ]);
+
+    $response = $this->actingAs($agentUser)
+        ->get("/companies/{$agent->username}/dashboard/vendors/{$vendor->username}/tours");
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->component('companies/dashboard/vendor-tours/index')
+        ->where('data.0.agent_itinerary_upload_enabled', false)
+        ->where('data.0.vendor_document_url', '/storage/media/documents/vendor-itinerary.pdf')
+        ->where('data.0.agent_document_url', '/storage/media/documents/agent-itinerary.pdf')
+        ->where('data.0.itinerary_document_source', 'vendor')
+        ->where('data.0.itinerary_document_url', '/storage/media/documents/vendor-itinerary.pdf'));
 });
 
 test('dashboard booking create page uses customer wizard with dashboard endpoints', function () {
