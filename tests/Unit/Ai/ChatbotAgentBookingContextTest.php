@@ -2,6 +2,7 @@
 
 use App\Ai\Agents\ChatbotAgent;
 use App\Enums\BookingStatus;
+use App\Enums\CompanyType;
 use App\Models\AppConfig;
 use App\Models\Booking;
 use App\Models\ChatMessage;
@@ -11,6 +12,26 @@ use App\Models\Company;
 use App\Models\Tour;
 use App\Models\User;
 use Laravel\Ai\Messages\Message;
+
+function createChatbotAgentCompanyForBookingContext(array $attributes = []): Company
+{
+    return Company::factory()->create(array_merge([
+        'type' => CompanyType::AGENT,
+    ], $attributes));
+}
+
+function createAgentChatCustomerForBookingContext(Company $company, array $attributes = []): User
+{
+    $user = User::factory()->create(array_merge([
+        'company_id' => $company->id,
+    ], $attributes));
+
+    if (! $user->hasRole('user:customer')) {
+        $user->addRole('user:customer');
+    }
+
+    return $user;
+}
 
 test('chatbot booking query context formats booking status enum values', function () {
     AppConfig::updateOrCreate(['key' => 'chatbot'], [
@@ -26,10 +47,10 @@ test('chatbot booking query context formats booking status enum values', functio
         ],
     ]);
 
-    $company = Company::factory()->create();
+    $company = createChatbotAgentCompanyForBookingContext();
     $company->aiCredit()->update(['balance' => 10_000]);
 
-    $user = User::factory()->create();
+    $user = createAgentChatCustomerForBookingContext($company);
     $tour = Tour::factory()->create(['company_id' => $company->id]);
 
     Booking::factory()->create([
@@ -96,10 +117,10 @@ test('chatbot booking query context returns explicit message when no bookings ex
         ],
     ]);
 
-    $company = Company::factory()->create();
+    $company = createChatbotAgentCompanyForBookingContext();
     $company->aiCredit()->update(['balance' => 10_000]);
 
-    $user = User::factory()->create();
+    $user = createAgentChatCustomerForBookingContext($company);
 
     $room = ChatRoom::query()->create([
         'type' => 'private',
@@ -155,8 +176,8 @@ test('chatbot ai message includes attached tour id in message content', function
         ],
     ]);
 
-    $company = Company::factory()->create();
-    $user = User::factory()->create();
+    $company = createChatbotAgentCompanyForBookingContext();
+    $user = createAgentChatCustomerForBookingContext($company);
 
     $room = ChatRoom::query()->create([
         'type' => 'private',
@@ -215,10 +236,10 @@ test('chatbot booking query context can filter by attached tour id', function ()
         ],
     ]);
 
-    $company = Company::factory()->create();
+    $company = createChatbotAgentCompanyForBookingContext();
     $company->aiCredit()->update(['balance' => 10_000]);
 
-    $user = User::factory()->create();
+    $user = createAgentChatCustomerForBookingContext($company);
     $attachedTour = Tour::factory()->create(['company_id' => $company->id]);
     $otherTour = Tour::factory()->create(['company_id' => $company->id]);
 
@@ -296,10 +317,10 @@ test('chatbot booking query context filters by status and upcoming departure', f
         ],
     ]);
 
-    $company = Company::factory()->create();
+    $company = createChatbotAgentCompanyForBookingContext();
     $company->aiCredit()->update(['balance' => 10_000]);
 
-    $user = User::factory()->create();
+    $user = createAgentChatCustomerForBookingContext($company);
     $tour = Tour::factory()->create(['company_id' => $company->id]);
 
     Booking::factory()->create([
@@ -389,10 +410,10 @@ test('chatbot booking query context filters by booking number keywords', functio
         ],
     ]);
 
-    $company = Company::factory()->create();
+    $company = createChatbotAgentCompanyForBookingContext();
     $company->aiCredit()->update(['balance' => 10_000]);
 
-    $user = User::factory()->create();
+    $user = createAgentChatCustomerForBookingContext($company);
     $baliTour = Tour::factory()->create(['company_id' => $company->id, 'name' => 'Bali Adventure']);
     $tokyoTour = Tour::factory()->create(['company_id' => $company->id, 'name' => 'Tokyo Highlights']);
 

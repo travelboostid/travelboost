@@ -40,11 +40,14 @@ beforeEach(function () {
  */
 function createBookingCreateScenario(string $username): array
 {
-    $user = User::factory()->create();
     $company = Company::factory()->create([
         'username' => $username,
         'type' => 'vendor',
     ]);
+    $user = User::factory()->create([
+        'company_id' => $company->id,
+    ]);
+    $user->addRole('user:customer');
     $company->companySetting()->updateOrCreate([], [
         'minimum_down_payment' => 30,
     ]);
@@ -2902,39 +2905,7 @@ test('opening create route for an expired booking number does not restore it', f
 });
 
 test('expired future booking can be reset through reorder endpoint with the same booking number', function () {
-    $user = User::factory()->create();
-    $company = Company::factory()->create([
-        'username' => 'endpointreordervendor',
-        'type' => 'vendor',
-    ]);
-
-    Domain::create([
-        'subdomain' => 'endpointreordervendor',
-        'owner_type' => Company::class,
-        'owner_id' => $company->id,
-        'domain_enabled' => true,
-        'subdomain_enabled' => true,
-    ]);
-
-    $tour = Tour::factory()->create([
-        'company_id' => $company->id,
-        'status' => 'active',
-    ]);
-    $schedule = TourSchedule::create([
-        'tour_id' => $tour->id,
-        'tour_code' => $tour->code,
-        'company_id' => $company->id,
-        'departure_date' => now()->addDays(20)->toDateString(),
-        'return_date' => now()->addDays(25)->toDateString(),
-        'is_active' => true,
-    ]);
-    TourAvailability::create([
-        'company_id' => $company->id,
-        'tour_id' => $tour->id,
-        'schedule_id' => $schedule->id,
-        'max_pax' => 10,
-        'available' => 10,
-    ]);
+    ['user' => $user, 'company' => $company, 'tour' => $tour, 'schedule' => $schedule] = createBookingCreateScenario('endpointreordervendor');
 
     $booking = Booking::factory()->create([
         'booking_number' => 'BKG-REORDER-ENDPOINT',

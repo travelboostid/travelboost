@@ -2,6 +2,9 @@
 
 namespace App\Ai\Agents\Concerns;
 
+use App\Actions\Booking\ReleaseCustomerBookingHoldAction;
+use App\Actions\Booking\ReorderCustomerBookingAction;
+use App\Actions\Booking\ReserveCustomerBookingAction;
 use App\Enums\BookingStatus;
 use App\Enums\CompanyType;
 use App\Enums\TourStatus;
@@ -18,13 +21,23 @@ use App\Models\CompanySettings;
 use App\Models\KnowledgeBase;
 use App\Models\Media;
 use App\Models\Tour;
+use App\Models\TourPrice;
 use App\Models\TourSchedule;
+use App\Models\TourWaitingListSchedule;
+use App\Models\User;
+use App\Services\BookingAddOnOptionsService;
+use App\Services\BookingNumberService;
+use App\Services\BookingPricingService;
 use App\Services\TourScheduleDisplayPriceService;
 use App\Support\NumericStringConfig;
+use App\Support\TenantCustomerGuard;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\ValidationException;
 use Laravel\Ai\Embeddings;
 use Laravel\Ai\Messages\Message;
 use Laravel\Ai\Messages\MessageRole;
@@ -96,6 +109,9 @@ trait ProvidesChatbotContext
     protected string $embeddingTokenCostPerMillion = '0';
 
     protected string $userCostPerInteraction = '0';
+
+    /** @var list<array{label: string, href: string}> */
+    protected array $botMessageActions = [];
 
     /**
      * @param  array<string, mixed>  $args
@@ -244,8 +260,8 @@ trait ProvidesChatbotContext
      */
     public function retrieveBookingQueryContext(array $args): string
     {
-        if ($this->message->sender_type !== 'user') {
-            return '';
+        if (! $this->chatAuthorizedCustomerUser()) {
+            return $this->chatCustomerBookingDeniedMessage();
         }
 
         $tourId = $args['tour_id'] ?? null;
@@ -259,10 +275,12 @@ trait ProvidesChatbotContext
         $statuses = $this->normalizeBookingStatusFilters((array) ($args['statuses'] ?? []));
         $upcomingOnly = filter_var($args['upcoming_only'] ?? false, FILTER_VALIDATE_BOOL);
 
-        $bookings = Booking::query()
-            ->with('tour')
-            ->where('user_id', $this->message->sender_id)
-            ->where('agent_id', $this->company->id)
+        $bookings = TenantCustomerGuard::scopeBookingsForCompany(
+            Booking::query()
+                ->with('tour')
+                ->where('user_id', $this->message->sender_id),
+            $this->company,
+        )
             ->when(($tourId ?? 0) > 0, fn (Builder $query) => $query->where('tour_id', $tourId))
             ->when($bookingNumber !== '', fn (Builder $query) => $query->where('booking_number', 'ilike', $this->ilikeTerm($bookingNumber)))
             ->when($statuses !== [], fn (Builder $query) => $query->whereIn('status', $statuses))
@@ -279,7 +297,7 @@ trait ProvidesChatbotContext
             return 'No bookings matched.';
         }
 
-        return "bookings:id|no|tour|departure|status|total\n".$bookings
+        return "bookings:id|no|tour|departure|status|total|can_reorder|can_release_hold\n".$bookings
             ->map(fn (Booking $booking): string => implode('|', [
                 $booking->id,
                 $booking->booking_number,
@@ -287,6 +305,8 @@ trait ProvidesChatbotContext
                 $booking->departure_date,
                 $this->formatBookingStatus($booking),
                 $booking->total_price,
+                $this->bookingCanBeReordered($booking) ? '1' : '0',
+                $this->bookingCanReleaseHold($booking) ? '1' : '0',
             ]))
             ->implode("\n");
     }
@@ -296,25 +316,17 @@ trait ProvidesChatbotContext
      */
     public function retrieveBookingDetailContext(array $args): string
     {
-        if ($this->message->sender_type !== 'user') {
-            return '';
+        if (! $this->chatAuthorizedCustomerUser()) {
+            return $this->chatCustomerBookingDeniedMessage();
         }
 
-        $bookingId = $args['booking_id'] ?? null;
-        if (! $bookingId) {
-            return '';
-        }
+        $booking = $this->findCustomerBooking($args);
 
-        $booking = Booking::query()->with('tour')->find($bookingId);
         if (! $booking) {
-            return '';
+            return 'No booking matched.';
         }
 
-        if ($booking->user_id !== $this->message->sender_id || $booking->agent_id !== $this->company->id) {
-            return '';
-        }
-
-        return 'booking:id|no|tour|departure|status|total|adult|child|infant|contact|email'
+        return 'booking:id|no|tour|departure|status|total|adult|child|infant|contact|email|can_reorder|can_release_hold'
             ."\n".implode('|', [
                 $booking->id,
                 $booking->booking_number,
@@ -327,7 +339,119 @@ trait ProvidesChatbotContext
                 $booking->pax_infant,
                 $booking->contact_name,
                 $booking->contact_email,
+                $this->bookingCanBeReordered($booking) ? '1' : '0',
+                $this->bookingCanReleaseHold($booking) ? '1' : '0',
             ]);
+    }
+
+    /**
+     * @param  array<string, mixed>  $args
+     */
+    public function reorderExpiredBookingContext(array $args): string
+    {
+        $user = $this->chatAuthorizedCustomerUser();
+
+        if (! $user) {
+            return $this->chatCustomerBookingDeniedMessage();
+        }
+
+        $booking = $this->findCustomerBooking($args);
+
+        if (! $booking) {
+            return 'No booking matched.';
+        }
+
+        if (! $this->bookingCanBeReordered($booking) && ! $this->bookingCanBeContinued($booking)) {
+            return 'reorder_unavailable:Booking cannot be reordered. It may not be expired, the departure may have passed, or the booking window is closed.';
+        }
+
+        try {
+            $result = app(ReorderCustomerBookingAction::class)->execute($user, $booking, $this->company);
+            $booking = $result['booking'];
+            $continueUrl = $result['continue_url'];
+            $myBookingsUrl = '/mybookings?tab=current&booking_number='.urlencode((string) $booking->booking_number);
+
+            $this->appendBotMessageAction([
+                'label' => 'Continue booking',
+                'href' => $continueUrl,
+            ]);
+
+            $this->appendBotMessageAction([
+                'label' => 'View my booking',
+                'href' => $myBookingsUrl,
+            ]);
+
+            return 'reordered:status|booking_number|tour|departure|new_status|continue_url|mybookings_url'
+                ."\n".implode('|', [
+                    $result['reactivated'] ? 'reactivated' : 'continued',
+                    $booking->booking_number,
+                    $booking->tour?->name ?? '',
+                    $booking->departure_date,
+                    $this->formatBookingStatus($booking),
+                    $continueUrl,
+                    $myBookingsUrl,
+                ])
+                ."\nTell the customer they can continue their booking from the button below.";
+        } catch (ValidationException $exception) {
+            $messages = collect($exception->errors())->flatten()->implode(' ');
+
+            return 'reorder_failed:'.$messages;
+        } catch (\Throwable $exception) {
+            return 'reorder_failed:'.$exception->getMessage();
+        }
+    }
+
+    /**
+     * @param  array<string, mixed>  $args
+     */
+    public function releaseBookingHoldContext(array $args): string
+    {
+        $user = $this->chatAuthorizedCustomerUser();
+
+        if (! $user) {
+            return $this->chatCustomerBookingDeniedMessage();
+        }
+
+        $booking = $this->findCustomerBooking($args);
+
+        if (! $booking) {
+            return 'No booking matched.';
+        }
+
+        if (! $this->bookingCanReleaseHold($booking)) {
+            return 'release_unavailable:This booking has no active system hold to release. It may already be expired, awaiting payment, or a waiting-list offer.';
+        }
+
+        try {
+            $result = app(ReleaseCustomerBookingHoldAction::class)->execute($user, $booking, $this->company);
+            $booking = $result['booking'];
+            $myBookingsUrl = '/mybookings?tab=current&booking_number='.urlencode((string) $booking->booking_number);
+
+            if ($result['released']) {
+                $this->appendBotMessageAction([
+                    'label' => 'View my bookings',
+                    'href' => $myBookingsUrl,
+                ]);
+
+                return 'hold_released:booking_number|tour|departure|new_status|mybookings_url'
+                    ."\n".implode('|', [
+                        $booking->booking_number,
+                        $booking->tour?->name ?? '',
+                        $booking->departure_date,
+                        $this->formatBookingStatus($booking),
+                        $myBookingsUrl,
+                    ])
+                    ."\nTell the customer their hold was released and seats are available again.";
+            }
+
+            return 'hold_unchanged:Booking was not on an active timed hold. Status remains '.$this->formatBookingStatus($booking).'.';
+        } catch (ValidationException $exception) {
+            $messages = collect($exception->errors())->flatten()->implode(' ');
+
+            return 'release_failed:'.$messages;
+        } catch (\Throwable $exception) {
+            return 'release_failed:'.$exception->getMessage();
+        }
     }
 
     /**
@@ -358,6 +482,187 @@ trait ProvidesChatbotContext
                 $this->company->address,
                 $csPhone,
             ]);
+    }
+
+    public function retrieveCustomerProfileContext(): string
+    {
+        $user = $this->chatAuthorizedCustomerUser();
+
+        if (! $user) {
+            return $this->chatCustomerBookingDeniedMessage();
+        }
+
+        return 'customer:id|name|username|email|phone'
+            ."\n".implode('|', [
+                $user->id,
+                $user->name,
+                $user->username ?? '',
+                $user->email,
+                $user->phone ?? '',
+            ]);
+    }
+
+    /**
+     * @param  array<string, mixed>  $args
+     */
+    public function retrieveBookingQuoteContext(array $args): string
+    {
+        $user = $this->chatAuthorizedCustomerUser();
+
+        if (! $user) {
+            return $this->chatCustomerBookingDeniedMessage();
+        }
+
+        $tourId = (int) ($args['tour_id'] ?? 0);
+
+        if ($tourId <= 0 && $this->message->attachment_type === 'tour') {
+            $tourId = (int) $this->message->attachment_data;
+        }
+
+        if ($tourId <= 0) {
+            return 'Missing tour_id.';
+        }
+
+        $tour = $this->availableToursQuery()->whereKey($tourId)->first();
+
+        if (! $tour) {
+            return 'No tour matched.';
+        }
+
+        $departureDate = trim((string) ($args['departure_date'] ?? ''));
+
+        if ($departureDate === '') {
+            return 'Missing departure_date. Use get_tour_schedules first.';
+        }
+
+        $schedule = TourSchedule::query()
+            ->where('tour_id', $tour->id)
+            ->where('company_id', $tour->company_id)
+            ->where('is_active', true)
+            ->whereDate('departure_date', $departureDate)
+            ->first();
+
+        if (! $schedule) {
+            return 'No active schedule for that departure date.';
+        }
+
+        $priceCategories = TourPrice::query()
+            ->with('priceCategory')
+            ->where('company_id', $tour->company_id)
+            ->where('tour_code', $tour->code)
+            ->where('schedule_id', $schedule->id)
+            ->orderBy('id')
+            ->get()
+            ->unique('price_category_id');
+
+        $categoryRows = $priceCategories
+            ->map(fn (TourPrice $price): string => implode('|', [
+                $price->priceCategory?->name ?? 'Unknown',
+                $price->price,
+                $price->priceCategory?->description ?? '',
+            ]))
+            ->implode("\n");
+
+        $addOnRows = collect(app(BookingAddOnOptionsService::class)->forSchedule($tour, $schedule))
+            ->map(fn (array $addon): string => implode('|', [
+                $addon['label'],
+                $addon['unitPrice'],
+                $addon['isTaxable'] ? '1' : '0',
+                $addon['hasQty'] ? '1' : '0',
+            ]))
+            ->implode("\n");
+
+        $passengers = $this->decodeJsonArray($args['passengers_json'] ?? $args['passengers'] ?? []);
+
+        if ($passengers === []) {
+            return "quote_requirements:tour_id|departure_date|passengers_json|contact\n"
+                ."passengers_json must be a JSON array. Each passenger needs first_name, price_category, and optionally title, last_name, dob, pob, room_type, price_amount.\n"
+                ."price_categories:category|price|description\n"
+                .($categoryRows !== '' ? $categoryRows : 'No price categories found.')
+                ."\naddons:label|unit_price|is_taxable|has_qty\n"
+                .($addOnRows !== '' ? $addOnRows : 'No add-ons.');
+        }
+
+        $addons = $this->decodeJsonArray($args['addons_json'] ?? $args['addons'] ?? []);
+        $agentId = $this->resolveChatbotAgentId();
+
+        $quote = app(BookingPricingService::class)->quoteForBookingData(
+            $tour,
+            $departureDate,
+            $passengers,
+            $addons,
+            (float) ($tour->company?->companySetting?->minimum_vat ?? BookingPricingService::DEFAULT_PPN_RATE),
+            $agentId !== null,
+            $agentId,
+        );
+
+        return 'quote:subtotal|tax|platform_fee|commission|grand_total|pax_adult|pax_child|pax_infant'
+            ."\n".implode('|', [
+                $quote['subtotal_guests'],
+                $quote['tax_amount'] ?? 0,
+                $quote['platform_fee'] ?? 0,
+                $quote['agent_commission'] ?? 0,
+                $quote['grand_total'] ?? 0,
+                $this->countPassengersByType($passengers, 'adult'),
+                $this->countPassengersByType($passengers, 'child'),
+                $this->countPassengersByType($passengers, 'infant'),
+            ])
+            ."\nrequired_for_reserve:contact_name|contact_email|contact_phone|passengers_json|departure_date|tour_id";
+    }
+
+    /**
+     * @param  array<string, mixed>  $args
+     */
+    public function reserveBookingContext(array $args): string
+    {
+        $user = $this->chatAuthorizedCustomerUser();
+
+        if (! $user) {
+            return $this->chatCustomerBookingDeniedMessage();
+        }
+
+        try {
+            $payload = $this->buildChatbotReservePayload($args, $user);
+            $tour = $this->availableToursQuery()->whereKey($payload['tour_id'])->first();
+
+            if (! $tour) {
+                return 'No tour matched.';
+            }
+
+            $booking = app(ReserveCustomerBookingAction::class)->execute($user, $tour, $payload, $this->company);
+
+            $myBookingsUrl = '/mybookings?tab=current&booking_number='.urlencode((string) $booking->booking_number);
+
+            $this->appendBotMessageAction([
+                'label' => 'View my booking',
+                'href' => $myBookingsUrl,
+            ]);
+
+            return 'reserved:booking_number|tour|departure|grand_total|expires_minutes|mybookings_url'
+                ."\n".implode('|', [
+                    $booking->booking_number,
+                    $booking->tour?->name ?? '',
+                    $booking->departure_date,
+                    $booking->grand_total,
+                    max(1, (int) now()->diffInMinutes($booking->reserved_expires_at, false)),
+                    $myBookingsUrl,
+                ])
+                ."\nTell the customer their booking is reserved and they can continue payment from My Bookings.";
+        } catch (ValidationException $exception) {
+            $messages = collect($exception->errors())->flatten()->implode(' ');
+
+            return 'reserve_failed:'.$messages;
+        } catch (\Throwable $exception) {
+            return 'reserve_failed:'.$exception->getMessage();
+        }
+    }
+
+    /**
+     * @param  array{label: string, href: string}  $action
+     */
+    protected function appendBotMessageAction(array $action): void
+    {
+        $this->botMessageActions[] = $action;
     }
 
     protected function setupChatbotContext(): void
@@ -433,6 +738,11 @@ trait ProvidesChatbotContext
 
         if ($botContext !== null && $botContext !== '') {
             $meta['bot-context'] = $this->truncateForModel($botContext, self::BOT_CONTEXT_MAX_STORE_CHARS);
+        }
+
+        if ($this->botMessageActions !== []) {
+            $meta['actions'] = $this->botMessageActions;
+            $this->botMessageActions = [];
         }
 
         $message->update([
@@ -812,5 +1122,277 @@ trait ProvidesChatbotContext
         }
 
         return (string) ($status ?? '');
+    }
+
+    private function chatAuthorizedCustomerUser(): ?User
+    {
+        if ($this->message->sender_type !== 'user' || ! $this->company) {
+            return null;
+        }
+
+        $user = User::query()->find($this->message->sender_id);
+
+        if (! $user instanceof User) {
+            return null;
+        }
+
+        if ((int) $user->company_id !== (int) $this->company->id) {
+            return null;
+        }
+
+        if (! $user->hasRole('user:customer')) {
+            return null;
+        }
+
+        return $user;
+    }
+
+    private function chatCustomerBookingDeniedMessage(): string
+    {
+        if ($this->message->sender_type !== 'user') {
+            return 'Login required. Ask the customer to log in at /customers/login before continuing.';
+        }
+
+        $user = User::query()->find($this->message->sender_id);
+
+        if ($user instanceof User && (int) $user->company_id !== (int) $this->company?->id) {
+            return 'customer:wrong_agent|This account is not registered with this travel agent. Ask the customer to log in with their account for this agent at /customers/login.';
+        }
+
+        if ($user instanceof User && ! $user->hasRole('user:customer')) {
+            return 'customer:not_customer|Only customer accounts can manage bookings in chat.';
+        }
+
+        return 'Login required. Ask the customer to log in at /customers/login before continuing.';
+    }
+
+    private function resolveChatbotAgentId(): ?int
+    {
+        if ($this->company?->type === CompanyType::AGENT) {
+            return $this->company->id;
+        }
+
+        return null;
+    }
+
+    /**
+     * @param  array<string, mixed>  $args
+     * @return array<string, mixed>
+     */
+    private function buildChatbotReservePayload(array $args, User $user): array
+    {
+        $tourId = (int) ($args['tour_id'] ?? 0);
+
+        if ($tourId <= 0 && $this->message->attachment_type === 'tour') {
+            $tourId = (int) $this->message->attachment_data;
+        }
+
+        $passengers = $this->decodeJsonArray($args['passengers_json'] ?? $args['passengers'] ?? []);
+        $addons = $this->decodeJsonArray($args['addons_json'] ?? $args['addons'] ?? []);
+
+        $payload = [
+            'tour_id' => $tourId,
+            'departure_date' => trim((string) ($args['departure_date'] ?? '')),
+            'pax_adult' => (int) ($args['pax_adult'] ?? $this->countPassengersByType($passengers, 'adult')),
+            'pax_child' => (int) ($args['pax_child'] ?? $this->countPassengersByType($passengers, 'child')),
+            'pax_infant' => (int) ($args['pax_infant'] ?? $this->countPassengersByType($passengers, 'infant')),
+            'booking_number' => trim((string) ($args['booking_number'] ?? '')),
+            'vendor_id' => isset($args['vendor_id']) ? (int) $args['vendor_id'] : null,
+            'agent_id' => isset($args['agent_id']) ? (int) $args['agent_id'] : $this->resolveChatbotAgentId(),
+            'contact_name' => trim((string) ($args['contact_name'] ?? $user->name ?? '')),
+            'contact_email' => trim((string) ($args['contact_email'] ?? $user->email ?? '')),
+            'contact_phone' => trim((string) ($args['contact_phone'] ?? $user->phone ?? '')),
+            'contact_notes' => trim((string) ($args['contact_notes'] ?? '')),
+            'passengers' => $passengers,
+            'addons' => $addons,
+        ];
+
+        if ($payload['booking_number'] === '') {
+            $payload['booking_number'] = app(BookingNumberService::class)->generate((string) ($this->company?->id ?? 0));
+        }
+
+        Validator::validate($payload, [
+            'tour_id' => ['required', 'integer', 'exists:tours,id'],
+            'departure_date' => ['required', 'date'],
+            'pax_adult' => ['required', 'integer', 'min:0'],
+            'pax_child' => ['required', 'integer', 'min:0'],
+            'pax_infant' => ['required', 'integer', 'min:0'],
+            'booking_number' => ['required', 'string'],
+            'vendor_id' => ['nullable', 'exists:companies,id'],
+            'agent_id' => ['nullable', 'exists:companies,id'],
+            'contact_name' => ['nullable', 'string', 'max:255'],
+            'contact_email' => ['nullable', 'email', 'max:255'],
+            'contact_phone' => ['nullable', 'string', 'max:50'],
+            'contact_notes' => ['nullable', 'string', 'max:1000'],
+            'addons' => ['nullable', 'array'],
+            'addons.*.name' => ['required_with:addons', 'string', 'max:255'],
+            'addons.*.price' => ['required_with:addons', 'numeric', 'min:0'],
+            'addons.*.qty' => ['nullable', 'integer', 'min:0'],
+            'addons.*.is_taxable' => ['nullable', 'boolean'],
+            'passengers' => ['required', 'array', 'min:1'],
+            'passengers.*.title' => ['nullable', 'string', 'max:20'],
+            'passengers.*.first_name' => ['required', 'string', 'max:255'],
+            'passengers.*.last_name' => ['nullable', 'string', 'max:255'],
+            'passengers.*.dob' => ['nullable', 'date'],
+            'passengers.*.pob' => ['nullable', 'string', 'max:255'],
+            'passengers.*.price_category' => ['nullable', 'string'],
+            'passengers.*.price_amount' => ['nullable', 'numeric'],
+            'passengers.*.visa_category_item_id' => ['nullable', 'integer', 'exists:visa_category_items,id'],
+            'passengers.*.room_type' => ['nullable', 'string'],
+            'passengers.*.note' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        if (! $payload['vendor_id']) {
+            $tour = Tour::query()->find($payload['tour_id']);
+            $payload['vendor_id'] = $tour?->company_id;
+        }
+
+        return $payload;
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    private function decodeJsonArray(mixed $value): array
+    {
+        if (is_array($value)) {
+            return array_values($value);
+        }
+
+        $json = trim((string) $value);
+
+        if ($json === '') {
+            return [];
+        }
+
+        $decoded = json_decode($json, true);
+
+        return is_array($decoded) ? array_values($decoded) : [];
+    }
+
+    /**
+     * @param  list<array<string, mixed>>  $passengers
+     */
+    private function countPassengersByType(array $passengers, string $type): int
+    {
+        return collect($passengers)
+            ->filter(function (array $passenger) use ($type): bool {
+                $category = strtolower((string) ($passenger['price_category'] ?? ''));
+
+                return match ($type) {
+                    'child' => str_contains($category, 'child'),
+                    'infant' => str_contains($category, 'infant'),
+                    default => ! str_contains($category, 'child') && ! str_contains($category, 'infant'),
+                };
+            })
+            ->count();
+    }
+
+    /**
+     * @param  array<string, mixed>  $args
+     */
+    private function findCustomerBooking(array $args): ?Booking
+    {
+        if (! $this->chatAuthorizedCustomerUser()) {
+            return null;
+        }
+
+        $bookingId = (int) ($args['booking_id'] ?? 0);
+        $bookingNumber = trim((string) ($args['booking_number'] ?? ''));
+
+        $query = TenantCustomerGuard::scopeBookingsForCompany(
+            Booking::query()
+                ->with('tour.company.companySetting')
+                ->where('user_id', $this->message->sender_id),
+            $this->company,
+        );
+
+        if ($bookingId > 0) {
+            return $query->whereKey($bookingId)->first();
+        }
+
+        if ($bookingNumber !== '') {
+            return $query->where('booking_number', 'ilike', $this->ilikeTerm($bookingNumber))->first();
+        }
+
+        return null;
+    }
+
+    private function bookingCanBeReordered(Booking $booking): bool
+    {
+        $status = $booking->status instanceof BookingStatus
+            ? $booking->status
+            : BookingStatus::tryFrom((string) $booking->status);
+
+        if ($status !== BookingStatus::EXPIRED) {
+            return false;
+        }
+
+        return $this->bookingScheduleIsBookable($booking);
+    }
+
+    private function bookingCanBeContinued(Booking $booking): bool
+    {
+        $status = $booking->status instanceof BookingStatus
+            ? $booking->status
+            : BookingStatus::tryFrom((string) $booking->status);
+
+        if (! in_array($status, [
+            BookingStatus::AWAITING_PAYMENT,
+            BookingStatus::BOOKING_RESERVED,
+        ], true)) {
+            return false;
+        }
+
+        return $this->bookingScheduleIsBookable($booking);
+    }
+
+    private function bookingCanReleaseHold(Booking $booking): bool
+    {
+        $status = $booking->status instanceof BookingStatus
+            ? $booking->status
+            : BookingStatus::tryFrom((string) $booking->status);
+
+        if ($status !== BookingStatus::BOOKING_RESERVED || $booking->reserved_type !== 'system') {
+            return false;
+        }
+
+        if ($booking->reserved_type === 'waiting_list_offer') {
+            return false;
+        }
+
+        return ! TourWaitingListSchedule::query()
+            ->where('booking_id', $booking->id)
+            ->exists();
+    }
+
+    private function bookingScheduleIsBookable(Booking $booking): bool
+    {
+        if (! $booking->tour_id || ! $booking->vendor_id || ! $booking->departure_date) {
+            return false;
+        }
+
+        $booking->loadMissing('tour.company.companySetting');
+        $settings = $booking->tour?->company?->companySetting;
+
+        $departureDate = Carbon::parse($booking->departure_date)->startOfDay();
+
+        if ($departureDate->isPast() && ! $departureDate->isToday()) {
+            return false;
+        }
+
+        $deadlineDays = (int) ($settings?->booking_deadline ?? 0);
+        $cutoffDate = now()->startOfDay()->addDays($deadlineDays);
+
+        if ($departureDate->lt($cutoffDate)) {
+            return false;
+        }
+
+        return TourSchedule::query()
+            ->where('tour_id', $booking->tour_id)
+            ->where('company_id', $booking->vendor_id)
+            ->where('is_active', true)
+            ->whereDate('departure_date', $departureDate->toDateString())
+            ->exists();
     }
 }

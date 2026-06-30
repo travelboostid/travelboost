@@ -1,10 +1,12 @@
 import { type ChatMessageResource } from '@/api/model';
 import { cn } from '@/lib/utils';
 import { useChatStore } from '@/stores/chat/chat-store';
+import { Link } from '@inertiajs/react';
 import { memo, useCallback, useEffect, useRef } from 'react';
 import { useInView } from 'react-intersection-observer';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { Button } from '../ui/button';
 import {
     ChatEmptyConversation,
     ChatErrorPanel,
@@ -21,10 +23,19 @@ import {
     useRoomPagination,
 } from './state';
 
+type ChatMessageAction = {
+    label: string;
+    href: string;
+};
+
+type ChatMessageWithActions = ChatMessageResource & {
+    actions?: ChatMessageAction[];
+};
+
 const ChatMessage = memo(function ChatMessage({
     message,
 }: {
-    message: ChatMessageResource;
+    message: ChatMessageWithActions;
 }) {
     const actor = useChatActor();
     const mine =
@@ -63,7 +74,7 @@ const ChatMessage = memo(function ChatMessage({
 export function MessageContentRenderer({
     message,
 }: {
-    message: ChatMessageResource;
+    message: ChatMessageWithActions;
 }) {
     if (message.is_streaming && !message.message) {
         return (
@@ -124,6 +135,21 @@ export function MessageContentRenderer({
             </ReactMarkdown>
             {message.is_streaming && (
                 <span className="ml-0.5 inline-block animate-pulse">|</span>
+            )}
+            {!message.is_streaming && (message.actions?.length ?? 0) > 0 && (
+                <div className="mt-2 flex flex-wrap gap-2">
+                    {message.actions?.map((action) => (
+                        <Button
+                            key={`${action.href}-${action.label}`}
+                            asChild
+                            size="sm"
+                            variant="secondary"
+                            className="rounded-lg"
+                        >
+                            <Link href={action.href}>{action.label}</Link>
+                        </Button>
+                    ))}
+                </div>
             )}
         </>
     );
