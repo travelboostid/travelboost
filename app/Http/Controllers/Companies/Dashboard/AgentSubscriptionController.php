@@ -90,4 +90,35 @@ class AgentSubscriptionController extends Controller
 
         return back()->with('success', 'Manual subscription payment request submitted.');
     }
+
+    public function paymentHistory(Request $request, Company $company)
+    {
+        abort_unless(
+            CompanyPermissionMap::userHasScopedPermission($request->user(), $company, 'subscription-ai.query'),
+            403
+        );
+
+        $payments = Payment::query()
+            ->with(['payable.package'])
+            ->whereMorphedTo('owner', $company)
+            ->whereMorphedTo('payable', AgentSubscriptionPayment::class)
+            ->latest()
+            ->get()
+            ->map(function ($payment) {
+                $package = $payment->payable?->package;
+
+                return [
+                    'id' => (string) $payment->id,
+                    'date' => $payment->created_at->toIso8601String(),
+                    'period' => $package ? $package->duration_months.' Months' : 'N/A',
+                    'amount' => (float) $payment->amount,
+                    'status' => $payment->status->value ?? $payment->status,
+                    'type' => $payment->provider,
+                ];
+            });
+
+        return Inertia::render('companies/dashboard/agent-subscriptions/components/payment-history', [
+            'payments' => $payments,
+        ]);
+    }
 }

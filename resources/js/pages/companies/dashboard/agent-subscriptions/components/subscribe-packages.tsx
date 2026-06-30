@@ -28,7 +28,7 @@ import {
     refreshAgentSubscriptionPendingPayment,
 } from '@/lib/refresh-agent-subscription-page';
 import { cn, formatIDR } from '@/lib/utils';
-import { index as paymentsIndex } from '@/routes/companies/dashboard/payments';
+import { paymentHistory as paymentHistoryRoute } from '@/routes/companies/dashboard/agent-subscriptions';
 import { Link, router } from '@inertiajs/react';
 import {
     BanknoteIcon,
@@ -327,7 +327,9 @@ export default function SubscribePackages() {
                         asChild
                     >
                         <Link
-                            href={`${paymentsIndex({ company: company.username })}?type=agent-subscription-payment`}
+                            href={paymentHistoryRoute({
+                                company: company.username,
+                            })}
                         >
                             <FormattedMessage defaultMessage="View payment history" />
                             <ExternalLinkIcon className="size-4" />

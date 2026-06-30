@@ -275,6 +275,7 @@ Route::prefix('companies')->middleware(['can:access-company-pages', 'use-analyti
             ->middleware(['company.type:agent'])
             ->middlewareFor(['show'], 'company.permission:subscription-ai.query')
             ->middlewareFor(['update', 'store', 'destroy'], 'company.permission:subscription-ai.mutation');
+        Route::middleware(['company.type:agent', 'company.permission:subscription-ai.query'])->get('agent-subscriptions/payment-history', [AgentSubscriptionController::class, 'paymentHistory'])->name('agent-subscriptions.payment-history');
         Route::middleware(['company.type:agent', 'company.permission:subscription-ai.mutation'])->post('agent-subscriptions/manual-payment', [AgentSubscriptionController::class, 'storeManualPayment'])->name('agent-subscriptions.manual-payment');
         Route::singleton('ai-credits', ChatbotController::class)
             ->middlewareFor(['show'], 'company.permission:chat-ai.query')
