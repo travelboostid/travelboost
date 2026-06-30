@@ -15,9 +15,9 @@ class UseAffiliateProps
      *
      * @param  Closure(Request): (Response)  $next
      */
-    public function handle(Request $request, Closure $next, AffiliateReferralContext $affiliateReferralContext)
+    public function handle(Request $request, Closure $next)
     {
-        $affiliate = $affiliateReferralContext->visibleAffiliatePayload($request);
+        $affiliate = app(AffiliateReferralContext::class)->visibleAffiliatePayload($request);
 
         if ($affiliate === null) {
             return $next($request);

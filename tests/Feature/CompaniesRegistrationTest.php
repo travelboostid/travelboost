@@ -57,7 +57,7 @@ test('company registration still redirects when verification email dispatch fail
 
     $response = $this->post('/companies/register', [
         'name' => 'Test Agent',
-        'username' => 'test-agent',
+        'username' => 'test_agent',
         'email' => 'test-agent@example.com',
         'password' => 'password',
         'password_confirmation' => 'password',
@@ -65,4 +65,6 @@ test('company registration still redirects when verification email dispatch fail
 
     $this->assertAuthenticated();
     $response->assertRedirect('/me');
+})->tap(function () {
+    //
 });

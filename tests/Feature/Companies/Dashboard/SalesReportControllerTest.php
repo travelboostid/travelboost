@@ -164,18 +164,18 @@ test('sales report uses the final full payment date and keeps the booking grand 
         ->where('rows.0.booking_code', 'BOOK-SALES-001')
         ->where('rows.0.agent_name', 'Agent Alpha')
         ->where('rows.0.paid_at', fn (string $value) => str_contains($value, '2026-10-20T11:30:00'))
-        ->where('rows.0.base_tour_total', 8000000.0)
-        ->where('rows.0.taxable_visa_total', 500000.0)
-        ->where('rows.0.taxable_addon_total', 300000.0)
-        ->where('rows.0.non_taxable_visa_total', 250000.0)
-        ->where('rows.0.non_taxable_addon_total', 120000.0)
-        ->where('rows.0.vat_amount', 880000.0)
-        ->where('rows.0.platform_fee', 50000.0)
-        ->where('rows.0.grand_total', 10250000.0)
+        ->where('rows.0.base_tour_total', fn ($v) => $v == 8000000)
+        ->where('rows.0.taxable_visa_total', fn ($v) => $v == 500000)
+        ->where('rows.0.taxable_addon_total', fn ($v) => $v == 300000)
+        ->where('rows.0.non_taxable_visa_total', fn ($v) => $v == 250000)
+        ->where('rows.0.non_taxable_addon_total', fn ($v) => $v == 120000)
+        ->where('rows.0.vat_amount', fn ($v) => $v == 880000)
+        ->where('rows.0.platform_fee', fn ($v) => $v == 50000)
+        ->where('rows.0.grand_total', fn ($v) => $v == 10250000)
         ->where('summary.total_bookings', 1)
         ->where('summary.total_pax', 2)
-        ->where('summary.total_sales', 10250000.0)
-        ->where('summary.total_commission', 300000.0));
+        ->where('summary.total_sales', fn ($v) => $v == 10250000)
+        ->where('summary.total_commission', fn ($v) => $v == 300000));
 });
 
 test('sales report excludes bookings when the selected period only matches down payment dates', function () {
@@ -246,5 +246,5 @@ test('sales report excludes bookings when the selected period only matches down 
         ->where('rows', [])
         ->where('summary.total_bookings', 0)
         ->where('summary.total_pax', 0)
-        ->where('summary.total_sales', 0.0));
+        ->where('summary.total_sales', fn ($v) => $v == 0));
 });

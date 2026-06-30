@@ -30,6 +30,12 @@ class DomainResolver
 
     public function handle($request, Closure $next)
     {
+        if ($this->shouldBypassTenantResolution($request)) {
+            $request->attributes->set('tenant', null);
+
+            return $next($request);
+        }
+
         // Redirect to main domain if accessing company dashboard or other non-guest routes on a subdomain
         if (! $this->isMainHost && ! $this->isInternalSubdomain() && $request->is('companies*')) {
             $allowedPatterns = [
@@ -148,6 +154,34 @@ class DomainResolver
     private function shouldAllowDomainlessOnboarding($request): bool
     {
         return $request->is('me/onboarding*');
+    }
+
+    private function shouldBypassTenantResolution($request): bool
+    {
+        return $request->is([
+            'build/*',
+            'storage/*',
+            'images/*',
+            'favicon.ico',
+            'robots.txt',
+            'site.webmanifest',
+            'sitemap*',
+            '*.css',
+            '*.js',
+            '*.map',
+            '*.png',
+            '*.jpg',
+            '*.jpeg',
+            '*.gif',
+            '*.svg',
+            '*.webp',
+            '*.avif',
+            '*.ico',
+            '*.woff',
+            '*.woff2',
+            '*.ttf',
+            '*.eot',
+        ]);
     }
 
     private function continueOnboardingWithoutTenant($request, Closure $next, ?Domain $domainObject = null)

@@ -25,11 +25,42 @@ use App\Models\TourPrice;
 use App\Models\TourSchedule;
 use App\Models\User;
 use App\Models\VendorAgentPartner;
+use Carbon\Carbon;
 use Database\Seeders\Common\RolePermissionSeeder;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
+
+function createBookingWithSchedule($count = 1, $attributes = [])
+{
+    $bookings = Booking::factory()->count($count)->create($attributes);
+    $collection = $bookings instanceof Collection ? $bookings : collect([$bookings]);
+
+    foreach ($collection as $booking) {
+        $schedule = TourSchedule::firstOrCreate([
+            'tour_id' => $booking->tour_id,
+            'departure_date' => $booking->departure_date,
+        ], [
+            'tour_code' => $booking->tour->code ?? 'CODE',
+            'company_id' => $booking->vendor_id,
+            'return_date' => Carbon::parse($booking->departure_date)->addDays(7)->toDateString(),
+            'is_active' => true,
+        ]);
+
+        TourAvailability::firstOrCreate([
+            'schedule_id' => $schedule->id,
+        ], [
+            'company_id' => $booking->vendor_id,
+            'tour_id' => $booking->tour_id,
+            'max_pax' => 50,
+            'available' => 50,
+        ]);
+    }
+
+    return $count === 1 ? $collection->first() : $collection;
+}
 
 beforeEach(function () {
     /** @var TestCase $this */
@@ -55,7 +86,7 @@ test('vendor can see their own bookings', function () {
 
     $tour = Tour::factory()->create(['company_id' => $vendor->id]);
 
-    Booking::factory()->count(3)->create([
+    createBookingWithSchedule(3, [
         'vendor_id' => $vendor->id,
         'tour_id' => $tour->id,
     ]);
@@ -63,7 +94,7 @@ test('vendor can see their own bookings', function () {
     // Create a booking for another vendor — should NOT appear
     $otherVendor = Company::factory()->create(['type' => 'vendor']);
     $otherTour = Tour::factory()->create(['company_id' => $otherVendor->id]);
-    Booking::factory()->create([
+    createBookingWithSchedule(1, [
         'vendor_id' => $otherVendor->id,
         'tour_id' => $otherTour->id,
     ]);
@@ -91,14 +122,14 @@ test('agent can see their own bookings', function () {
     $vendor = Company::factory()->create(['type' => 'vendor']);
     $tour = Tour::factory()->create(['company_id' => $vendor->id]);
 
-    Booking::factory()->count(2)->create([
+    createBookingWithSchedule(2, [
         'agent_id' => $agent->id,
         'vendor_id' => $vendor->id,
         'tour_id' => $tour->id,
     ]);
 
     // Create a booking for another agent — should NOT appear
-    Booking::factory()->create([
+    createBookingWithSchedule(1, [
         'agent_id' => Company::factory()->create(['type' => 'agent'])->id,
         'vendor_id' => $vendor->id,
         'tour_id' => $tour->id,
@@ -126,7 +157,7 @@ test('dashboard bookings index paginates ten bookings per page and preserves fil
 
     $tour = Tour::factory()->create(['company_id' => $vendor->id]);
 
-    Booking::factory()->count(12)->create([
+    createBookingWithSchedule(12, [
         'vendor_id' => $vendor->id,
         'tour_id' => $tour->id,
         'status' => BookingStatus::DOWN_PAYMENT,
@@ -202,7 +233,7 @@ test('agent can preview vendor invoice for full payment booking as pdf', functio
         'price' => 8_800_000,
     ]);
 
-    $booking = Booking::factory()->create([
+    $booking = createBookingWithSchedule(1, [
         'user_id' => $this->user->id,
         'agent_id' => $agent->id,
         'vendor_id' => $vendor->id,
@@ -269,13 +300,13 @@ test('bookings can be filtered by booking number', function () {
 
     $tour = Tour::factory()->create(['company_id' => $vendor->id]);
 
-    Booking::factory()->create([
+    createBookingWithSchedule(1, [
         'vendor_id' => $vendor->id,
         'tour_id' => $tour->id,
         'booking_number' => 'BKG-MATCH-12345',
     ]);
 
-    Booking::factory()->create([
+    createBookingWithSchedule(1, [
         'vendor_id' => $vendor->id,
         'tour_id' => $tour->id,
         'booking_number' => 'BKG-OTHER-99999',
@@ -305,7 +336,7 @@ test('booking index supports unified search across booking fields', function () 
         'name' => 'Mountain Explorer',
     ]);
 
-    Booking::factory()->create([
+    createBookingWithSchedule(1, [
         'vendor_id' => $vendor->id,
         'tour_id' => $tour->id,
         'booking_number' => 'BKG-SEARCH-001',
@@ -317,7 +348,7 @@ test('booking index supports unified search across booking fields', function () 
         'name' => 'Beach Holiday',
     ]);
 
-    Booking::factory()->create([
+    createBookingWithSchedule(1, [
         'vendor_id' => $vendor->id,
         'tour_id' => $otherTour->id,
         'booking_number' => 'BKG-OTHER-002',
@@ -360,7 +391,7 @@ test('booking index includes paid amount and remaining balance', function () {
     ]);
 
     $tour = Tour::factory()->create(['company_id' => $vendor->id]);
-    $booking = Booking::factory()->create([
+    $booking = createBookingWithSchedule(1, [
         'vendor_id' => $vendor->id,
         'tour_id' => $tour->id,
         'grand_total' => 1_000_000,
@@ -438,7 +469,7 @@ test('dashboard booking payload reconciles stale grand total with persisted add 
 
     $staleGrandTotal = 33_817_400;
     $expectedGrandTotal = 37_273_400;
-    $booking = Booking::factory()->create([
+    $booking = createBookingWithSchedule(1, [
         'vendor_id' => $vendor->id,
         'tour_id' => $tour->id,
         'departure_date' => $schedule->departure_date,
@@ -629,7 +660,7 @@ test('booking index exposes down payment and full payment details', function () 
     ]);
 
     $tour = Tour::factory()->create(['company_id' => $vendor->id]);
-    $booking = Booking::factory()->create([
+    $booking = createBookingWithSchedule(1, [
         'vendor_id' => $vendor->id,
         'tour_id' => $tour->id,
         'status' => BookingStatus::FULL_PAYMENT,
@@ -710,7 +741,7 @@ test('booking index sums multiple full payments and exposes grouped receipts aft
     ]);
 
     $tour = Tour::factory()->create(['company_id' => $vendor->id]);
-    $booking = Booking::factory()->create([
+    $booking = createBookingWithSchedule(1, [
         'vendor_id' => $vendor->id,
         'tour_id' => $tour->id,
         'status' => BookingStatus::FULL_PAYMENT,
@@ -798,7 +829,7 @@ test('booking index infers legacy paid midtrans full payment detail when payment
     ]);
 
     $tour = Tour::factory()->create(['company_id' => $vendor->id]);
-    $booking = Booking::factory()->create([
+    $booking = createBookingWithSchedule(1, [
         'vendor_id' => $vendor->id,
         'tour_id' => $tour->id,
         'status' => BookingStatus::FULL_PAYMENT,
@@ -861,7 +892,7 @@ test('booking index infers paid midtrans full payment detail when gateway overwr
     ]);
 
     $tour = Tour::factory()->create(['company_id' => $vendor->id]);
-    $booking = Booking::factory()->create([
+    $booking = createBookingWithSchedule(1, [
         'vendor_id' => $vendor->id,
         'tour_id' => $tour->id,
         'status' => BookingStatus::FULL_PAYMENT,
@@ -976,7 +1007,7 @@ test('booking index keeps waiting payment approval when paid down payment has pe
     ]);
 
     $tour = Tour::factory()->create(['company_id' => $vendor->id]);
-    $booking = Booking::factory()->create([
+    $booking = createBookingWithSchedule(1, [
         'vendor_id' => $vendor->id,
         'tour_id' => $tour->id,
         'status' => BookingStatus::WAITING_PAYMENT_APPROVAL,
@@ -1050,7 +1081,7 @@ test('booking index exposes input by audit payload with legacy fallback', functi
         'description' => 'Operator',
     ]);
 
-    Booking::factory()->create([
+    createBookingWithSchedule(1, [
         'user_id' => $customer->id,
         'vendor_id' => $vendor->id,
         'tour_id' => $tour->id,
@@ -1058,7 +1089,7 @@ test('booking index exposes input by audit payload with legacy fallback', functi
         'created_at' => '2026-04-30 08:00:00',
     ]);
 
-    Booking::factory()->create([
+    createBookingWithSchedule(1, [
         'user_id' => $customer->id,
         'vendor_id' => $vendor->id,
         'tour_id' => $tour->id,
@@ -1102,7 +1133,7 @@ test('booking index exposes payment and document follow up payloads with summary
 
     $tour = Tour::factory()->create(['company_id' => $vendor->id]);
     $departureDate = '2026-05-16';
-    $booking = Booking::factory()->create([
+    $booking = createBookingWithSchedule(1, [
         'vendor_id' => $vendor->id,
         'tour_id' => $tour->id,
         'booking_number' => 'BKG-FOLLOW-001',
@@ -1187,7 +1218,7 @@ test('booking follow up summary ignores status filters and includes payment tota
     ]);
 
     $tour = Tour::factory()->create(['company_id' => $vendor->id]);
-    $dueSoonBooking = Booking::factory()->create([
+    $dueSoonBooking = createBookingWithSchedule(1, [
         'vendor_id' => $vendor->id,
         'tour_id' => $tour->id,
         'departure_date' => '2026-05-16',
@@ -1205,7 +1236,7 @@ test('booking follow up summary ignores status filters and includes payment tota
         'status' => PaymentStatus::PAID,
     ]);
 
-    Booking::factory()->create([
+    createBookingWithSchedule(1, [
         'vendor_id' => $vendor->id,
         'tour_id' => $tour->id,
         'departure_date' => '2026-05-08',
@@ -1244,7 +1275,7 @@ test('booking index filters rows by follow up card query', function () {
     ]);
 
     $tour = Tour::factory()->create(['company_id' => $vendor->id]);
-    Booking::factory()->create([
+    createBookingWithSchedule(1, [
         'vendor_id' => $vendor->id,
         'tour_id' => $tour->id,
         'booking_number' => 'BKG-FOLLOW-OVERDUE',
@@ -1252,7 +1283,7 @@ test('booking index filters rows by follow up card query', function () {
         'status' => BookingStatus::AWAITING_PAYMENT,
         'grand_total' => 800_000,
     ]);
-    Booking::factory()->create([
+    createBookingWithSchedule(1, [
         'vendor_id' => $vendor->id,
         'tour_id' => $tour->id,
         'booking_number' => 'BKG-FOLLOW-DUE-SOON',
@@ -1289,7 +1320,7 @@ test('booking index marks payment approval pending without complete payment acti
     ]);
 
     $tour = Tour::factory()->create(['company_id' => $vendor->id]);
-    $booking = Booking::factory()->create([
+    $booking = createBookingWithSchedule(1, [
         'vendor_id' => $vendor->id,
         'tour_id' => $tour->id,
         'departure_date' => '2026-05-16',
@@ -1335,7 +1366,7 @@ test('booking index exposes complete payment action for payment in progress wait
 
     $tour = Tour::factory()->create(['company_id' => $vendor->id]);
     $departureDate = '2026-05-16';
-    $booking = Booking::factory()->create([
+    $booking = createBookingWithSchedule(1, [
         'vendor_id' => $vendor->id,
         'tour_id' => $tour->id,
         'booking_number' => 'BKG-WA-PAYMENT',
@@ -1369,20 +1400,20 @@ test('booking index exposes proforma eligibility for down payment and payment pr
     ]);
 
     $tour = Tour::factory()->create(['company_id' => $vendor->id]);
-    $downPaymentBooking = Booking::factory()->create([
+    $downPaymentBooking = createBookingWithSchedule(1, [
         'vendor_id' => $vendor->id,
         'tour_id' => $tour->id,
         'booking_number' => 'PRO-DP',
         'status' => BookingStatus::DOWN_PAYMENT,
     ]);
-    $waitingApprovalBooking = Booking::factory()->create([
+    $waitingApprovalBooking = createBookingWithSchedule(1, [
         'vendor_id' => $vendor->id,
         'tour_id' => $tour->id,
         'booking_number' => 'PRO-WA-PAY',
         'status' => BookingStatus::WAITING_PAYMENT_APPROVAL,
         'reserved_type' => 'payment_in_progress',
     ]);
-    $reservedBooking = Booking::factory()->create([
+    $reservedBooking = createBookingWithSchedule(1, [
         'vendor_id' => $vendor->id,
         'tour_id' => $tour->id,
         'booking_number' => 'PRO-BR',
@@ -1442,7 +1473,7 @@ test('booking follow up summary excludes terminal bookings', function () {
 
     $tour = Tour::factory()->create(['company_id' => $vendor->id]);
     foreach ([BookingStatus::CANCELLED, BookingStatus::REFUNDED, BookingStatus::EXPIRED] as $status) {
-        $booking = Booking::factory()->create([
+        $booking = createBookingWithSchedule(1, [
             'vendor_id' => $vendor->id,
             'tour_id' => $tour->id,
             'departure_date' => '2026-05-10',
@@ -1511,7 +1542,7 @@ test('booking index derives commission amount', function () {
         'commission' => 0,
     ]);
 
-    Booking::factory()->create([
+    createBookingWithSchedule(1, [
         'vendor_id' => $vendor->id,
         'tour_id' => $tour->id,
         'departure_date' => $departureDate,
@@ -1583,7 +1614,7 @@ test('booking index derives commission from each passenger schedule price catego
         'commission' => 0,
     ]);
 
-    $booking = Booking::factory()->create([
+    $booking = createBookingWithSchedule(1, [
         'vendor_id' => $vendor->id,
         'tour_id' => $tour->id,
         'departure_date' => $departureDate,
@@ -1626,7 +1657,7 @@ test('booking index filters waiting payment approval and exposes manual payment 
     ]);
 
     $tour = Tour::factory()->create(['company_id' => $vendor->id]);
-    $booking = Booking::factory()->create([
+    $booking = createBookingWithSchedule(1, [
         'vendor_id' => $vendor->id,
         'tour_id' => $tour->id,
         'status' => 'waiting payment approval',
@@ -1651,7 +1682,7 @@ test('booking index filters waiting payment approval and exposes manual payment 
         ],
     ]);
 
-    Booking::factory()->create([
+    createBookingWithSchedule(1, [
         'vendor_id' => $vendor->id,
         'tour_id' => $tour->id,
         'status' => 'booking reserved',
@@ -1712,7 +1743,7 @@ test('booking index exposes manual payment review permission only for the paymen
     ]);
 
     $tour = Tour::factory()->create(['company_id' => $vendor->id]);
-    $booking = Booking::factory()->create([
+    $booking = createBookingWithSchedule(1, [
         'vendor_id' => $vendor->id,
         'agent_id' => $agent->id,
         'tour_id' => $tour->id,
@@ -1785,7 +1816,7 @@ test('booking index exposes payment receiver type for payment mode label', funct
     ]);
 
     $tour = Tour::factory()->create(['company_id' => $vendor->id]);
-    $booking = Booking::factory()->create([
+    $booking = createBookingWithSchedule(1, [
         'vendor_id' => $vendor->id,
         'agent_id' => $agent->id,
         'tour_id' => $tour->id,
@@ -1840,7 +1871,7 @@ test('agent index exposes customer online receipt and pay vendor workflow action
     ]);
 
     $tour = Tour::factory()->create(['company_id' => $vendor->id]);
-    $booking = Booking::factory()->create([
+    $booking = createBookingWithSchedule(1, [
         'vendor_id' => $vendor->id,
         'agent_id' => $agent->id,
         'tour_id' => $tour->id,
@@ -1923,7 +1954,7 @@ test('cancelled agent collection booking does not expose pay vendor workflow act
     ]);
 
     $tour = Tour::factory()->create(['company_id' => $vendor->id]);
-    $booking = Booking::factory()->create([
+    $booking = createBookingWithSchedule(1, [
         'vendor_id' => $vendor->id,
         'agent_id' => $agent->id,
         'tour_id' => $tour->id,
@@ -2017,7 +2048,7 @@ test('pending agent vendor online attempt does not replace pay vendor controls',
     ]);
 
     $tour = Tour::factory()->create(['company_id' => $vendor->id]);
-    $booking = Booking::factory()->create([
+    $booking = createBookingWithSchedule(1, [
         'vendor_id' => $vendor->id,
         'agent_id' => $agent->id,
         'tour_id' => $tour->id,
@@ -2119,7 +2150,7 @@ test('agent submits gross payment to vendor after customer payment is verified',
     ]);
 
     $tour = Tour::factory()->create(['company_id' => $vendor->id]);
-    $booking = Booking::factory()->create([
+    $booking = createBookingWithSchedule(1, [
         'vendor_id' => $vendor->id,
         'agent_id' => $agent->id,
         'tour_id' => $tour->id,
@@ -2318,7 +2349,7 @@ test('vendor decline keeps agent collection booking waiting approval for resubmi
     ]);
 
     $tour = Tour::factory()->create(['company_id' => $vendor->id]);
-    $booking = Booking::factory()->create([
+    $booking = createBookingWithSchedule(1, [
         'vendor_id' => $vendor->id,
         'agent_id' => $agent->id,
         'tour_id' => $tour->id,
@@ -2411,7 +2442,7 @@ test('vendor can directly cancel an in progress booking and release availability
         'available' => 8,
         'BRS' => 2,
     ]);
-    $booking = Booking::factory()->create([
+    $booking = createBookingWithSchedule(1, [
         'vendor_id' => $vendor->id,
         'tour_id' => $tour->id,
         'departure_date' => $departureDate,
@@ -2458,7 +2489,7 @@ test('full payment booking exposes cancel and refund actions in dashboard index'
     ]);
 
     $tour = Tour::factory()->create(['company_id' => $vendor->id]);
-    $fullPaymentBooking = Booking::factory()->create([
+    $fullPaymentBooking = createBookingWithSchedule(1, [
         'vendor_id' => $vendor->id,
         'tour_id' => $tour->id,
         'status' => BookingStatus::FULL_PAYMENT,
@@ -2491,7 +2522,7 @@ test('down payment booking exposes cancel and refund actions in dashboard index'
     ]);
 
     $tour = Tour::factory()->create(['company_id' => $vendor->id]);
-    $downPaymentBooking = Booking::factory()->create([
+    $downPaymentBooking = createBookingWithSchedule(1, [
         'vendor_id' => $vendor->id,
         'tour_id' => $tour->id,
         'status' => BookingStatus::DOWN_PAYMENT,
@@ -2541,7 +2572,7 @@ test('vendor can directly cancel a full payment booking and release availability
         'available' => 8,
         'FP' => 2,
     ]);
-    $booking = Booking::factory()->create([
+    $booking = createBookingWithSchedule(1, [
         'vendor_id' => $vendor->id,
         'tour_id' => $tour->id,
         'departure_date' => $departureDate,
@@ -2615,7 +2646,7 @@ test('vendor can directly cancel a down payment booking and release availability
         'available' => 8,
         'DP' => 2,
     ]);
-    $booking = Booking::factory()->create([
+    $booking = createBookingWithSchedule(1, [
         'vendor_id' => $vendor->id,
         'tour_id' => $tour->id,
         'departure_date' => $departureDate,
@@ -2689,7 +2720,7 @@ test('vendor can directly refund a paid booking and release availability', funct
         'available' => 8,
         'DP' => 2,
     ]);
-    $booking = Booking::factory()->create([
+    $booking = createBookingWithSchedule(1, [
         'vendor_id' => $vendor->id,
         'tour_id' => $tour->id,
         'departure_date' => $departureDate,
@@ -2748,7 +2779,7 @@ test('agent cancel creates a pending vendor approval request without mutating bo
     ]);
 
     $tour = Tour::factory()->create(['company_id' => $vendor->id]);
-    $booking = Booking::factory()->create([
+    $booking = createBookingWithSchedule(1, [
         'vendor_id' => $vendor->id,
         'agent_id' => $agent->id,
         'tour_id' => $tour->id,
@@ -2785,7 +2816,7 @@ test('agent down payment cancel creates a pending vendor approval request withou
     ]);
 
     $tour = Tour::factory()->create(['company_id' => $vendor->id]);
-    $booking = Booking::factory()->create([
+    $booking = createBookingWithSchedule(1, [
         'vendor_id' => $vendor->id,
         'agent_id' => $agent->id,
         'tour_id' => $tour->id,
@@ -2822,7 +2853,7 @@ test('agent full payment cancel creates a pending vendor approval request withou
     ]);
 
     $tour = Tour::factory()->create(['company_id' => $vendor->id]);
-    $booking = Booking::factory()->create([
+    $booking = createBookingWithSchedule(1, [
         'vendor_id' => $vendor->id,
         'agent_id' => $agent->id,
         'tour_id' => $tour->id,
@@ -2874,7 +2905,7 @@ test('vendor can reorder an eligible expired booking with the same booking numbe
         'available' => 8,
         'EX' => 2,
     ]);
-    $booking = Booking::factory()->create([
+    $booking = createBookingWithSchedule(1, [
         'vendor_id' => $vendor->id,
         'tour_id' => $tour->id,
         'booking_number' => 'BKG-REORDER-001',
@@ -2933,7 +2964,7 @@ test('agent can reorder an eligible expired agent booking with the same booking 
         'return_date' => now()->addMonth()->addDays(5)->toDateString(),
         'is_active' => true,
     ]);
-    $booking = Booking::factory()->create([
+    $booking = createBookingWithSchedule(1, [
         'vendor_id' => $vendor->id,
         'agent_id' => $agent->id,
         'tour_id' => $tour->id,
@@ -2963,7 +2994,7 @@ test('dashboard reorder rejects non expired bookings', function () {
     ]);
 
     $tour = Tour::factory()->create(['company_id' => $vendor->id]);
-    $booking = Booking::factory()->create([
+    $booking = createBookingWithSchedule(1, [
         'vendor_id' => $vendor->id,
         'tour_id' => $tour->id,
         'departure_date' => now()->addMonth()->toDateString(),
@@ -2987,7 +3018,7 @@ test('dashboard cancel returns validation error instead of exception overlay for
     ]);
 
     $tour = Tour::factory()->create(['company_id' => $vendor->id]);
-    $booking = Booking::factory()->create([
+    $booking = createBookingWithSchedule(1, [
         'vendor_id' => $vendor->id,
         'tour_id' => $tour->id,
         'status' => BookingStatus::CANCELLED,
@@ -3026,7 +3057,7 @@ test('vendor can approve and reject agent cancel refund requests', function () {
         'name' => 'Cancel Mountain Trail',
         'code' => 'CXL-MTN',
     ]);
-    $bookingToApprove = Booking::factory()->create([
+    $bookingToApprove = createBookingWithSchedule(1, [
         'booking_number' => 'BKG-REFUND-001',
         'contact_name' => 'Refund Customer',
         'vendor_id' => $vendor->id,
@@ -3035,7 +3066,7 @@ test('vendor can approve and reject agent cancel refund requests', function () {
         'departure_date' => '2026-12-24',
         'status' => BookingStatus::DOWN_PAYMENT,
     ]);
-    $bookingToReject = Booking::factory()->create([
+    $bookingToReject = createBookingWithSchedule(1, [
         'booking_number' => 'BKG-CANCEL-001',
         'contact_name' => 'Cancel Customer',
         'vendor_id' => $vendor->id,
@@ -3207,12 +3238,12 @@ test('direct vendor booking actions use final action reviewer labels', function 
     ]);
 
     $tour = Tour::factory()->create(['company_id' => $vendor->id]);
-    $cancelledBooking = Booking::factory()->create([
+    $cancelledBooking = createBookingWithSchedule(1, [
         'vendor_id' => $vendor->id,
         'tour_id' => $tour->id,
         'status' => BookingStatus::CANCELLED,
     ]);
-    $refundedBooking = Booking::factory()->create([
+    $refundedBooking = createBookingWithSchedule(1, [
         'vendor_id' => $vendor->id,
         'tour_id' => $tour->id,
         'status' => BookingStatus::REFUNDED,
@@ -3280,7 +3311,7 @@ test('agent can monitor their booking modification requests without review actio
     ]);
 
     $tour = Tour::factory()->create(['company_id' => $vendor->id]);
-    $booking = Booking::factory()->create([
+    $booking = createBookingWithSchedule(1, [
         'vendor_id' => $vendor->id,
         'agent_id' => $agent->id,
         'tour_id' => $tour->id,
@@ -3342,7 +3373,7 @@ test('availability save preserves manual reserved and recomputes booking reserve
         'available' => 9,
     ]);
 
-    Booking::factory()->create([
+    createBookingWithSchedule(1, [
         'vendor_id' => $vendor->id,
         'tour_id' => $tour->id,
         'departure_date' => $departureDate,
@@ -3392,7 +3423,7 @@ test('booking show includes room bed layout data', function () {
     ]);
 
     $tour = Tour::factory()->create(['company_id' => $vendor->id]);
-    $booking = Booking::factory()->create([
+    $booking = createBookingWithSchedule(1, [
         'vendor_id' => $vendor->id,
         'tour_id' => $tour->id,
     ]);
@@ -3454,7 +3485,7 @@ test('vendor can update booking wizard data dynamically', function () {
         'price' => 1_000_000,
         'promotion' => 100_000,
     ]);
-    $booking = Booking::factory()->create([
+    $booking = createBookingWithSchedule(1, [
         'vendor_id' => $vendor->id,
         'tour_id' => $tour->id,
         'departure_date' => $departureDate,
@@ -3597,7 +3628,7 @@ test('vendor booking update rejects multiple dependent bed guests in one room', 
         'is_active' => true,
     ]);
 
-    $booking = Booking::factory()->create([
+    $booking = createBookingWithSchedule(1, [
         'vendor_id' => $vendor->id,
         'tour_id' => $tour->id,
         'departure_date' => $departureDate,
@@ -3737,7 +3768,7 @@ test('booking edit exposes customer wizard payment props for dashboard', functio
         'available' => 4,
     ]);
 
-    $booking = Booking::factory()->create([
+    $booking = createBookingWithSchedule(1, [
         'vendor_id' => $vendor->id,
         'tour_id' => $tour->id,
         'departure_date' => $schedule->departure_date,
@@ -3841,7 +3872,7 @@ test('booking edit resolves agent commission when booking snapshot is zero', fun
         'commission' => 0,
     ]);
 
-    $booking = Booking::factory()->create([
+    $booking = createBookingWithSchedule(1, [
         'vendor_id' => $vendor->id,
         'agent_id' => $agent->id,
         'tour_id' => $tour->id,
@@ -3883,7 +3914,7 @@ test('full payment booking with incomplete documents allows dashboard document-o
     ]);
 
     $tour = Tour::factory()->create(['company_id' => $vendor->id]);
-    $booking = Booking::factory()->create([
+    $booking = createBookingWithSchedule(1, [
         'vendor_id' => $vendor->id,
         'tour_id' => $tour->id,
         'status' => BookingStatus::FULL_PAYMENT,
@@ -3949,7 +3980,7 @@ test('down payment booking with incomplete documents allows dashboard document-o
     ]);
 
     $tour = Tour::factory()->create(['company_id' => $vendor->id]);
-    $booking = Booking::factory()->create([
+    $booking = createBookingWithSchedule(1, [
         'vendor_id' => $vendor->id,
         'tour_id' => $tour->id,
         'status' => BookingStatus::DOWN_PAYMENT,
@@ -3991,7 +4022,7 @@ test('waiting approval booking allows dashboard document-only updates', function
     ]);
 
     $tour = Tour::factory()->create(['company_id' => $vendor->id]);
-    $booking = Booking::factory()->create([
+    $booking = createBookingWithSchedule(1, [
         'vendor_id' => $vendor->id,
         'tour_id' => $tour->id,
         'status' => BookingStatus::WAITING_PAYMENT_APPROVAL,
@@ -4042,7 +4073,7 @@ test('full payment booking with complete documents still allows dashboard docume
     ]);
 
     $tour = Tour::factory()->create(['company_id' => $vendor->id]);
-    $booking = Booking::factory()->create([
+    $booking = createBookingWithSchedule(1, [
         'vendor_id' => $vendor->id,
         'tour_id' => $tour->id,
         'status' => BookingStatus::FULL_PAYMENT,
@@ -4106,7 +4137,7 @@ test('dashboard document updates clear removed file paths', function () {
     ]);
 
     $tour = Tour::factory()->create(['company_id' => $vendor->id]);
-    $booking = Booking::factory()->create([
+    $booking = createBookingWithSchedule(1, [
         'vendor_id' => $vendor->id,
         'tour_id' => $tour->id,
         'status' => BookingStatus::FULL_PAYMENT,
@@ -4159,7 +4190,7 @@ test('booking index limits remaining balance to down payment and hides followups
 
     $tour = Tour::factory()->create(['company_id' => $vendor->id]);
 
-    Booking::factory()->create([
+    createBookingWithSchedule(1, [
         'vendor_id' => $vendor->id,
         'tour_id' => $tour->id,
         'status' => BookingStatus::DOWN_PAYMENT,
@@ -4167,7 +4198,7 @@ test('booking index limits remaining balance to down payment and hides followups
         'grand_total' => 1_000_000,
     ]);
 
-    Booking::factory()->create([
+    createBookingWithSchedule(1, [
         'vendor_id' => $vendor->id,
         'tour_id' => $tour->id,
         'status' => BookingStatus::WAITING_PAYMENT_APPROVAL,
@@ -4175,7 +4206,7 @@ test('booking index limits remaining balance to down payment and hides followups
         'grand_total' => 1_000_000,
     ]);
 
-    Booking::factory()->create([
+    createBookingWithSchedule(1, [
         'vendor_id' => $vendor->id,
         'tour_id' => $tour->id,
         'status' => BookingStatus::CANCELLED,
@@ -4183,7 +4214,7 @@ test('booking index limits remaining balance to down payment and hides followups
         'grand_total' => 1_000_000,
     ]);
 
-    Booking::factory()->create([
+    createBookingWithSchedule(1, [
         'vendor_id' => $vendor->id,
         'tour_id' => $tour->id,
         'status' => BookingStatus::REFUNDED,
@@ -4222,7 +4253,7 @@ test('booking index exposes continue booking action for awaiting payment booking
     $tour = Tour::factory()->create(['company_id' => $vendor->id]);
     $departureDate = now()->addMonth()->toDateString();
 
-    Booking::factory()->create([
+    createBookingWithSchedule(1, [
         'vendor_id' => $vendor->id,
         'tour_id' => $tour->id,
         'status' => BookingStatus::AWAITING_PAYMENT,
@@ -4252,7 +4283,7 @@ test('booking index hides continue booking action for agents without catalog acc
         'accepted_at' => now(),
     ]);
 
-    Booking::factory()->create([
+    createBookingWithSchedule(1, [
         'vendor_id' => $vendor->id,
         'agent_id' => $agent->id,
         'tour_id' => $tour->id,
@@ -4285,7 +4316,7 @@ test('booking index exposes completed document detail links', function () {
     ]);
 
     $tour = Tour::factory()->create(['company_id' => $vendor->id]);
-    $booking = Booking::factory()->create([
+    $booking = createBookingWithSchedule(1, [
         'vendor_id' => $vendor->id,
         'tour_id' => $tour->id,
         'status' => BookingStatus::DOWN_PAYMENT,
@@ -4335,7 +4366,7 @@ test('dashboard hold expiry resolution is idempotent after booking state changes
     ]);
 
     $tour = Tour::factory()->create(['company_id' => $vendor->id]);
-    $booking = Booking::factory()->create([
+    $booking = createBookingWithSchedule(1, [
         'vendor_id' => $vendor->id,
         'tour_id' => $tour->id,
         'status' => BookingStatus::WAITING_PAYMENT_APPROVAL,
