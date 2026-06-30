@@ -1,10 +1,8 @@
-import {
-    index,
-    store,
-} from '@/actions/App/Http/Controllers/Companies/Dashboard/TourController';
+import { store } from '@/actions/App/Http/Controllers/Companies/Dashboard/TourController';
+import AlertError from '@/components/alert-error';
 import CompanyDashboardLayout from '@/components/layouts/company-dashboard';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
-import { router, useForm, usePage } from '@inertiajs/react';
+import { useForm, usePage } from '@inertiajs/react';
 import { lazy, Suspense, useMemo, useState } from 'react';
 import { useIntl } from 'react-intl';
 
@@ -48,9 +46,6 @@ export default function Page() {
     const [countryId, setCountryId] = useState<number | null>(null);
     const { company } = usePageSharedDataProps();
     const { auth } = usePage().props as any;
-    const handleSuccess = () => {
-        router.visit(index({ username: company.username }), { replace: true });
-    };
 
     //for price
     const [displayPrice, setDisplayPrice] = useState('');
@@ -88,7 +83,7 @@ export default function Page() {
     //
 
     //30032026
-    const { data, setData, post, processing, errors } = useForm({
+    const { data, setData, post, processing, errors, transform } = useForm({
         name: '',
         description: '',
         code: '',
@@ -111,6 +106,12 @@ export default function Page() {
 
         currency: 'IDR',
     });
+
+    transform((formData) => ({
+        ...formData,
+        showprice: formData.showprice || '0',
+        promote_price: formData.promote_price || 0,
+    }));
 
     const { priceCategories, productCommissionCategories, visaCategories } =
         usePage<{
@@ -295,20 +296,20 @@ export default function Page() {
             <form
                 onSubmit={(e) => {
                     e.preventDefault();
-
-                    // ensure values always exist
-                    setData((prev) => ({
-                        ...prev,
-                        showprice: prev.showprice || '0',
-                        promote_price: prev.promote_price || '0',
-                    }));
-
-                    post(store.url({ company: company.username }), {
-                        onSuccess: handleSuccess,
-                    });
+                    post(store.url({ company: company.username }));
                 }}
                 className="space-y-4"
             >
+                {errors.error && (
+                    <div className="container mx-auto px-4 pt-4">
+                        <AlertError
+                            errors={[errors.error]}
+                            title={intl.formatMessage({
+                                defaultMessage: 'Unable to save tour',
+                            })}
+                        />
+                    </div>
+                )}
                 <div className="container mx-auto space-y-4 p-4">
                     <Tabs
                         value={activeTab}
@@ -333,7 +334,6 @@ export default function Page() {
                                     handlePriceChange,
                                     handlePriceChange1,
                                     intl,
-                                    post,
                                     processing,
                                     productCommissionCategories,
                                     rawPrice,

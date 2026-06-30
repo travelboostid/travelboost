@@ -1,4 +1,3 @@
-import { store } from '@/actions/App/Http/Controllers/Companies/Dashboard/TourController';
 import type { MediaResource } from '@/api/model';
 import InputError from '@/components/input-error';
 import { TourDocumentPicker } from '@/components/media/tour-document-picker';
@@ -46,7 +45,6 @@ export function CreateTourMasterTab({ context }: MasterTabProps) {
         handlePriceChange,
         handlePriceChange1,
         intl,
-        post,
         processing,
         productCommissionCategories,
         rawPrice,
@@ -580,26 +578,7 @@ export function CreateTourMasterTab({ context }: MasterTabProps) {
             </div>
 
             <div className="flex justify-start pt-6 border-t">
-                <Button
-                    type="button"
-                    disabled={processing}
-                    /*onClick={() => {
-                      post(store.url({ company: company.username }), {
-                        onSuccess: (page: any) => {
-                          const tourId = page.props.tour.id
-
-                          router.visit(`/dashboard/tours/${tourId}/edit?tab=schedule`)
-                        },
-                      })
-                    }}*/
-                    onClick={() => {
-                        post(
-                            store.url({
-                                company: company.username,
-                            }),
-                        );
-                    }}
-                >
+                <Button type="submit" disabled={processing}>
                     {processing && <Spinner />}
                     <FormattedMessage defaultMessage="Save & Continue" />
                 </Button>
