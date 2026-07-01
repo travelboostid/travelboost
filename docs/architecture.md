@@ -12,7 +12,7 @@ For product-level requirements, see [Product Requirements](./requirements.md). F
 
 | Layer             | Technology                                                            |
 | ----------------- | --------------------------------------------------------------------- |
-| Runtime           | PHP 8.5 (`ext-bcmath` required for wallet/chatbot math)               |
+| Runtime           | PHP 8.5 (`ext-bcmath` required for wallet/AI billing)                 |
 | Framework         | Laravel 13                                                            |
 | Database          | PostgreSQL 18 with **pgvector** (AI embeddings)                       |
 | Auth              | Laravel Fortify (2FA, password reset) + Laratrust (roles/permissions) |
@@ -34,7 +34,7 @@ For product-level requirements, see [Product Requirements](./requirements.md). F
 | HTTP (Inertia)       | Inertia router + Wayfinder-generated route helpers   |
 | HTTP (JSON API)      | Axios + TanStack React Query (Orval-generated hooks) |
 | Real-time            | `@laravel/echo-react`                                |
-| Client state         | Zustand (chat), React Hook Form + Zod                |
+| Client state         | Zustand, React Hook Form + Zod                       |
 | Landing page builder | Puck editor (JSON stored in DB)                      |
 | i18n                 | react-intl + FormatJS extraction                     |
 | Build                | Vite 7                                               |
@@ -73,13 +73,13 @@ Every web request passes through `DomainResolver` (`app/Http/Middleware/DomainRe
 | `Http/Controllers/Companies/Dashboard/` | Agent and vendor B2B dashboards                                |
 | `Http/Controllers/Customers/`           | Tenant customer auth                                           |
 | `Http/Controllers/Tenant/`              | Public tour catalog on company domains                         |
-| `Http/Controllers/Webapi/`              | JSON API for React client (chat, payments, tours, geo, etc.)   |
+| `Http/Controllers/Webapi/`              | JSON API for React client (payments, tours, geo, etc.)         |
 | `Http/Controllers/Webhooks/`            | Midtrans, PrismaLink payment callbacks                         |
 | `Http/Middleware/`                      | Tenancy, scoped Inertia props, subscription checks             |
 | `Http/Resources/`                       | API serializers consumed by Scramble/Orval                     |
 | `Actions/Booking/`                      | Focused booking workflows (reserve, expire, finalize payment)  |
 | `Services/`                             | Payment gateways, pricing, knowledge base, document generation |
-| `Ai/Agents/`                            | `ChatbotAgent` — conversational AI with pgvector RAG           |
+| `Ai/Agents/`                            | AI agents (e.g. conversational assistant with pgvector RAG)    |
 | `Models/`                               | Eloquent models (~64)                                          |
 | `Events/` + `Listeners/`                | Domain events (auto-discovered by Laravel)                     |
 | `Jobs/`                                 | Scheduled/queued background work                               |
@@ -93,11 +93,11 @@ See [Web API & Orval](./webapi-orval.md) for Scramble + Orval workflow (`pnpm or
 | Path                   | Responsibility                                                                                             |
 | ---------------------- | ---------------------------------------------------------------------------------------------------------- |
 | `pages/`               | Inertia page components, grouped by audience (`admin/`, `companies/`, `affiliate/`, `me/`, `tours/`, etc.) |
-| `components/`          | Shared UI, layouts, chat widget, booking wizards                                                           |
+| `components/`          | Shared UI, layouts, booking wizards                                                                        |
 | `components/layouts/`  | Shell layouts per panel (`tenant-layout/`, `company-dashboard/`, `admin-dashboard/`, …)                    |
 | `api/`                 | Orval-generated React Query client + TypeScript models                                                     |
 | `routes/` + `actions/` | Wayfinder-generated type-safe Laravel route helpers                                                        |
-| `stores/`              | Zustand stores (chat state)                                                                                |
+| `stores/`              | Zustand client state                                                                                       |
 | `app.tsx` / `ssr.tsx`  | Vite entry points                                                                                          |
 
 ### `routes/` — composed in `routes/web.php`
@@ -219,7 +219,7 @@ Additional middleware:
 
 ### Anonymous visitors
 
-Unauthenticated chat and browsing on tenant pages use `AnonymousUser` records, created via `POST /webapi/anonymous-users/setup`.
+Guest browsing on tenant pages uses `AnonymousUser` records via `POST /webapi/anonymous-users/setup`.
 
 ---
 
@@ -260,21 +260,6 @@ Scheduled tasks expire unpaid reservations and send deadline reminders (`routes/
 Payment status sync runs via webhooks and a scheduled `MarkExpiredPaymentsJob`.
 
 Local webhook testing uses [Cloudflare Tunnel](./cloudflare-tunnel.md) (`tunnel-8000.travelboost.co.id`).
-
-### Chat and AI chatbot
-
-Private chat between customers (user or anonymous) and a company, with optional AI auto-reply.
-
-See [Live Chat & Chatbot](./live-chat.md) for the full flow, prerequisites, and troubleshooting.
-
-| Component      | Path                                                                     |
-| -------------- | ------------------------------------------------------------------------ |
-| API            | `Webapi/ChatRoomController`, `ChatMessageController`                     |
-| Auto-reply     | `Listeners/ChatbotAutoReply` → `Ai/Agents/ChatbotAgent`                  |
-| Broadcast      | `Events/ChatMessageCreated` via Reverb                                   |
-| Frontend       | `components/chat/`, `stores/chat/`                                       |
-| Knowledge base | `Services/KnowledgeBaseService`, pgvector on `knowledge_bases.embedding` |
-| AI billing     | `AiCredit`, `AiUsageLog`, company dashboard chatbot settings             |
 
 ### Affiliate network
 
@@ -321,7 +306,7 @@ Scoped props are injected by dedicated middleware rather than loading everything
 
 ### JSON API client (Orval)
 
-Interactive UI features that need JSON outside Inertia (chat, some payment flows, geo lookups) call `/webapi`:
+Interactive UI features that need JSON outside Inertia (payments, geo lookups, etc.) call `/webapi`:
 
 1. **Scramble** generates OpenAPI spec from webapi controllers → `/docs/api.json`
 2. **Orval** (`orval.config.js`) generates React Query hooks into `resources/js/api/`
@@ -339,7 +324,7 @@ Laravel Wayfinder generates `resources/js/routes/` and `resources/js/actions/` f
 
 ### Real-time UI
 
-Echo listeners subscribe to private channels (`users.{id}`) or public channels (`anonymous-users.{id}`). Primary use case today is live chat message delivery in `components/chat/state.tsx`.
+Laravel Echo + Reverb for websocket broadcasts (`@laravel/echo-react`).
 
 ---
 
@@ -429,7 +414,7 @@ Admin-editable JSON settings with JSON Schema validation, stored in `app_configs
 | `admin`   | Platform fees, commission tiers, free AI credits, WhatsApp CS |
 | `common`  | Site-wide settings including default GA measurement ID        |
 
-Changes to `chatbot` invalidate the config cache used by `ChatbotAgent`.
+Changes to `chatbot` invalidate the config cache used by AI agents.
 
 ### Feature flags (Pennant)
 
@@ -443,7 +428,7 @@ Changes to `chatbot` invalidate the config cache used by `ChatbotAgent`.
 | ------------------ | -------------------------------------------- | ----------------------------------- |
 | Midtrans           | `midtrans/midtrans-php`, `MidtransService`   | Online payments (VA, etc.)          |
 | PrismaLink         | `PrismaLinkService`                          | Alternative payment gateway         |
-| OpenRouter         | `laravel/ai`, `config/openrouter-models.php` | Chatbot LLM + embeddings            |
+| OpenRouter         | `laravel/ai`, `config/openrouter-models.php` | LLM + embeddings                    |
 | Google Analytics   | `google/analytics-*`, dashboard OAuth        | Per-company GA4 reports             |
 | Google OAuth       | `laravel/socialite`                          | GA account connection               |
 | Bavix Wallet       | `bavix/laravel-wallet`                       | User/company balances               |
@@ -492,7 +477,6 @@ Full index: [README](../README.md)
 | Topic                | Document                                                                                                                 |
 | -------------------- | ------------------------------------------------------------------------------------------------------------------------ |
 | Web API & Orval      | [webapi-orval.md](./webapi-orval.md)                                                                                     |
-| Live chat & chatbot  | [live-chat.md](./live-chat.md)                                                                                           |
 | Routing              | [routing.md](./routing.md)                                                                                               |
 | Product requirements | [requirements.md](./requirements.md)                                                                                     |
 | Local development    | [local-development.md](./local-development.md)                                                                           |

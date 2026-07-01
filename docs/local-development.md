@@ -8,7 +8,7 @@ Doc index: [README](../README.md)
 
 - **OS**: Windows, macOS, or Linux
 - **PHP**: ^8.5 with required extensions:
-    - **bcmath** — required for chatbot AI credit billing (`ChatbotAgent`)
+    - **bcmath** — required for wallet and AI credit billing
     - **imagick**, **gd**, **iconv**, **pgsql** (PostgreSQL)
 - **Server**: LAMP, WAMP, XAMPP, Laravel Herd, or equivalent
 - **SSH**: Pre-installed on most systems; install if needed
@@ -199,19 +199,19 @@ First-time setup runs `pnpm dev:setenv` as part of `pnpm dev:init`. Ask a teamma
 
 ## Running the Dev Server
 
-Start the full local stack (Reverb, queue worker, Vite, and Laravel):
+Start the full local stack (Laravel, Vite, queue worker, Reverb):
 
 ```bash
 pnpm dev:full
 ```
 
-This is required for features that depend on real-time updates, including **live chat and chatbot replies**. The npm scripts pass `-d extension=bcmath` to PHP so the chatbot works even when bcmath is not enabled system-wide.
+npm scripts pass `-d extension=bcmath` to PHP so billing works even when bcmath is not enabled system-wide.
 
-Individual processes can also be run separately:
+Individual processes:
 
 ```bash
 pnpm dev:serve   # Laravel HTTP server
-pnpm dev:reverb  # WebSocket server (chat broadcasts)
+pnpm dev:reverb  # WebSocket server
 pnpm dev:queue   # Queue worker
 pnpm dev:vite    # Frontend HMR
 ```
@@ -232,6 +232,4 @@ Requires the Laravel server to be running (`pnpm dev:serve` or `pnpm dev:full`) 
 
 Full conventions: [Web API & Orval](./webapi-orval.md).
 
-See [Live Chat & Chatbot](./live-chat.md) for how chat auto-reply works and how to troubleshoot it.
-
-For payment gateway webhooks (Midtrans, PrismaLink) and other HTTPS callbacks to your local machine, see [Cloudflare Tunnel](./cloudflare-tunnel.md).
+For payment gateway webhooks (Midtrans, PrismaLink), see [Cloudflare Tunnel](./cloudflare-tunnel.md).

@@ -17,7 +17,7 @@ Use the tunnel preset when you need a **public HTTPS URL** pointing at local `ph
 | **Google OAuth**               | Redirect URI must match a registered HTTPS callback                                       |
 | **End-to-end payment testing** | Finish redirects and webhook settlement must hit the same host you used to start checkout |
 
-For normal UI work (bookings, dashboard, chat), use a local preset such as `lvh.me` or `localhost` instead — no tunnel required.
+For normal UI work (bookings, dashboard), use the `local` preset (`lvh.me`) — no tunnel required.
 
 ---
 

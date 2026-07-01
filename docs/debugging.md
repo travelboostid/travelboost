@@ -33,7 +33,7 @@ Fix: [Deployment — Fix storage permissions](./deployment.md#fix-storage-permis
 
 ### Supervisor logs
 
-Queue worker, scheduler, and Reverb stdout (including queued `ChatMessageCreated` broadcast jobs):
+Queue worker, scheduler, and Reverb stdout:
 
 ```text
 storage/logs/queue-worker.log
@@ -48,7 +48,6 @@ Workers run as `travelboost` per `infra/supervisor/travelboost.conf`. Log files 
 - URL: `https://travelboost.co.id/telescope` (or your app host + `/telescope`)
 - Access: users with the `user:admin` role (`TelescopeServiceProvider` gate)
 - **Filtered on production** (`app/Providers/TelescopeServiceProvider.php`): only reportable exceptions, failed requests, failed jobs, scheduled tasks, and monitored tags are stored — not successful HTTP requests
-- Do not expect chat `POST` history in Telescope on live; use `laravel.log` and the database (`chat_messages`) instead
 
 Locally (tunnel preset / `local` environment), Telescope records full request history.
 
@@ -289,30 +288,4 @@ Once the listener is active, open the application in browser with the Xdebug Hel
 
 ## Frontend Debugging
 
-After the dev server is running, open the **Run and Debug** panel and run the **Debug (Frontend)** configuration. Additionally, you can run the backend and frontend simultaneously using the **Debug (Fullstack)** configuration.
-
----
-
-## Troubleshooting Chatbot Auto-Reply
-
-Chatbot auto-reply runs outside a normal controller response: a model event triggers `ChatbotAutoReply`, which calls `ChatbotAgent`. This makes it a good candidate for log inspection or Xdebug breakpoints rather than `dd()` in the controller.
-
-**Quick checks:**
-
-```bash
-# Watch for listener failures
-tail -f storage/logs/laravel.log | rg -i "ChatbotAutoReply"
-
-# Confirm bcmath is loaded (required for credit checks)
-php -r 'echo function_exists("bccomp") ? "bcmath OK\n" : "bcmath MISSING\n";'
-
-# Confirm a bot message was created in the database
-php artisan tinker --execute 'dump(App\Models\ChatMessage::where("is_bot", true)->latest()->first()?->only(["id", "message", "created_at"]));'
-```
-
-**Useful breakpoint locations:**
-
-- `app/Listeners/ChatbotAutoReply.php` — listener entry
-- `app/Ai/Agents/ChatbotAgent.php` — `setup()` (conditions gate) and `reply()` (AI call)
-
-For the full flow, prerequisites, and common errors (including **server error but message saved**), see [Live Chat & Chatbot](./live-chat.md).
+After the dev server is running, open the **Run and Debug** panel and run the **Debug (Frontend)** configuration. You can also run backend and frontend together with **Debug (Fullstack)**.

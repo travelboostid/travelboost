@@ -139,7 +139,7 @@ Run these before opening a PR when your change touches the relevant area:
 
 CI runs tests and lint on PRs to `dev` and `main` — fix failures before merge.
 
-Local full stack for chat, queues, and real-time features: `pnpm dev:full` ([Local Development](./local-development.md)).
+Local full stack for queues and real-time features: `pnpm dev:full` ([Local Development](./local-development.md)).
 
 ---
 

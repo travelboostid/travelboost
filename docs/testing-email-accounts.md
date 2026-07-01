@@ -62,13 +62,13 @@ flowchart LR
 
 Use predictable aliases so you can tell which test is which in your inbox:
 
-| Purpose            | Example alias                                          |
-| ------------------ | ------------------------------------------------------ |
-| Customer signup    | `tb-customer-001@travelboostqa.33mail.com`             |
-| Second customer    | `tb-customer-002@travelboostqa.33mail.com`             |
-| Affiliate signup   | `tb-affiliate-001@travelboostqa.33mail.com`            |
-| Agent staff user   | `tb-agent-staff-001@travelboostqa.33mail.com`          |
-| Feature under test | `tb-chatbot-smoke-2026-07-01@travelboostqa.33mail.com` |
+| Purpose            | Example alias                                         |
+| ------------------ | ----------------------------------------------------- |
+| Customer signup    | `tb-customer-001@travelboostqa.33mail.com`            |
+| Second customer    | `tb-customer-002@travelboostqa.33mail.com`            |
+| Affiliate signup   | `tb-affiliate-001@travelboostqa.33mail.com`           |
+| Agent staff user   | `tb-agent-staff-001@travelboostqa.33mail.com`         |
+| Feature under test | `tb-booking-hold-2026-07-01@travelboostqa.33mail.com` |
 
 Replace `travelboostqa` with your 33mail username.
 
