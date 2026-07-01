@@ -275,11 +275,11 @@ test('my bookings hides continue and reorder actions after the vendor booking de
 });
 
 test('my bookings shows reordered expired booking as awaiting payment continue action', function () {
-    $user = User::factory()->create(['status' => UserStatus::ACTIVE]);
     $vendor = Company::factory()->create([
         'username' => 'freshreordervendor',
         'type' => 'vendor',
     ]);
+    $user = createTenantCustomer($vendor, ['status' => UserStatus::ACTIVE]);
     Domain::create([
         'subdomain' => 'freshreordervendor',
         'owner_type' => Company::class,

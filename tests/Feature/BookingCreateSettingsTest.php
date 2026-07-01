@@ -44,10 +44,7 @@ function createBookingCreateScenario(string $username): array
         'username' => $username,
         'type' => 'vendor',
     ]);
-    $user = User::factory()->create([
-        'company_id' => $company->id,
-    ]);
-    $user->addRole('user:customer');
+    $user = createTenantCustomer($company);
     $company->companySetting()->updateOrCreate([], [
         'minimum_down_payment' => 30,
     ]);
@@ -486,11 +483,11 @@ test('booking create classifies saved passengers by traveler type for the select
 });
 
 test('reserve rejects extra bed passengers without a twin or double base room', function () {
-    $user = User::factory()->create();
     $company = Company::factory()->create([
         'username' => 'extrabedvendor',
         'type' => 'vendor',
     ]);
+    $user = createTenantCustomer($company);
     $tour = Tour::factory()->create([
         'company_id' => $company->id,
         'status' => 'active',
@@ -742,11 +739,11 @@ test('reserve allows one dependent bed passenger with one twin or double base ro
 test('reserve stores server hold expiry using ten minute fallback when setting is empty', function () {
     $this->travelTo(now()->startOfSecond());
 
-    $user = User::factory()->create();
     $company = Company::factory()->create([
         'username' => 'timerfallbackvendor',
         'type' => 'vendor',
     ]);
+    $user = createTenantCustomer($company);
     $company->companySetting()->updateOrCreate([], [
         'booking_entry_time_limit' => 0,
     ]);
@@ -1473,7 +1470,7 @@ test('reserve rejects expanding the same booking beyond free seats plus its curr
 
 test('reserve does not let another customer use seats held by a different booking', function () {
     ['user' => $owner, 'company' => $company, 'tour' => $tour, 'schedule' => $schedule] = createBookingCreateScenario('otherholdvendor');
-    $otherUser = User::factory()->create();
+    $otherUser = createTenantCustomer($company);
 
     $booking = Booking::factory()->create([
         'booking_number' => 'BKG-OTHER-HOLD',

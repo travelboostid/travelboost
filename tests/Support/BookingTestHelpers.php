@@ -5,7 +5,24 @@ use App\Models\Company;
 use App\Models\Tour;
 use App\Models\TourAvailability;
 use App\Models\TourSchedule;
+use App\Models\User;
 use Illuminate\Support\Carbon;
+
+/**
+ * @param  array<string, mixed>  $attributes
+ */
+function createTenantCustomer(Company $company, array $attributes = []): User
+{
+    $user = User::factory()->create(array_merge([
+        'company_id' => $company->id,
+    ], $attributes));
+
+    if (! $user->hasRole('user:customer')) {
+        $user->addRole('user:customer');
+    }
+
+    return $user;
+}
 
 /**
  * @param  array<string, mixed>  $overrides
