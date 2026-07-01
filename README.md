@@ -42,7 +42,7 @@ Other dev commands: `pnpm dev:min` (server + Vite only), `pnpm dev` (interactive
 | [Merging Branch Conflicts](./docs/merging-branch-conflicts.md) | Sync feature branch with `dev`                    |
 | [Testing Email Accounts](./docs/testing-email-accounts.md)     | Bulk unique test users (33mail)                   |
 | [Date & time (UTC / ISO 8601)](./docs/datetime.md)             | Timestamps, timezones, API date format            |
-| [Single source of truth](./docs/single-source-of-truth.md)     | Who owns translations, enums, validation, etc.    |
+| [Single source of truth](./docs/single-source-of-truth.md)     | One owner per rule — who decides vs who displays  |
 
 ### Integrations
 
