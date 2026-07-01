@@ -78,7 +78,7 @@ class PrismaLinkService
     public function submitPaymentPageTransaction(array $params): array
     {
         $now = now();
-        $validityHours = (int) config('prismalink.default_validity_hours', 24);
+        $defaultValidity = $this->defaultValidityExpiresAt($now);
 
         $body = [
             'transmission_date_time' => $this->formatDateTime($now),
@@ -98,7 +98,7 @@ class PrismaLinkService
             'integration_type' => ($params['payment_method'] ?? null) === 'CC'
                 ? self::INTEGRATION_TYPE_PAYMENT_PAGE
                 : self::INTEGRATION_TYPE_FULL_API,
-            'validity' => $params['validity'] ?? $this->formatDateTime($now->copy()->addHours($validityHours)),
+            'validity' => $params['validity'] ?? $this->formatDateTime($defaultValidity),
         ];
 
         if (isset($params['user_name'])) {
@@ -271,6 +271,18 @@ class PrismaLinkService
     public function isSuccessResponse(array $response): bool
     {
         return ($response['response_code'] ?? '') === self::SUCCESS_RESPONSE_CODE;
+    }
+
+    public function defaultValidityExpiresAt(?CarbonInterface $from = null): CarbonInterface
+    {
+        $from = $from ?? now();
+        $validityMinutes = config('prismalink.default_validity_minutes');
+
+        if ($validityMinutes !== null && $validityMinutes !== '') {
+            return $from->copy()->addMinutes((int) $validityMinutes);
+        }
+
+        return $from->copy()->addHours((int) config('prismalink.default_validity_hours', 24));
     }
 
     public function formatDateTime(CarbonInterface $at): string

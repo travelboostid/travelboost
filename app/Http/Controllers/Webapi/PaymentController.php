@@ -523,7 +523,6 @@ class PaymentController extends Controller
         array $context,
     ): void {
         $merchantRefNo = $this->prismaLinkService->buildMerchantRefNo($payment->id);
-        $validityHours = (int) config('prismalink.default_validity_hours', 24);
         $paymentMethod = PaymentMethod::query()
             ->where('provider', 'prismalink')
             ->where('method', $payment->payment_method)
@@ -562,7 +561,7 @@ class PaymentController extends Controller
 
         $expiredAt = filled($response['validity'] ?? null)
             ? Carbon::parse((string) $response['validity'])
-            : now()->addHours($validityHours);
+            : $this->prismaLinkService->defaultValidityExpiresAt();
 
         $instructionPayload = $this->prismaLinkService->extractInstructions(
             $response,
