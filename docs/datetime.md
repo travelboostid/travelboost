@@ -28,6 +28,63 @@ A **calendar date** is a day on the calendar (tour departs **15 Aug 2026**) — 
 
 ---
 
+## Example: booking hold across timezones
+
+Real scenario — three people, three timezones, **one** booking.
+
+**Setup:** Agent **Rina** (Jakarta, WIB) reserves seats at **15:00** her time. The hold expires **2 hours** later. Customer **Alex** (Singapore, UTC+8) opens the payment link. Teammate **Ken** (Tokyo, JST) watches the booking list on the dashboard.
+
+### What everyone sees (same hold, different clocks)
+
+| Step                    | Rina Jakarta WIB          | Alex Singapore       | Ken Tokyo JST        | Database UTC            |
+| ----------------------- | ------------------------- | -------------------- | -------------------- | ----------------------- |
+| Hold created            | 1 Jul **15:00**           | 1 Jul **16:00**      | 1 Jul **17:00**      | `created_at` **08:00Z** |
+| Hold expires            | 1 Jul **17:00**           | 1 Jul **18:00**      | 1 Jul **19:00**      | `expires_at` **10:00Z** |
+| Scheduler releases seat | hold gone after 17:00 WIB | gone after 18:00 SGT | gone after 19:00 JST | job runs at **10:00Z**  |
+
+Rina does **not** “save 17:00 WIB”. The server saves **`2026-07-01T10:00:00Z`**. Everyone’s UI converts that one instant to local time. When the clock hits that instant anywhere on Earth, the hold is expired for all of them.
+
+### Who does what
+
+```mermaid
+sequenceDiagram
+  participant Rina as Rina agent WIB
+  participant Alex as Alex customer SGT
+  participant Ken as Ken staff JST
+  participant App as Travelboost UTC
+  participant DB as Database UTC
+
+  Rina->>App: Reserve at 15:00 WIB
+  App->>DB: expires_at = 2026-07-01T10:00:00Z
+
+  Alex->>App: Open payment page 16:30 SGT
+  App->>DB: read expires_at
+  DB->>App: 10:00Z
+  App->>Alex: UI shows expires 18:00 SGT
+
+  Ken->>App: Open bookings dashboard 17:30 JST
+  App->>DB: read same row
+  DB->>App: 10:00Z
+  App->>Ken: UI shows expires 19:00 JST
+
+  Note over App,DB: At 10:00Z scheduler expires hold
+  App->>Rina: hold expired 17:00 on her screen
+  App->>Alex: link invalid 18:00 on his screen
+```
+
+### What goes wrong without UTC + ISO 8601
+
+| Mistake                                     | Result                                                                                  |
+| ------------------------------------------- | --------------------------------------------------------------------------------------- |
+| Store `17:00` with no timezone              | Server in UTC thinks hold expires at 17:00 **UTC** — wrong by 7 hours for Jakarta users |
+| Backend sends `"expires_at": "17:00 WIB"`   | Frontend in Singapore cannot parse reliably; translations and sorting break             |
+| Alex’s browser sends local time without `Z` | Backend may save the wrong instant; Rina and Ken see different expiry times             |
+| Developer adds `+7` in PHP “to fix WIB”     | Every other timezone drifts; jet-lag bugs in reports                                    |
+
+**Correct:** one UTC instant in the DB, ISO 8601 in JSON, each browser shows local time. Compare instants in code with UTC — never with “what my wall clock said”.
+
+---
+
 ## What is ISO 8601?
 
 An international standard for writing **dates and times as text** so people and systems agree on the meaning.
