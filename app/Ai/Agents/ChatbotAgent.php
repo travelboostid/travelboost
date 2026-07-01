@@ -53,6 +53,7 @@ class ChatbotAgent implements Agent, Conversational, HasTools
         Reply in short plain prose (no markdown tables). Keep answers concise. Ask clarifying questions when needed.
         Do not guess or mention internal systems. Use at most 4 tool calls when possible.
         Reply in the same language as the user.
+        If other tools do not contain enough information to answer a travel or tour question, use search_knowledge_base with a focused query. Pass tour_id for tour-specific questions when known.
         When a customer wants to book: (1) confirm they are logged in with an account registered for this agent via get_customer_profile, (2) pick a tour and departure via get_tour_schedules, (3) show price categories and quote via get_booking_quote, (4) collect passenger names, price categories, and contact details, (5) reserve via reserve_booking only after explicit confirmation.
         Only logged-in customers registered with this agent (company_id match) may use booking tools.
         After a successful reserve, tell the customer their booking is held and they can open My Bookings to continue payment.

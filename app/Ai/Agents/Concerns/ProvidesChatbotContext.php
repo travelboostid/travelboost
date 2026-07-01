@@ -464,7 +464,28 @@ trait ProvidesChatbotContext
             $query = $this->message->message;
         }
 
-        return $this->searchKnowledgeBase($this->generalKnowledgeBaseOwnerIds(), $query);
+        $ownerIds = $this->generalKnowledgeBaseOwnerIds();
+
+        $tourId = (int) ($args['tour_id'] ?? 0);
+        if ($tourId <= 0 && $this->message->attachment_type === 'tour') {
+            $tourId = (int) $this->message->attachment_data;
+        }
+
+        if ($tourId > 0) {
+            $tour = Tour::query()->find($tourId);
+
+            if ($tour?->document_id) {
+                $ownerIds = $ownerIds->prepend($tour->document_id)->unique()->values();
+            }
+        }
+
+        if ($ownerIds->isEmpty()) {
+            return 'No knowledge base documents available.';
+        }
+
+        $results = $this->searchKnowledgeBase($ownerIds, $query);
+
+        return $results !== '' ? $results : 'No knowledge base entries matched.';
     }
 
     public function retrieveCompanyContactContext(): string

@@ -14,18 +14,19 @@ class SearchKnowledgeBaseTool implements Tool
 
     public function description(): Stringable|string
     {
-        return 'Search the knowledge base for general travel information.';
+        return 'Search the knowledge base for general travel information or tour-specific details such as itinerary, inclusions, visa requirements, and policies. Use when other tools do not answer the question. Pass tour_id for tour-specific questions.';
     }
 
     public function handle(Request $request): Stringable|string
     {
-        return $this->agent->retrieveGeneralContext(['query' => (string) $request->string('query')]);
+        return $this->agent->retrieveGeneralContext($request->all());
     }
 
     public function schema(JsonSchema $schema): array
     {
         return [
             'query' => $schema->string()->required(),
+            'tour_id' => $schema->integer(),
         ];
     }
 }
