@@ -89,7 +89,7 @@ class AffiliateProfile extends Model
                 $files = collect($this->photo?->data['files'] ?? []);
                 $file = $files->firstWhere('code', 'small');
 
-                return data_get($file, 'url');
+                return Media::normalizePublicUrl(data_get($file, 'url'));
             }
         );
     }
@@ -101,7 +101,7 @@ class AffiliateProfile extends Model
                 $files = collect($this->identityCard?->data['files'] ?? []);
                 $file = $files->first();
 
-                return data_get($file, 'url');
+                return Media::normalizePublicUrl(data_get($file, 'url'));
             }
         );
     }

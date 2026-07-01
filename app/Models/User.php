@@ -111,7 +111,7 @@ class User extends Authenticatable implements Customer, LaratrustUser, MustVerif
                 $files = collect($this->photo?->data['files'] ?? []);
                 $file = $files->firstWhere('code', 'small');
 
-                return data_get($file, 'url');
+                return Media::normalizePublicUrl(data_get($file, 'url'));
             }
         );
     }

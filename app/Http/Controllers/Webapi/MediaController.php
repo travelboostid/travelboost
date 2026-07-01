@@ -181,7 +181,7 @@ class MediaController extends Controller
                 'width' => $clone->width(),
                 'height' => $clone->height(),
                 'path' => Media::publicPath($path),
-                'url' => Storage::disk('public')->url($path),
+                'url' => Media::publicUrl($path),
                 'size' => Storage::disk('public')->size($path),
                 'media_type' => 'image/webp',
             ];
@@ -203,7 +203,7 @@ class MediaController extends Controller
 
         return [
             'path' => Media::publicPath($path),
-            'url' => Storage::disk('public')->url($path),
+            'url' => Media::publicUrl($path),
             'size' => Storage::disk('public')->size($path),
             'media_type' => $file->getClientMimeType(),
         ];
@@ -222,7 +222,7 @@ class MediaController extends Controller
 
         return [
             'path' => Media::publicPath($path),
-            'url' => Storage::disk('public')->url($path),
+            'url' => Media::publicUrl($path),
             'size' => Storage::disk('public')->size($path),
             'media_type' => $file->getClientMimeType(),
         ];

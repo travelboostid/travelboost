@@ -137,7 +137,7 @@ test('main host onboarding applies the default affiliate referral without showin
         ->and($company->referred_by)->toBe($defaultAffiliateOwner->id);
 });
 
-test('onboarding from affiliate subdomain redirects to the main company dashboard host', function () {
+test('onboarding from affiliate subdomain redirects to the same affiliate company dashboard host', function () {
     AgentSubscriptionPackage::factory()->create(['id' => 1, 'price' => 0]);
 
     $user = User::factory()->create([
@@ -187,14 +187,14 @@ test('onboarding from affiliate subdomain redirects to the main company dashboar
             'identity_card_id' => $media->id,
         ]);
 
-    $response->assertRedirect("http://{$appHost}/companies/mytravelagency/dashboard");
+    $response->assertRedirect("http://affiliate-satu.{$appHost}/companies/mytravelagency/dashboard");
 
     $company = Company::where('username', 'mytravelagency')->first();
     expect($company)->not->toBeNull()
         ->and($company->referred_by)->toBe($affiliateOwner->id);
 });
 
-test('inertia onboarding request from affiliate subdomain returns an inertia location to the main company dashboard host', function () {
+test('inertia onboarding request from affiliate subdomain returns an inertia location to the same affiliate company dashboard host', function () {
     AgentSubscriptionPackage::factory()->create(['id' => 1, 'price' => 0]);
 
     $user = User::factory()->create([
@@ -249,7 +249,7 @@ test('inertia onboarding request from affiliate subdomain returns an inertia loc
         ]);
 
     $response->assertStatus(409);
-    $response->assertHeader('X-Inertia-Location', "http://{$appHost}/companies/mytravel/dashboard");
+    $response->assertHeader('X-Inertia-Location', "http://affiliate-satu.{$appHost}/companies/mytravel/dashboard");
 });
 
 test('onboarding still redirects when notification dispatch fails', function () {
