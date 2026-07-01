@@ -2,11 +2,11 @@ import type { StoreChatMessageRequest } from '@/api/model';
 import { cn } from '@/lib/utils';
 import { formatChatError } from '@/stores/chat/chat-error';
 import { Send, XIcon } from 'lucide-react';
-import { useState } from 'react';
+import { useCallback, useLayoutEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '../ui/button';
-import { Input } from '../ui/input';
 import { Spinner } from '../ui/spinner';
+import { Textarea } from '../ui/textarea';
 import RenderAttachment from './render-attachment';
 import {
     useChatActor,
@@ -15,6 +15,8 @@ import {
     useRoomSending,
     useSendMessage,
 } from './state';
+
+const MAX_INPUT_ROWS = 3;
 
 export default function ChatInput({
     roomId,
@@ -29,6 +31,38 @@ export default function ChatInput({
     const { attachment, setAttachment } = useFloatingChatWidgetContext();
     const sending = useRoomSending(roomId);
     const [sendError, setSendError] = useState<string | null>(null);
+    const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+    const resizeTextarea = useCallback(() => {
+        const textarea = textareaRef.current;
+
+        if (!textarea) {
+            return;
+        }
+
+        textarea.style.height = 'auto';
+
+        const styles = window.getComputedStyle(textarea);
+        const lineHeight = Number.parseFloat(styles.lineHeight) || 20;
+        const paddingTop = Number.parseFloat(styles.paddingTop) || 0;
+        const paddingBottom = Number.parseFloat(styles.paddingBottom) || 0;
+        const borderTop = Number.parseFloat(styles.borderTopWidth) || 0;
+        const borderBottom = Number.parseFloat(styles.borderBottomWidth) || 0;
+        const maxHeight =
+            lineHeight * MAX_INPUT_ROWS +
+            paddingTop +
+            paddingBottom +
+            borderTop +
+            borderBottom;
+
+        textarea.style.height = `${Math.min(textarea.scrollHeight, maxHeight)}px`;
+        textarea.style.overflowY =
+            textarea.scrollHeight > maxHeight ? 'auto' : 'hidden';
+    }, []);
+
+    useLayoutEffect(() => {
+        resizeTextarea();
+    }, [message, resizeTextarea]);
 
     const canSend =
         Boolean(actor?.id) &&
@@ -103,10 +137,11 @@ export default function ChatInput({
                     {sendError}
                 </div>
             )}
-            <div className="flex gap-2 p-4">
-                <Input
+            <div className="flex items-end gap-2 p-4">
+                <Textarea
+                    ref={textareaRef}
+                    rows={1}
                     disabled={sending || !actor?.id}
-                    type="text"
                     value={message}
                     onChange={(e) => {
                         setMessage(e.target.value);
@@ -125,7 +160,7 @@ export default function ChatInput({
                             ? 'Write your message...'
                             : 'Chat is initializing...'
                     }
-                    className="flex-1"
+                    className="max-h-none min-h-9 flex-1 resize-none py-2 leading-5 [field-sizing:fixed]"
                 />
                 <Button
                     disabled={!canSend}

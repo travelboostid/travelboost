@@ -42,31 +42,50 @@ const ChatMessage = memo(function ChatMessage({
         !message.is_bot &&
         message.sender_type === actor?.type &&
         message.sender_id === actor?.id;
+    const isStreamingBot = message.is_bot && message.is_streaming;
+
+    const bubbleContent = (
+        <>
+            <div className="text-sm leading-relaxed space-y-1.5">
+                <MessageContentRenderer message={message} />
+            </div>
+            {message.attachment_data && !message.is_bot && (
+                <div className="space-y-2 rounded-lg border bg-background/10 p-2">
+                    <div className="text-xs opacity-80">Attached</div>
+                    <div className="text-sm">
+                        <RenderAttachment
+                            type={message.attachment_type || ''}
+                            data={message.attachment_data}
+                        />
+                    </div>
+                </div>
+            )}
+        </>
+    );
 
     return (
         <div className={`flex ${mine ? 'justify-end' : 'justify-start'}`}>
-            <div
-                className={`flex max-w-11/12 flex-col gap-2 rounded-2xl px-4 py-3 ${
-                    mine
-                        ? 'rounded-br-sm bg-primary text-primary-foreground'
-                        : 'rounded-bl-sm border border-border bg-card text-foreground'
-                }`}
-            >
-                <div className="text-sm leading-relaxed space-y-1.5">
-                    <MessageContentRenderer message={message} />
-                </div>
-                {message.attachment_data && !message.is_bot && (
-                    <div className="space-y-2 rounded-lg border bg-background/10 p-2">
-                        <div className="text-xs opacity-80">Attached</div>
-                        <div className="text-sm">
-                            <RenderAttachment
-                                type={message.attachment_type || ''}
-                                data={message.attachment_data}
-                            />
-                        </div>
+            {isStreamingBot ? (
+                <div className="relative max-w-11/12 overflow-hidden rounded-2xl rounded-bl-sm p-[1.5px]">
+                    <div
+                        className="pointer-events-none absolute inset-[-150%] animate-spin bg-[conic-gradient(from_0deg,transparent_0deg,color-mix(in_oklch,var(--primary)_20%,transparent)_285deg,var(--primary)_330deg,color-mix(in_oklch,var(--primary)_35%,transparent)_25deg,transparent_75deg)] motion-reduce:animate-none animation-duration-[2.8s] [animation-timing-function:linear]"
+                        aria-hidden="true"
+                    />
+                    <div className="relative flex flex-col gap-2 rounded-[calc(1rem-1.5px)] rounded-bl-[calc(0.125rem-1.5px)] bg-card px-4 py-3 text-foreground">
+                        {bubbleContent}
                     </div>
-                )}
-            </div>
+                </div>
+            ) : (
+                <div
+                    className={`flex max-w-11/12 flex-col gap-2 rounded-2xl px-4 py-3 ${
+                        mine
+                            ? 'rounded-br-sm bg-primary text-primary-foreground'
+                            : 'rounded-bl-sm border border-border bg-card text-foreground'
+                    }`}
+                >
+                    {bubbleContent}
+                </div>
+            )}
         </div>
     );
 });
@@ -84,6 +103,12 @@ export function MessageContentRenderer({
                 <span className="size-1.5 animate-pulse rounded-full bg-current opacity-60 [animation-delay:300ms]" />
             </span>
         );
+    }
+
+    const markdown = message.message || '';
+
+    if (!message.is_bot) {
+        return <p className="whitespace-pre-wrap break-words">{markdown}</p>;
     }
 
     return (
@@ -131,11 +156,8 @@ export function MessageContentRenderer({
                     ),
                 }}
             >
-                {message?.message || ''}
+                {markdown}
             </ReactMarkdown>
-            {message.is_streaming && (
-                <span className="ml-0.5 inline-block animate-pulse">|</span>
-            )}
             {!message.is_streaming && (message.actions?.length ?? 0) > 0 && (
                 <div className="mt-2 flex flex-wrap gap-2">
                     {message.actions?.map((action) => (
