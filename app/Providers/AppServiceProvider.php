@@ -12,6 +12,7 @@ use App\Models\User;
 use App\Models\WalletTopupPayment;
 use App\Services\KnowledgeBaseService;
 use App\Services\PrismaLinkService;
+use App\Support\ViteAssetUrl;
 use Carbon\CarbonImmutable;
 use Illuminate\Auth\Middleware\Authenticate;
 use Illuminate\Database\Eloquent\Relations\Relation;
@@ -48,21 +49,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        $assetBaseUrl = rtrim((string) config('app.url'), '/');
-
-        if ($assetBaseUrl !== '') {
-            Vite::createAssetPathsUsing(function (string $path) use ($assetBaseUrl): string {
-                if (
-                    str_starts_with($path, 'http://')
-                    || str_starts_with($path, 'https://')
-                    || str_starts_with($path, '//')
-                ) {
-                    return $path;
-                }
-
-                return $assetBaseUrl.'/'.ltrim($path, '/');
-            });
-        }
+        Vite::createAssetPathsUsing([ViteAssetUrl::class, 'resolve']);
 
         Relation::morphMap([
             'wallet-topup-payment' => WalletTopupPayment::class,

@@ -882,7 +882,6 @@ class DashboardBookingController extends Controller
     ): void {
         $prismaLinkService = app(PrismaLinkService::class);
         $merchantRefNo = $prismaLinkService->buildMerchantRefNo($payment->id);
-        $validityHours = (int) config('prismalink.default_validity_hours', 24);
         $paymentMethodCode = $this->prismaLinkPaymentMethodCode($paymentMethod->method);
         $bankId = $this->prismaLinkBankIdFromMeta($paymentMethod->meta);
 
@@ -922,7 +921,7 @@ class DashboardBookingController extends Controller
         $response = $prismaLinkService->submitPaymentPageTransaction($params);
         $expiredAt = filled($response['validity'] ?? null)
             ? Carbon::parse((string) $response['validity'])
-            : now()->addHours($validityHours);
+            : $prismaLinkService->defaultValidityExpiresAt();
         $instructionPayload = $prismaLinkService->extractInstructions(
             $response,
             $paymentMethod->method,

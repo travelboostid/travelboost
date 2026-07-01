@@ -55,7 +55,7 @@ test('vendor dashboard exposes pax based sales stats and customer count', functi
         'pax_adult' => 2,
         'pax_child' => 1,
         'pax_infant' => 1,
-        'created_at' => now()->subDays(2),
+        'created_at' => now()->startOfMonth()->addDay(),
     ]);
 
     BookingPassenger::factory()->create([
@@ -133,7 +133,7 @@ test('agent dashboard exposes pax based sales stats and customer count', functio
         'pax_adult' => 3,
         'pax_child' => 0,
         'pax_infant' => 1,
-        'created_at' => now()->subDay(),
+        'created_at' => now()->startOfMonth()->addDay(),
     ]);
 
     BookingPassenger::factory()->create([

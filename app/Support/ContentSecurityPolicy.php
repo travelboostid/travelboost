@@ -112,7 +112,13 @@ class ContentSecurityPolicy
             return [];
         }
 
-        $vitePort = (int) env('VITE_DEV_SERVER_PORT', 5173);
+        $ports = array_values(array_unique(array_filter([
+            self::viteDevServerPortFromHotFile(),
+            (int) env('VITE_DEV_SERVER_PORT', 0) ?: null,
+            5173,
+            5174,
+        ])));
+
         $hosts = array_values(array_unique(array_filter([
             'localhost',
             '127.0.0.1',
@@ -124,11 +130,32 @@ class ContentSecurityPolicy
         $sources = [];
 
         foreach ($hosts as $host) {
-            $sources[] = "http://{$host}:{$vitePort}";
-            $sources[] = "ws://{$host}:{$vitePort}";
+            foreach ($ports as $port) {
+                $sources[] = "http://{$host}:{$port}";
+                $sources[] = "ws://{$host}:{$port}";
+            }
         }
 
         return array_values(array_unique($sources));
+    }
+
+    private static function viteDevServerPortFromHotFile(): ?int
+    {
+        $hotFile = public_path('hot');
+
+        if (! is_file($hotFile)) {
+            return null;
+        }
+
+        $hotUrl = trim((string) file_get_contents($hotFile));
+
+        if ($hotUrl === '') {
+            return null;
+        }
+
+        $port = parse_url($hotUrl, PHP_URL_PORT);
+
+        return is_int($port) ? $port : null;
     }
 
     private static function normalizeHost(string $host): ?string

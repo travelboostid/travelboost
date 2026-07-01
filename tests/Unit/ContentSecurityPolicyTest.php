@@ -116,6 +116,22 @@ test('web responses include reverb websocket sources in connect-src', function (
     }
 });
 
+test('content security policy includes common vite dev server ports in local environment', function () {
+    app()->detectEnvironment(fn () => 'local');
+
+    config([
+        'csp.enabled' => true,
+        'csp.directives' => [
+            'connect-src' => ["'self'"],
+        ],
+    ]);
+
+    expect(ContentSecurityPolicy::localDevConnectSources())
+        ->toContain('ws://localhost:5173')
+        ->toContain('ws://localhost:5174')
+        ->toContain('http://localhost:5174');
+});
+
 test('content security policy middleware does not override existing header', function () {
     config(['csp.enabled' => true]);
 
