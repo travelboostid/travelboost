@@ -41,6 +41,8 @@ Other dev commands: `pnpm dev:min` (server + Vite only), `pnpm dev` (interactive
 | [Team SOP](./docs/team-sop.md)                                 | Git workflow, PRs, coding standards               |
 | [Merging Branch Conflicts](./docs/merging-branch-conflicts.md) | Sync feature branch with `dev`                    |
 | [Testing Email Accounts](./docs/testing-email-accounts.md)     | Bulk unique test users (33mail)                   |
+| [Date & time (UTC / ISO 8601)](./docs/datetime.md)             | Timestamps, timezones, API date format            |
+| [Single source of truth](./docs/single-source-of-truth.md)     | Who owns translations, enums, validation, etc.    |
 
 ### Integrations
 

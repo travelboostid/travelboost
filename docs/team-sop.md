@@ -171,6 +171,8 @@ Principles we aim for — and common traps to avoid — with links for deeper re
 - Return API Resources from `/webapi` endpoints for typed OpenAPI output
 - Use `@operationId` on Webapi actions and run `pnpm orval` — see [Web API & Orval](./webapi-orval.md)
 - Add or update **Pest tests** for behavior you introduce or fix
+- Datetimes: [Date & time](./datetime.md)
+- API → UI: [Single source of truth](./single-source-of-truth.md)
 - Use factories in tests; avoid hand-built model setup when a factory state exists
 
 ### Database
@@ -184,6 +186,8 @@ Principles we aim for — and common traps to avoid — with links for deeper re
 
 - Pages live in `resources/js/pages/`; reuse existing components before creating new ones
 - User-facing strings via `<FormattedMessage />` or `intl.formatMessage()` — see [Translations (i18n)](./i18n.md)
+- **Instants:** [Date & time](./datetime.md) — backend owns UTC; no adjust-before-save/send
+- **UI copy & locale:** [Single source of truth](./single-source-of-truth.md) — frontend owns translations; API sends codes not prose
 - Use generated Orval hooks/types from `@/api/` for `/webapi` calls — do not duplicate TS types by hand
 - Prefer Wayfinder route helpers (`@/routes/`, `@/actions/`) over hard-coded URLs
 - Keep client state predictable — follow existing Zustand / Inertia patterns in the area you touch
@@ -264,14 +268,16 @@ See [Deployment](./deployment.md) for manual steps, skip flags, and server mappi
 
 ## Related docs
 
-| Topic               | Doc                                                       |
-| ------------------- | --------------------------------------------------------- |
-| Flow charts         | [Development Flow](./development-flow.md)                 |
-| Merge conflicts     | [Merging Branch Conflicts](./merging-branch-conflicts.md) |
-| Local setup         | [Local Development](./local-development.md)               |
-| Configuration & env | [Configuration](./configuration.md)                       |
-| Integrations        | [Integrations](./integrations.md)                         |
-| Architecture        | [Architecture](./architecture.md)                         |
-| Web API types       | [Web API & Orval](./webapi-orval.md)                      |
-| Translations        | [Translations (i18n)](./i18n.md)                          |
-| Deploy              | [Deployment](./deployment.md)                             |
+| Topic                  | Doc                                                       |
+| ---------------------- | --------------------------------------------------------- |
+| Flow charts            | [Development Flow](./development-flow.md)                 |
+| Merge conflicts        | [Merging Branch Conflicts](./merging-branch-conflicts.md) |
+| Local setup            | [Local Development](./local-development.md)               |
+| Configuration & env    | [Configuration](./configuration.md)                       |
+| Integrations           | [Integrations](./integrations.md)                         |
+| Architecture           | [Architecture](./architecture.md)                         |
+| Web API types          | [Web API & Orval](./webapi-orval.md)                      |
+| Translations           | [Translations (i18n)](./i18n.md)                          |
+| Date & time            | [Date & time (UTC / ISO 8601)](./datetime.md)             |
+| Single source of truth | [single-source-of-truth.md](./single-source-of-truth.md)  |
+| Deploy                 | [Deployment](./deployment.md)                             |
