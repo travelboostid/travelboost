@@ -31,6 +31,9 @@ export default function ContinuePayment({
                 onComplete: () => {
                     refreshWalletPage();
                 },
+                onPaid: () => {
+                    refreshWalletPage();
+                },
             },
         );
     };

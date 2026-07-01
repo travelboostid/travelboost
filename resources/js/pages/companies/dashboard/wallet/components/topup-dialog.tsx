@@ -47,6 +47,9 @@ function openWalletTopupPayment(
         onComplete: () => {
             refreshWalletPage();
         },
+        onPaid: () => {
+            refreshWalletPage();
+        },
     });
 }
 
