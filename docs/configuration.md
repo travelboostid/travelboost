@@ -95,11 +95,11 @@ Never commit secrets, production keys, or personal `.env` files.
 
 ## Related docs
 
-| Topic                         | Doc                                                   |
-| ----------------------------- | ----------------------------------------------------- |
-| Local setup & `pnpm dev:full` | [Local Development](./local-development.md)           |
-| External services & webhooks  | [Integrations](./integrations.md)                     |
-| Payment/OAuth tunnel testing  | [Cloudflare Tunnel](./cloudflare-tunnel.md)           |
-| S3 buckets & AWS CLI          | [Object Storage](./object-storage.md)                 |
-| Deploy presets & script       | [Deployment](./deployment.md)                         |
-| Bulk test signups & mail      | [Testing Email Accounts](./testing-email-accounts.md) |
+| Topic                         | Doc                                                                                 |
+| ----------------------------- | ----------------------------------------------------------------------------------- |
+| Local setup & `pnpm dev:full` | [Local Development](./local-development.md)                                         |
+| External services & webhooks  | [Integrations](./integrations.md)                                                   |
+| Payment/OAuth tunnel testing  | [Cloudflare Tunnel](./cloudflare-tunnel.md) · [Cloudflare DNS](./cloudflare-dns.md) |
+| S3 buckets & AWS CLI          | [Object Storage](./object-storage.md)                                               |
+| Deploy presets & script       | [Deployment](./deployment.md)                                                       |
+| Bulk test signups & mail      | [Testing Email Accounts](./testing-email-accounts.md)                               |

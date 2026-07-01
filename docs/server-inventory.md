@@ -30,7 +30,7 @@ Not servers — listed here so preset names stay in one place.
 | `local`  | `http://lvh.me:8000`                    | Default local dev                      |
 | `tunnel` | `https://tunnel-8000.travelboost.co.id` | Webhooks & OAuth against local machine |
 
-Details: [Configuration](./configuration.md) · [Local Development](./local-development.md) · [Cloudflare Tunnel](./cloudflare-tunnel.md).
+Details: [Configuration](./configuration.md) · [Local Development](./local-development.md) · [Cloudflare DNS](./cloudflare-dns.md) · [Cloudflare Tunnel](./cloudflare-tunnel.md).
 
 ---
 

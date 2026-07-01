@@ -18,7 +18,7 @@ Doc index: [README](../README.md) · Env presets: [Configuration](./configuratio
 | Reverb / Echo     | `REVERB_*`, `VITE_REVERB_*`         | `pnpm dev:full` starts Reverb                          | `config/reverb.php`, `routes/channels.php`, `@laravel/echo-react`                  |
 | Web API           | Scramble + Orval                    | Dev server up for `pnpm orval`                         | [Web API & Orval](./webapi-orval.md)                                               |
 | i18n              | `resources/js/lang/*.json`          | `pnpm i18n:extract`                                    | [Translations (i18n)](./i18n.md)                                                   |
-| Cloudflare tunnel | `tunnel` preset                     | Team-shared hostname — coordinate before use           | [Cloudflare Tunnel](./cloudflare-tunnel.md)                                        |
+| Cloudflare tunnel | `tunnel` preset                     | Team-shared hostname — coordinate before use           | [Cloudflare Tunnel](./cloudflare-tunnel.md) · [DNS routing](./cloudflare-dns.md)   |
 
 ---
 

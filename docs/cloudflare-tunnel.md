@@ -2,7 +2,7 @@
 
 Expose your local Laravel app at **`https://tunnel-8000.travelboost.co.id`** so external services (payment gateways, OAuth providers) can reach webhooks and callbacks on your machine.
 
-Doc index: [README](../README.md) · Env presets: [Configuration](./configuration.md) · Webhook index: [Integrations](./integrations.md)
+Doc index: [README](../README.md) · Env presets: [Configuration](./configuration.md) · Webhook index: [Integrations](./integrations.md) · DNS & SSL: [Cloudflare DNS](./cloudflare-dns.md)
 
 ---
 

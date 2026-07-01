@@ -10,19 +10,19 @@ For product-level requirements, see [Product Requirements](./requirements.md). F
 
 ### Backend
 
-| Layer             | Technology                                                            |
-| ----------------- | --------------------------------------------------------------------- |
-| Runtime           | PHP 8.5 (`ext-bcmath` required for wallet/AI billing)                 |
-| Framework         | Laravel 13                                                            |
-| Database          | PostgreSQL 18 with **pgvector** (AI embeddings)                       |
-| Auth              | Laravel Fortify (2FA, password reset) + Laratrust (roles/permissions) |
-| Real-time         | Laravel Reverb + Laravel Echo                                         |
-| AI                | Laravel AI (`laravel/ai`) via OpenRouter                              |
-| Wallets           | Bavix Laravel Wallet (polymorphic user/company wallets)               |
-| API docs          | Dedoc Scramble (OpenAPI from `/webapi` controllers)                   |
-| API client (FE)   | Orval → TanStack Query hooks + TS types in `resources/js/api/`        |
-| Web server (prod) | Caddy with on-demand TLS                                              |
-| Debugging (dev)   | Laravel Telescope, Laravel Pail                                       |
+| Layer             | Technology                                                                 |
+| ----------------- | -------------------------------------------------------------------------- |
+| Runtime           | PHP 8.5 (`ext-bcmath` required for wallet/AI billing)                      |
+| Framework         | Laravel 13                                                                 |
+| Database          | PostgreSQL 18 with **pgvector** (AI embeddings)                            |
+| Auth              | Laravel Fortify (2FA, password reset) + Laratrust (roles/permissions)      |
+| Real-time         | Laravel Reverb + Laravel Echo                                              |
+| AI                | Laravel AI (`laravel/ai`) via OpenRouter                                   |
+| Wallets           | Bavix Laravel Wallet (polymorphic user/company wallets)                    |
+| API docs          | Dedoc Scramble (OpenAPI from `/webapi` controllers)                        |
+| API client (FE)   | Orval → TanStack Query hooks + TS types in `resources/js/api/`             |
+| Web server (prod) | [Caddy](./caddy.md) — PHP-FPM, on-demand TLS, origin cert on `tb-app-main` |
+| Debugging (dev)   | Laravel Telescope, Laravel Pail                                            |
 
 ### Frontend
 
@@ -159,7 +159,7 @@ Tenant storefront URLs use `Route::domain('{username}.'.$appHost)` in `routes/cu
 
 ### TLS for custom domains
 
-`CaddyController` exposes `/caddy/verify-domain` for Caddy on-demand TLS. Custom domain certificates are issued automatically by Caddy — no separate certbot step is required.
+`CaddyController` exposes `/caddy/verify-domain` for Caddy on-demand TLS. Production uses Cloudflare Origin certificates for `travelboost.co.id` and `*.travelboost.co.id`; staging and custom domains use on-demand Let's Encrypt on the origin. Full DNS and SSL layout: [Cloudflare DNS & Routing](./cloudflare-dns.md).
 
 ---
 
@@ -414,20 +414,20 @@ Changes to `chatbot` invalidate the config cache used by AI agents.
 
 ## Third-Party Integrations
 
-| Service            | Package / path                               | Purpose                             |
-| ------------------ | -------------------------------------------- | ----------------------------------- |
-| Midtrans           | `midtrans/midtrans-php`, `MidtransService`   | Online payments (VA, etc.)          |
-| PrismaLink         | `PrismaLinkService`                          | Alternative payment gateway         |
-| OpenRouter         | `laravel/ai`, `config/openrouter-models.php` | LLM + embeddings                    |
-| Google Analytics   | `google/analytics-*`, dashboard OAuth        | Per-company GA4 reports             |
-| Google OAuth       | `laravel/socialite`                          | GA account connection               |
-| Bavix Wallet       | `bavix/laravel-wallet`                       | User/company balances               |
-| Laratrust          | `santigarcor/laratrust`                      | RBAC                                |
-| Laravolt Indonesia | `laravolt/indonesia`                         | Province/city/district/village data |
-| DomPDF             | `barryvdh/laravel-dompdf`                    | Booking invoices / PDFs             |
-| Maatwebsite Excel  | Report exports from dashboards               |
-| Caddy              | `CaddyController`, production server         | Reverse proxy + on-demand TLS       |
-| Intervention Image | `AppServiceProvider` ImageManager            | Media processing                    |
+| Service            | Package / path                                                       | Purpose                               |
+| ------------------ | -------------------------------------------------------------------- | ------------------------------------- |
+| Midtrans           | `midtrans/midtrans-php`, `MidtransService`                           | Online payments (VA, etc.)            |
+| PrismaLink         | `PrismaLinkService`                                                  | Alternative payment gateway           |
+| OpenRouter         | `laravel/ai`, `config/openrouter-models.php`                         | LLM + embeddings                      |
+| Google Analytics   | `google/analytics-*`, dashboard OAuth                                | Per-company GA4 reports               |
+| Google OAuth       | `laravel/socialite`                                                  | GA account connection                 |
+| Bavix Wallet       | `bavix/laravel-wallet`                                               | User/company balances                 |
+| Laratrust          | `santigarcor/laratrust`                                              | RBAC                                  |
+| Laravolt Indonesia | `laravolt/indonesia`                                                 | Province/city/district/village data   |
+| DomPDF             | `barryvdh/laravel-dompdf`                                            | Booking invoices / PDFs               |
+| Maatwebsite Excel  | Report exports from dashboards                                       |
+| Caddy              | [Caddy on the Server](./caddy.md), `CaddyController`, production VPS | Reverse proxy, PHP-FPM, on-demand TLS |
+| Intervention Image | `AppServiceProvider` ImageManager                                    | Media processing                      |
 
 ---
 
@@ -442,7 +442,7 @@ Changes to `chatbot` invalidate the config cache used by AI agents.
 
 ## Development vs Production
 
-Local stack: [Local Development](./local-development.md) (`pnpm dev:full`). Production servers, Caddy, and Supervisor: [Production App Server](./production-app-server.md). Release workflow: [Deployment](./deployment.md).
+Local stack: [Local Development](./local-development.md) (`pnpm dev:full`). Production servers and Supervisor: [Production App Server](./production-app-server.md). Caddy: [Caddy on the Server](./caddy.md). Release workflow: [Deployment](./deployment.md).
 
 ---
 
@@ -461,10 +461,12 @@ Full index: [README](../README.md)
 | Team SOP                    | [team-sop.md](./team-sop.md)                                                                                             |
 | Merge conflicts             | [merging-branch-conflicts.md](./merging-branch-conflicts.md)                                                             |
 | Local development           | [local-development.md](./local-development.md)                                                                           |
+| Cloudflare DNS & routing    | [cloudflare-dns.md](./cloudflare-dns.md)                                                                                 |
 | Cloudflare tunnel           | [cloudflare-tunnel.md](./cloudflare-tunnel.md)                                                                           |
 | Testing email accounts      | [testing-email-accounts.md](./testing-email-accounts.md)                                                                 |
 | Server inventory            | [server-inventory.md](./server-inventory.md)                                                                             |
 | Production servers          | [production-app-server.md](./production-app-server.md), [production-database-server.md](./production-database-server.md) |
+| Caddy web server            | [caddy.md](./caddy.md)                                                                                                   |
 | Database backups            | [database-backups.md](./database-backups.md)                                                                             |
 | Object storage              | [object-storage.md](./object-storage.md)                                                                                 |
 | Debugging                   | [debugging.md](./debugging.md)                                                                                           |

@@ -47,6 +47,7 @@ Other dev commands: `pnpm dev:min` (server + Vite only), `pnpm dev` (interactive
 | Doc                                              | When to read                                     |
 | ------------------------------------------------ | ------------------------------------------------ |
 | [Integrations](./docs/integrations.md)           | Payments, OAuth, S3, Reverb, webhooks index      |
+| [Cloudflare DNS](./docs/cloudflare-dns.md)       | DNS, Full (strict), origin certs, staging TLS    |
 | [Cloudflare Tunnel](./docs/cloudflare-tunnel.md) | Payment webhooks & OAuth via tunnel hostname     |
 | [Web API & Orval](./docs/webapi-orval.md)        | Scramble docs, `/webapi` endpoints, `pnpm orval` |
 | [Translations (i18n)](./docs/i18n.md)            | react-intl, extraction, locale files             |
@@ -66,10 +67,17 @@ Other dev commands: `pnpm dev:min` (server + Vite only), `pnpm dev` (interactive
 | Doc                                                                | When to read                                |
 | ------------------------------------------------------------------ | ------------------------------------------- |
 | [Server Inventory](./docs/server-inventory.md)                     | Hosts, IPs, URLs, app↔DB pairing            |
-| [Production App Server](./docs/production-app-server.md)           | PHP, Caddy, Supervisor, first install       |
+| [Caddy on the Server](./docs/caddy.md)                             | Web server, TLS, PHP-FPM, Caddyfiles        |
+| [Production App Server](./docs/production-app-server.md)           | PHP, Caddy install, Supervisor, first setup |
 | [Production Database Server](./docs/production-database-server.md) | PostgreSQL, pgvector, WAL-G backups         |
 | [Database Backups](./docs/database-backups.md)                     | Admin backup panel, WAL-G env               |
 | [Deployment](./docs/deployment.md)                                 | Pull, migrate, build, restart after release |
+
+### Planning
+
+| Doc                                       | When to read                                      |
+| ----------------------------------------- | ------------------------------------------------- |
+| [Infrastructure backlog](./docs/todos.md) | Future SES, Cloudflare SaaS, FrankenPHP, and more |
 
 ---
 

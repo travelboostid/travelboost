@@ -2,7 +2,7 @@
 
 First-time setup for `tb-app-dev` / `tb-app-main`: PHP, Caddy, Supervisor, deploy user.
 
-Doc index: [README](../README.md) · Hosts: [Server Inventory](./server-inventory.md) · Deploy: [Deployment](./deployment.md)
+Doc index: [README](../README.md) · Hosts: [Server Inventory](./server-inventory.md) · Deploy: [Deployment](./deployment.md) · Caddy: [Caddy on the Server](./caddy.md)
 
 ## Installing required packages
 
@@ -25,6 +25,8 @@ On some Linux distributions the extension package is installed but not enabled i
 
 ## Installing Caddy
 
+Caddy is the web server on the VPS. Setup, TLS, and day-to-day ops: [Caddy on the Server](./caddy.md).
+
 Install Caddy using the official repository.
 
 ```bash
@@ -45,15 +47,18 @@ sudo apt install caddy
 
 ## Configuring SSL Certificates
 
-Production deployments use Cloudflare Origin SSL certificates instead of generating SSL certificates for every subdomain.
+Production (`tb-app-main`) uses **Cloudflare Full (strict)** at the edge and a **Cloudflare Origin Certificate** on Caddy. Staging (`tb-app-dev`) uses **DNS-only** records and Caddy on-demand TLS with Let's Encrypt for tenant subdomains (avoids paid deep wildcards on Cloudflare).
 
-Generate an Origin Certificate from Cloudflare with the following domains:
+Full DNS layout, proxy vs grey-cloud, and cert strategy: [Cloudflare DNS & Routing](./cloudflare-dns.md).
+
+Generate an Origin Certificate in Cloudflare (**SSL/TLS → Origin Server**) with:
 
 ```text
 travelboost.co.id
 *.travelboost.co.id
-*.dev.travelboost.co.id
 ```
+
+Do **not** rely on this origin cert alone on `tb-app-dev` — use [`infra/caddy/Caddyfile.dev`](../infra/caddy/Caddyfile.dev) and Let's Encrypt on-demand TLS instead (see [Cloudflare DNS — SSL/TLS strategy](./cloudflare-dns.md#ssltls-strategy)).
 
 Store the certificate and private key in:
 
@@ -62,7 +67,7 @@ Store the certificate and private key in:
 /etc/ssl/cloudflare/travelboost/origin.key
 ```
 
-These files are referenced inside the Caddy configuration.
+These files are referenced inside the Caddy configuration. TLS strategy and staging vs production: [Caddy on the Server](./caddy.md) · [Cloudflare DNS](./cloudflare-dns.md).
 
 ---
 
@@ -296,8 +301,8 @@ Add the following rules:
 # Allow using supervisorctl without password
 travelboost ALL=NOPASSWD: /usr/bin/supervisorctl
 
-# Allow reload/restart nginx without password
-travelboost ALL=NOPASSWD: /bin/systemctl reload nginx, /bin/systemctl restart nginx
+# Allow reload/restart Caddy without password
+travelboost ALL=NOPASSWD: /bin/systemctl reload caddy, /bin/systemctl restart caddy
 ```
 
 ---
