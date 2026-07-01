@@ -13,7 +13,7 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useDataTable } from '@/hooks/use-data-table';
-import { formatIDR } from '@/lib/utils';
+import { formatIDRFull } from '@/lib/utils';
 import { router } from '@inertiajs/react';
 import type { ColumnDef } from '@tanstack/react-table';
 import dayjs from 'dayjs';
@@ -241,7 +241,7 @@ export default function PaymentsPage({ data }: PaymentsPageProps) {
                 ),
                 cell: ({ cell }) => {
                     const amount = cell.getValue<any>();
-                    return <div>{formatIDR(amount)}</div>;
+                    return <div>{formatIDRFull(amount)}</div>;
                 },
             },
             {

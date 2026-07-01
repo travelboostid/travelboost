@@ -1,5 +1,5 @@
 import { Card, CardContent } from '@/components/ui/card';
-import { formatIDR } from '@/lib/utils';
+import { formatIDRFull } from '@/lib/utils';
 
 export default function WithdrawalsSummary({ stats }: { stats: any }) {
     return (
@@ -20,7 +20,7 @@ export default function WithdrawalsSummary({ stats }: { stats: any }) {
                         Total Amount
                     </p>
                     <p className="mt-1 text-xl font-bold text-slate-900 dark:text-slate-100">
-                        {formatIDR(stats.total_amount)}
+                        {formatIDRFull(stats.total_amount)}
                     </p>
                 </CardContent>
             </Card>
@@ -30,7 +30,7 @@ export default function WithdrawalsSummary({ stats }: { stats: any }) {
                         Paid/Success
                     </p>
                     <p className="mt-1 text-xl font-bold text-emerald-600 dark:text-emerald-300">
-                        {formatIDR(stats.completed_amount)}
+                        {formatIDRFull(stats.completed_amount)}
                     </p>
                 </CardContent>
             </Card>
@@ -40,7 +40,7 @@ export default function WithdrawalsSummary({ stats }: { stats: any }) {
                         Pending/Processing
                     </p>
                     <p className="mt-1 text-xl font-bold text-amber-600 dark:text-amber-300">
-                        {formatIDR(stats.pending_amount)}
+                        {formatIDRFull(stats.pending_amount)}
                     </p>
                 </CardContent>
             </Card>

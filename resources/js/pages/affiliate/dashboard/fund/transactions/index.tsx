@@ -14,7 +14,7 @@ import {
     PopoverContent,
     PopoverTrigger,
 } from '@/components/ui/popover';
-import { formatIDR } from '@/lib/utils';
+import { formatIDRFull } from '@/lib/utils';
 import { Head, router } from '@inertiajs/react';
 import { IconFolderCode } from '@tabler/icons-react';
 import { format } from 'date-fns';
@@ -123,7 +123,7 @@ export default function TransactionsPage({
                                     Total Income
                                 </p>
                                 <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-300">
-                                    +{formatIDR(income_amount)}
+                                    +{formatIDRFull(income_amount)}
                                 </p>
                             </CardContent>
                         </Card>
@@ -133,7 +133,7 @@ export default function TransactionsPage({
                                     Total Expenses
                                 </p>
                                 <p className="text-2xl font-bold text-rose-600 dark:text-rose-300">
-                                    -{formatIDR(expense_amount)}
+                                    -{formatIDRFull(expense_amount)}
                                 </p>
                             </CardContent>
                         </Card>
@@ -267,7 +267,7 @@ function TransactionsList({ transactions }: { transactions: any[] }) {
                             className={`text-base font-semibold ${isIncome ? 'text-emerald-600 dark:text-emerald-300' : 'text-rose-600 dark:text-rose-300'}`}
                         >
                             {isIncome ? '+' : '-'}
-                            {formatIDR(Math.abs(transaction.amount))}
+                            {formatIDRFull(Math.abs(transaction.amount))}
                         </div>
                     </div>
                 );

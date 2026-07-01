@@ -5,7 +5,7 @@ import { DataTableToolbar } from '@/components/data-table/data-table-toolbar';
 import AdminDashboardLayout from '@/components/layouts/admin-dashboard';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useDataTable } from '@/hooks/use-data-table';
-import { formatIDR } from '@/lib/utils';
+import { formatIDRFull } from '@/lib/utils';
 import type { ColumnDef } from '@tanstack/react-table';
 import dayjs from 'dayjs';
 import { CalendarIcon, CircleDashedIcon } from 'lucide-react';
@@ -114,7 +114,7 @@ export default function WalletsPage({ data }: WalletsPageProps) {
                 ),
                 cell: ({ cell }) => {
                     const balance = cell.getValue<any>();
-                    return <div>{formatIDR(balance)}</div>;
+                    return <div>{formatIDRFull(balance)}</div>;
                 },
             },
             {
