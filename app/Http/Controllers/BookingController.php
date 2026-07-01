@@ -3,11 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Actions\Booking\AssertBookingOnlinePaymentStartAllowedAction;
-use App\Actions\Booking\AssertScheduleSeatAvailabilityAction;
 use App\Actions\Booking\ExpireBookingReservationsAction;
 use App\Actions\Booking\FinalizeBookingPaymentAction;
 use App\Actions\Booking\NotifyBookingPaymentEventAction;
 use App\Actions\Booking\ReconcileBookingPaymentAfterRepriceAction;
+use App\Actions\Booking\ReleaseCustomerBookingHoldAction;
+use App\Actions\Booking\ReorderCustomerBookingAction;
+use App\Actions\Booking\ReserveCustomerBookingAction;
 use App\Actions\Booking\SyncAvailabilityAction;
 use App\Enums\BookingAvailabilityContext;
 use App\Enums\BookingStatus;
@@ -19,6 +21,7 @@ use App\Http\Requests\StoreBookingRequest;
 use App\Http\Requests\UpdateBookingRequest;
 use App\Models\Booking;
 use App\Models\BookingDocument;
+use App\Models\Company;
 use App\Models\Payment;
 use App\Models\PaymentMethod;
 use App\Models\Tour;
@@ -35,9 +38,7 @@ use App\Services\BookingNumberService;
 use App\Services\BookingPaymentReceiverService;
 use App\Services\BookingPaymentWorkflowService;
 use App\Services\BookingPricingService;
-use App\Services\BookingRoomArrangementValidator;
 use App\Services\BookingService;
-use App\Services\BookingVisaTypeService;
 use App\Services\MidtransService;
 use App\Services\PaymentGatewayStatusSyncService;
 use App\Services\PrismaLinkException;
@@ -435,137 +436,15 @@ class BookingController extends Controller
             'passengers.*.note' => ['nullable', 'string', 'max:1000'],
         ]);
 
-        $visaErrors = app(BookingVisaTypeService::class)
-            ->validationErrorsForPassengers($tour->loadMissing('visaCategory.items'), $data['passengers'] ?? []);
+        $tenant = request()->attributes->get('tenant');
+        abort_unless($tenant instanceof Company, 422);
 
-        if ($visaErrors !== []) {
-            throw ValidationException::withMessages($visaErrors);
-        }
-
-        if (! $this->resolveBookableSchedule($tour, (string) $data['departure_date'])) {
-            throw ValidationException::withMessages([
-                'departure_date' => 'Booking window closed.',
-            ]);
-        }
-
-        app(BookingRoomArrangementValidator::class)->validatePassengerMix($data['passengers'] ?? []);
-
-        $bookingTimeLimitMinutes = $this->resolveBookingTimeLimitMinutes($tour);
-
-        $booking = DB::transaction(function () use ($data, $tour, $bookingTimeLimitMinutes) {
-            $vendorId = (int) ($data['vendor_id'] ?? $tour->company_id);
-            $existingBooking = Booking::query()
-                ->where('booking_number', $data['booking_number'])
-                ->where('user_id', request()->user()->id)
-                ->lockForUpdate()
-                ->first();
-
-            $schedule = $this->resolveBookableSchedule($tour, (string) $data['departure_date'], $vendorId);
-            if (! $schedule) {
-                throw ValidationException::withMessages([
-                    'departure_date' => 'Booking window closed.',
-                ]);
-            }
-
-            $availability = TourAvailability::query()
-                ->where('company_id', $vendorId)
-                ->where('tour_id', $tour->id)
-                ->where('schedule_id', $schedule->id)
-                ->lockForUpdate()
-                ->first();
-
-            if (! $availability) {
-                throw ValidationException::withMessages([
-                    'availability' => BookingAvailabilityContext::Reserve->message(),
-                ]);
-            }
-
-            $requestedSeatCount = (int) $data['pax_adult']
-                + (int) $data['pax_child'];
-
-            app(AssertScheduleSeatAvailabilityAction::class)->assertWithLockedAvailability(
-                $availability,
-                $tour->id,
-                $vendorId,
-                $this->normalizeDateString($schedule->departure_date),
-                $requestedSeatCount,
-                $existingBooking?->id,
-                BookingAvailabilityContext::Reserve,
-            );
-
-            $taxRate = (float) (($existingBooking && $existingBooking->tax_rate !== null)
-                ? $existingBooking->tax_rate
-                : ($tour->company?->companySetting?->minimum_vat ?? BookingPricingService::DEFAULT_PPN_RATE));
-
-            $quote = app(BookingPricingService::class)->quoteForBookingData(
-                $tour,
-                (string) $data['departure_date'],
-                $data['passengers'],
-                $data['addons'] ?? [],
-                $taxRate,
-                ! empty($data['agent_id']),
-                ! empty($data['agent_id']) ? (int) $data['agent_id'] : null,
-            );
-            $totals = app(BookingPricingService::class)->bookingTotalsFromQuote($quote);
-
-            $reservedExpiresAt = $existingBooking?->status === BookingStatus::BOOKING_RESERVED
-                && $existingBooking->reserved_expires_at
-                && $existingBooking->reserved_expires_at->isFuture()
-                    ? $existingBooking->reserved_expires_at
-                    : now()->addMinutes($bookingTimeLimitMinutes);
-
-            $reservedType = $existingBooking && $this->isWaitingListOfferBooking($existingBooking)
-                ? 'waiting_list_offer'
-                : 'system';
-
-            $booking = Booking::updateOrCreate(
-                [
-                    'booking_number' => $data['booking_number'],
-                    'user_id' => request()->user()->id,
-                ],
-                [
-                    'tour_id' => $data['tour_id'],
-                    'departure_date' => $data['departure_date'],
-                    'pax_adult' => $data['pax_adult'],
-                    'pax_child' => $data['pax_child'],
-                    'pax_infant' => $data['pax_infant'],
-                    'status' => BookingStatus::BOOKING_RESERVED,
-                    'reserved_type' => $reservedType,
-                    'reserved_expires_at' => $reservedExpiresAt,
-                    'vendor_id' => $vendorId,
-                    'agent_id' => $data['agent_id'] ?? null,
-                    'total_price' => $totals['total_price'],
-                    'tax_rate' => $totals['tax_rate'],
-                    'tax_amount' => $totals['tax_amount'],
-                    'platform_fee' => $totals['platform_fee'],
-                    'commission_amount' => $totals['commission_amount'],
-                    'grand_total' => $totals['grand_total'],
-                    'contact_name' => $data['contact_name'] ?? null,
-                    'contact_email' => $data['contact_email'] ?? null,
-                    'contact_phone' => $data['contact_phone'] ?? null,
-                    'contact_notes' => $data['contact_notes'] ?? null,
-                    'input_by_user_id' => request()->user()->id,
-                    'input_by_company_id' => null,
-                    'input_by_role' => 'customer',
-                ]
-            );
-
-            if (! empty($data['passengers'])) {
-                $booking->passengers()->delete();
-                $booking->passengers()->createMany($quote['passengers']);
-            }
-
-            $booking->rooms()->delete();
-
-            $booking->addons()->delete();
-            if (! empty($quote['addons'])) {
-                $booking->addons()->createMany($quote['addons']);
-            }
-
-            app(SyncAvailabilityAction::class)->syncSchedule($schedule, $vendorId);
-
-            return $booking;
-        });
+        app(ReserveCustomerBookingAction::class)->execute(
+            request()->user(),
+            $tour->loadMissing('visaCategory.items'),
+            $data,
+            $tenant,
+        );
 
         return back();
     }
@@ -574,29 +453,16 @@ class BookingController extends Controller
     {
         $booking = $booking ?? $usernameOrBooking;
         abort_unless($booking instanceof Booking, 404);
-        abort_unless($request->user()?->id === $booking->user_id, 403);
 
-        $booking = DB::transaction(function () use ($booking): Booking {
-            $lockedBooking = Booking::query()
-                ->whereKey($booking->id)
-                ->lockForUpdate()
-                ->firstOrFail();
+        $booking->loadMissing(['agent', 'vendor']);
+        $company = $booking->agent ?? $booking->vendor;
+        abort_unless($company instanceof Company, 422);
 
-            if (
-                $lockedBooking->status === BookingStatus::BOOKING_RESERVED
-                && $lockedBooking->reserved_type === 'system'
-                && ! $this->isWaitingListOfferBooking($lockedBooking)
-            ) {
-                $lockedBooking->update([
-                    'status' => BookingStatus::EXPIRED,
-                    'reserved_expires_at' => null,
-                ]);
-            }
-
-            return $lockedBooking->fresh();
-        });
-
-        app(SyncAvailabilityAction::class)->executeForBooking($booking);
+        try {
+            app(ReleaseCustomerBookingHoldAction::class)->execute($request->user(), $booking, $company);
+        } catch (ValidationException $exception) {
+            abort(403, collect($exception->errors())->flatten()->first() ?? 'Unable to release booking hold.');
+        }
 
         return back()->with('success', 'Booking hold released.');
     }
@@ -704,41 +570,23 @@ class BookingController extends Controller
 
     public function reorder(Request $request, Booking $booking): RedirectResponse
     {
-        abort_unless($request->user()?->id === $booking->user_id, 403);
-
-        $booking = app(ExpireBookingReservationsAction::class)->expireIfDue($booking);
         $booking->loadMissing(['agent', 'vendor', 'tour']);
+        $company = $booking->agent ?? $booking->vendor;
+        abort_unless($company instanceof Company, 422);
 
-        $status = $booking->status;
-
-        abort_unless(in_array($status, [
-            BookingStatus::EXPIRED,
-            BookingStatus::AWAITING_PAYMENT,
-            BookingStatus::BOOKING_RESERVED,
-        ], true), 422);
-        abort_unless($booking->departure_date?->isToday() || $booking->departure_date?->isFuture(), 422);
-        abort_unless(
-            $booking->tour && $this->resolveBookableSchedule(
-                $booking->tour,
-                $booking->departure_date->toDateString(),
-                $booking->vendor_id
-            ),
-            422
-        );
-
-        if ($status === BookingStatus::EXPIRED) {
-            DB::transaction(function () use ($booking): void {
-                $booking->update([
-                    'status' => BookingStatus::AWAITING_PAYMENT,
-                    'reserved_type' => 'system',
-                    'reserved_expires_at' => null,
-                ]);
-            });
-
-            app(SyncAvailabilityAction::class)->executeForBooking($booking->fresh());
+        try {
+            $result = app(ReorderCustomerBookingAction::class)->execute(
+                $request->user(),
+                $booking,
+                $company,
+            );
+        } catch (ValidationException $exception) {
+            abort(422, collect($exception->errors())->flatten()->first() ?? 'Unable to reorder booking.');
         }
 
+        $booking = $result['booking'];
         $tenantUsername = $booking->agent?->username ?? $booking->vendor?->username;
+
         abort_unless($tenantUsername && $booking->tour, 422);
 
         return redirect()->route('bookings.create', [

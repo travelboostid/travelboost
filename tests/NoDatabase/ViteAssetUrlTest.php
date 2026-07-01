@@ -3,6 +3,29 @@
 use App\Support\ViteAssetUrl;
 use Illuminate\Foundation\Vite;
 
+beforeEach(function () {
+    $hotFile = public_path('hot');
+    $this->hotFileBackup = [
+        'path' => $hotFile,
+        'existed' => is_file($hotFile),
+        'contents' => is_file($hotFile) ? file_get_contents($hotFile) : null,
+    ];
+
+    if ($this->hotFileBackup['existed']) {
+        @unlink($hotFile);
+    }
+});
+
+afterEach(function () {
+    $hotFile = $this->hotFileBackup['path'];
+
+    if ($this->hotFileBackup['existed']) {
+        file_put_contents($hotFile, $this->hotFileBackup['contents']);
+    } elseif (is_file($hotFile)) {
+        @unlink($hotFile);
+    }
+});
+
 test('vite asset urls resolve as same origin relative paths', function () {
     expect(ViteAssetUrl::resolve('build/assets/app.js'))
         ->toBe('/build/assets/app.js');

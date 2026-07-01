@@ -16,7 +16,15 @@ class ChatRoom extends Model
         'name',
         'type',
         'last_message_id',
+        'meta',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'meta' => 'array',
+        ];
+    }
 
     protected $with = [
         'lastMessage',

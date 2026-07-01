@@ -75,6 +75,7 @@ test('chatbot tour query context filters tours by keywords across searchable col
         'name' => 'Hong Kong City Escape',
         'destination' => 'Hong Kong',
         'country_name' => 'China',
+        'status' => TourStatus::ACTIVE,
     ]);
 
     Tour::factory()->create([
@@ -83,6 +84,7 @@ test('chatbot tour query context filters tours by keywords across searchable col
         'name' => 'Tokyo Highlights',
         'destination' => 'Tokyo',
         'country_name' => 'Japan',
+        'status' => TourStatus::ACTIVE,
     ]);
 
     $message = createPrivateChatMessage($company, $user, 'ada tour ke Hong Kong?');
@@ -148,6 +150,7 @@ test('chatbot tour query context returns explicit message when keywords match no
         'company_id' => $company->id,
         'name' => 'Bali Getaway',
         'destination' => 'Bali',
+        'status' => TourStatus::ACTIVE,
     ]);
 
     $message = createPrivateChatMessage($company, $user, 'ada tour ke Antarctica?');
@@ -158,5 +161,122 @@ test('chatbot tour query context returns explicit message when keywords match no
 
     $context = $method->invoke($agent, ['keywords' => 'Antarctica']);
 
-    expect($context)->toBe('No relevant tours found in the system based on the search criteria.');
+    expect($context)->toBe('No tours matched.');
+});
+
+test('chatbot tour query context excludes inactive tours', function () {
+    $company = Company::factory()->create();
+    $user = User::factory()->create();
+
+    Tour::factory()->create([
+        'company_id' => $company->id,
+        'name' => 'Hidden Hong Kong Tour',
+        'destination' => 'Hong Kong',
+        'status' => TourStatus::INACTIVE,
+    ]);
+
+    $message = createPrivateChatMessage($company, $user, 'ada tour ke Hong Kong?');
+    $agent = createChatbotAgentForTourQuery($company, $user, $message);
+
+    $method = new ReflectionMethod(ChatbotAgent::class, 'retrieveTourQueryContext');
+    $method->setAccessible(true);
+
+    $context = $method->invoke($agent, ['keywords' => 'Hong Kong']);
+
+    expect($context)->toBe('No tours matched.');
+});
+
+test('chatbot tour query context requires all keyword tokens to match', function () {
+    $company = Company::factory()->create();
+    $user = User::factory()->create();
+
+    Tour::factory()->create([
+        'company_id' => $company->id,
+        'name' => 'Hong Kong City Escape',
+        'destination' => 'Hong Kong',
+        'status' => TourStatus::ACTIVE,
+    ]);
+
+    Tour::factory()->create([
+        'company_id' => $company->id,
+        'name' => 'Hong Kong Food Walk',
+        'destination' => 'Hong Kong',
+        'status' => TourStatus::ACTIVE,
+    ]);
+
+    Tour::factory()->create([
+        'company_id' => $company->id,
+        'name' => 'Tokyo Highlights',
+        'destination' => 'Tokyo',
+        'status' => TourStatus::ACTIVE,
+    ]);
+
+    $message = createPrivateChatMessage($company, $user, 'tour hong kong city');
+    $agent = createChatbotAgentForTourQuery($company, $user, $message);
+
+    $method = new ReflectionMethod(ChatbotAgent::class, 'retrieveTourQueryContext');
+    $method->setAccessible(true);
+
+    $context = $method->invoke($agent, ['keywords' => 'Hong Kong City']);
+
+    expect($context)
+        ->toContain('Hong Kong City Escape')
+        ->not->toContain('Hong Kong Food Walk')
+        ->not->toContain('Tokyo Highlights');
+});
+
+test('chatbot tour query context matches countries with partial ilike values', function () {
+    $company = Company::factory()->create();
+    $user = User::factory()->create();
+
+    $japanTour = Tour::factory()->create([
+        'company_id' => $company->id,
+        'name' => 'Japan Discovery',
+        'status' => TourStatus::ACTIVE,
+    ]);
+    $japanTour->forceFill(['country_name' => 'Japan'])->save();
+
+    $baliTour = Tour::factory()->create([
+        'company_id' => $company->id,
+        'name' => 'Bali Getaway',
+        'status' => TourStatus::ACTIVE,
+    ]);
+    $baliTour->forceFill(['country_name' => 'Indonesia'])->save();
+
+    $message = createPrivateChatMessage($company, $user, 'tour japan');
+    $agent = createChatbotAgentForTourQuery($company, $user, $message);
+
+    $method = new ReflectionMethod(ChatbotAgent::class, 'retrieveTourQueryContext');
+    $method->setAccessible(true);
+
+    $context = $method->invoke($agent, ['countries' => ['japan']]);
+
+    expect($context)
+        ->toContain('Japan Discovery')
+        ->not->toContain('Bali Getaway');
+});
+
+test('chatbot tour query context uses compact pipe-delimited output', function () {
+    $company = Company::factory()->create();
+    $user = User::factory()->create();
+
+    Tour::factory()->create([
+        'company_id' => $company->id,
+        'code' => 'HK-001',
+        'name' => 'Hong Kong City Escape',
+        'destination' => 'Hong Kong',
+        'status' => TourStatus::ACTIVE,
+    ]);
+
+    $message = createPrivateChatMessage($company, $user, 'tour hk');
+    $agent = createChatbotAgentForTourQuery($company, $user, $message);
+
+    $method = new ReflectionMethod(ChatbotAgent::class, 'retrieveTourQueryContext');
+    $method->setAccessible(true);
+
+    $context = $method->invoke($agent, ['keywords' => 'Hong Kong']);
+
+    expect($context)
+        ->toStartWith('tours:id|code|name|days|dest|country|price')
+        ->not->toContain('|----|');
 });

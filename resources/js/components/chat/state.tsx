@@ -53,7 +53,7 @@ function notifyIncomingMessage(
     actor: ChatActor | null,
     authUserId?: number | null,
 ): void {
-    if (isMessageFromSelf(message, actor, authUserId)) {
+    if (message.is_bot || isMessageFromSelf(message, actor, authUserId)) {
         return;
     }
 
@@ -62,6 +62,10 @@ function notifyIncomingMessage(
         icon: <MessageSquareIcon />,
         position: 'top-center',
     });
+}
+
+function handleIncomingChatMessageUpdate(message: ChatMessageResource): void {
+    useChatStore.getState().upsertMessage(message);
 }
 
 function handleIncomingChatMessage(
@@ -96,6 +100,15 @@ function AuthenticatedChatMessageListener() {
 
     useEcho(
         channelName,
+        '.ChatMessageUpdated',
+        (event: ChatMessageResource) => {
+            handleIncomingChatMessageUpdate(event);
+        },
+        [channelName],
+    );
+
+    useEcho(
+        channelName,
         '.ChatRoomUpdated',
         (event: { room: ChatRoomResource }) => {
             upsertRoom(event.room);
@@ -125,6 +138,14 @@ function UnauthenticatedChatMessageListener() {
         '.ChatMessageCreated',
         (event: ChatMessageResource) => {
             handleIncomingChatMessage(event);
+        },
+    );
+
+    useEchoPublic(
+        channelName,
+        '.ChatMessageUpdated',
+        (event: ChatMessageResource) => {
+            handleIncomingChatMessageUpdate(event);
         },
     );
 
@@ -351,6 +372,15 @@ export function FloatingChatWidgetContextProvider({
     return <>{children}</>;
 }
 
+export function useChatDraft() {
+    return useChatUiStore(
+        useShallow((state) => ({
+            message: state.message,
+            setMessage: state.setMessage,
+        })),
+    );
+}
+
 export function useFloatingChatWidgetContext() {
     const ui = useChatUiStore(
         useShallow((state) => ({
@@ -358,8 +388,6 @@ export function useFloatingChatWidgetContext() {
             setOpen: state.setOpen,
             roomId: state.roomId,
             setRoomId: state.setRoomId,
-            message: state.message,
-            setMessage: state.setMessage,
             attachment: state.attachment,
             setAttachment: state.setAttachment,
         })),

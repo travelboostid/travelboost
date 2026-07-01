@@ -1,5 +1,5 @@
 import type { TourResource } from '@/api/model';
-import { useFloatingChatWidgetContext } from '@/components/chat/state';
+import { useStartPrivateChat } from '@/components/chat/state';
 import TourBookingModal from '@/components/tours/tour-booking-modal';
 import {
     AlertDialog,
@@ -14,6 +14,7 @@ import {
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
 import { activateChatStack } from '@/lib/activate-chat-stack';
 import { extractDocumentUrl } from '@/lib/utils';
+import { useChatUiStore } from '@/stores/chat/chat-ui-store';
 import { router } from '@inertiajs/react';
 import axios from 'axios';
 import { useCallback, useEffect, useState } from 'react';
@@ -80,7 +81,8 @@ export default function TourCard({
     imagePriority?: boolean;
 }) {
     const { company, auth } = usePageSharedDataProps();
-    const floatingChat = useFloatingChatWidgetContext();
+    const startPrivateChat = useStartPrivateChat();
+    const setAttachment = useChatUiStore((state) => state.setAttachment);
 
     const [startingChat, setStartingChat] = useState(false);
     const [liked, setLiked] = useState(Boolean(tour.is_liked));
@@ -201,11 +203,11 @@ export default function TourCard({
         try {
             setStartingChat(true);
             activateChatStack();
-            floatingChat?.setAttachment({
+            setAttachment({
                 type: 'tour',
                 data: tour.id.toString(),
             });
-            await floatingChat?.startPrivateChat({
+            await startPrivateChat({
                 type: 'company',
                 id: targetId,
             });
