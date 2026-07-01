@@ -110,7 +110,7 @@ Link related issues or chat threads when relevant.
 
 **Do**
 
-- Keep branch up to date with `dev` (merge `dev` into your branch)
+- Keep branch up to date with `dev` (merge `dev` into your branch) — see [Merging Branch Conflicts](./merging-branch-conflicts.md)
 - Pull latest `dev` before starting new work
 - Use feature branches for isolated work
 
@@ -354,11 +354,12 @@ See [Deployment](./deployment.md) for manual steps, skip flags, and server mappi
 
 ## Related docs
 
-| Topic         | Doc                                         |
-| ------------- | ------------------------------------------- |
-| Flow charts   | [Development Flow](./development-flow.md)   |
-| Local setup   | [Local Development](./local-development.md) |
-| Architecture  | [Architecture](./architecture.md)           |
-| Web API types | [Web API & Orval](./webapi-orval.md)        |
-| Translations  | [Translations (i18n)](./i18n.md)            |
-| Deploy        | [Deployment](./deployment.md)               |
+| Topic           | Doc                                                       |
+| --------------- | --------------------------------------------------------- |
+| Flow charts     | [Development Flow](./development-flow.md)                 |
+| Merge conflicts | [Merging Branch Conflicts](./merging-branch-conflicts.md) |
+| Local setup     | [Local Development](./local-development.md)               |
+| Architecture    | [Architecture](./architecture.md)                         |
+| Web API types   | [Web API & Orval](./webapi-orval.md)                      |
+| Translations    | [Translations (i18n)](./i18n.md)                          |
+| Deploy          | [Deployment](./deployment.md)                             |

@@ -54,6 +54,7 @@ flowchart TD
 | 5. Work         | Implement, run checks from [Team SOP — Before you push](./team-sop.md#before-you-push)                                                                       |
 | 6. Push         | `git push -u origin feat/my-feature`                                                                                                                         |
 | 7. Pull request | Open PR on GitHub **into `dev`** — include what/why, how to test, deploy notes                                                                               |
+| 7b. Conflicts   | If `dev` moved ahead: [Merging Branch Conflicts](./merging-branch-conflicts.md)                                                                              |
 | 8. CI           | GitHub Actions runs Pest tests and lint on PRs to `dev` and `main`                                                                                           |
 | 9. Review       | Ask a teammate to review when possible. **Required approvals are not configured in GitHub yet** — merge when CI is green and you are confident in the change |
 | 10. Merge       | Squash or merge PR into `dev` (team default: merge commit is fine)                                                                                           |
@@ -186,9 +187,10 @@ flowchart LR
 
 ## Related docs
 
-| Topic                                    | Doc                                         |
-| ---------------------------------------- | ------------------------------------------- |
-| Branch naming, commits, coding standards | [Team SOP](./team-sop.md)                   |
-| Deploy script, flags, manual steps       | [Deployment](./deployment.md)               |
-| Server IPs and hostnames                 | [Server Inventory](./server-inventory.md)   |
-| Local setup                              | [Local Development](./local-development.md) |
+| Topic                                    | Doc                                                       |
+| ---------------------------------------- | --------------------------------------------------------- |
+| Branch naming, commits, coding standards | [Team SOP](./team-sop.md)                                 |
+| Merge conflicts                          | [Merging Branch Conflicts](./merging-branch-conflicts.md) |
+| Deploy script, flags, manual steps       | [Deployment](./deployment.md)                             |
+| Server IPs and hostnames                 | [Server Inventory](./server-inventory.md)                 |
+| Local setup                              | [Local Development](./local-development.md)               |
