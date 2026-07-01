@@ -40,11 +40,11 @@ beforeEach(function () {
  */
 function createBookingCreateScenario(string $username): array
 {
-    $user = User::factory()->create();
     $company = Company::factory()->create([
         'username' => $username,
         'type' => 'vendor',
     ]);
+    $user = createTenantCustomer($company);
     $company->companySetting()->updateOrCreate([], [
         'minimum_down_payment' => 30,
     ]);
@@ -483,11 +483,11 @@ test('booking create classifies saved passengers by traveler type for the select
 });
 
 test('reserve rejects extra bed passengers without a twin or double base room', function () {
-    $user = User::factory()->create();
     $company = Company::factory()->create([
         'username' => 'extrabedvendor',
         'type' => 'vendor',
     ]);
+    $user = createTenantCustomer($company);
     $tour = Tour::factory()->create([
         'company_id' => $company->id,
         'status' => 'active',
@@ -739,11 +739,11 @@ test('reserve allows one dependent bed passenger with one twin or double base ro
 test('reserve stores server hold expiry using ten minute fallback when setting is empty', function () {
     $this->travelTo(now()->startOfSecond());
 
-    $user = User::factory()->create();
     $company = Company::factory()->create([
         'username' => 'timerfallbackvendor',
         'type' => 'vendor',
     ]);
+    $user = createTenantCustomer($company);
     $company->companySetting()->updateOrCreate([], [
         'booking_entry_time_limit' => 0,
     ]);
@@ -1470,7 +1470,7 @@ test('reserve rejects expanding the same booking beyond free seats plus its curr
 
 test('reserve does not let another customer use seats held by a different booking', function () {
     ['user' => $owner, 'company' => $company, 'tour' => $tour, 'schedule' => $schedule] = createBookingCreateScenario('otherholdvendor');
-    $otherUser = User::factory()->create();
+    $otherUser = createTenantCustomer($company);
 
     $booking = Booking::factory()->create([
         'booking_number' => 'BKG-OTHER-HOLD',
@@ -2902,39 +2902,7 @@ test('opening create route for an expired booking number does not restore it', f
 });
 
 test('expired future booking can be reset through reorder endpoint with the same booking number', function () {
-    $user = User::factory()->create();
-    $company = Company::factory()->create([
-        'username' => 'endpointreordervendor',
-        'type' => 'vendor',
-    ]);
-
-    Domain::create([
-        'subdomain' => 'endpointreordervendor',
-        'owner_type' => Company::class,
-        'owner_id' => $company->id,
-        'domain_enabled' => true,
-        'subdomain_enabled' => true,
-    ]);
-
-    $tour = Tour::factory()->create([
-        'company_id' => $company->id,
-        'status' => 'active',
-    ]);
-    $schedule = TourSchedule::create([
-        'tour_id' => $tour->id,
-        'tour_code' => $tour->code,
-        'company_id' => $company->id,
-        'departure_date' => now()->addDays(20)->toDateString(),
-        'return_date' => now()->addDays(25)->toDateString(),
-        'is_active' => true,
-    ]);
-    TourAvailability::create([
-        'company_id' => $company->id,
-        'tour_id' => $tour->id,
-        'schedule_id' => $schedule->id,
-        'max_pax' => 10,
-        'available' => 10,
-    ]);
+    ['user' => $user, 'company' => $company, 'tour' => $tour, 'schedule' => $schedule] = createBookingCreateScenario('endpointreordervendor');
 
     $booking = Booking::factory()->create([
         'booking_number' => 'BKG-REORDER-ENDPOINT',

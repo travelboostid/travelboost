@@ -2,9 +2,9 @@
 
 namespace App\Events;
 
+use App\Events\Concerns\BroadcastsChatMessageToMembers;
 use App\Http\Resources\ChatMessageResource;
 use App\Models\ChatMessage;
-use App\Models\Company;
 use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Broadcasting\PrivateChannel;
@@ -14,71 +14,30 @@ use Illuminate\Queue\SerializesModels;
 
 class ChatMessageCreated implements ShouldBroadcast
 {
-    use Dispatchable, InteractsWithSockets, SerializesModels;
+    use BroadcastsChatMessageToMembers, Dispatchable, InteractsWithSockets, SerializesModels;
+
+    public function __construct(public ChatMessage $message) {}
 
     /**
-     * Create a new event instance.
-     *
-     * @param  ChatMessage  $message  The chat message that was created
-     */
-    public function __construct(public ChatMessage $message)
-    {
-        // The chat message is passed to the event for broadcasting
-    }
-
-    /**
-     * Get the channels the event should broadcast on.
-     * Broadcasts to both room channel (for chat updates) and user channels (for notifications).
-     *
-     * @return array<int, PrivateChannel>
+     * @return array<int, Channel|PrivateChannel>
      */
     public function broadcastOn(): array
     {
-        $channels = [];
-
-        // 1️⃣ Room channel - for updating chat detail view
-        $channels[] = new PrivateChannel("rooms.{$this->message->room_id}");
-
-        // 2️⃣ User channels - for updating chat list sidebar for each member
-        $this->message->load('room.members');
-        foreach ($this->message->room->members as $member) {
-            if ($member->member_type === 'user') {
-                $channels[] = new PrivateChannel("users.{$member->member_id}");
-            } elseif ($member->member_type === 'anonymous-user') {
-                $channels[] = new Channel("anonymous-users.{$member->member_id}");
-            } elseif ($member->member_type === 'company') {
-                /** @var Company $company */
-                $company = $member->member;
-                $teams = $company->teams()->get(); // Assuming a company has many users
-                foreach ($teams as $team) {
-                    $channels[] = new PrivateChannel("users.{$team->user_id}");
-                }
-            }
-        }
-
-        return $channels;
+        return $this->chatMessageChannels($this->message);
     }
 
-    /**
-     * The event name to broadcast as.
-     */
     public function broadcastAs(): string
     {
         return 'ChatMessageCreated';
     }
 
     /**
-     * Get the data to broadcast.
-     * Serializes the chat message with its relationships.
+     * @return array<string, mixed>
      */
     public function broadcastWith(): array
     {
-        // Eager load relationships to avoid N+1 queries
         $this->message->loadMissing(['sender', 'room']);
 
-        // Use resource to control serialized data structure
-        $resource = new ChatMessageResource($this->message);
-
-        return $resource->resolve();
+        return (new ChatMessageResource($this->message))->resolve();
     }
 }

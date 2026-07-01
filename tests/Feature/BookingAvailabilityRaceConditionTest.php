@@ -64,12 +64,12 @@ beforeEach(function () {
  */
 function createSingleSeatRaceScenario(): array
 {
-    $customerA = User::factory()->create();
-    $customerB = User::factory()->create();
     $vendor = Company::factory()->create([
         'username' => 'racevendor'.fake()->unique()->numberBetween(1000, 9999),
         'type' => 'vendor',
     ]);
+    $customerA = createTenantCustomer($vendor);
+    $customerB = createTenantCustomer($vendor);
     $vendor->companySetting()->updateOrCreate([], [
         'minimum_down_payment' => 30,
         'minimum_vat' => 11,

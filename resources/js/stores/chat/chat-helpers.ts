@@ -8,7 +8,11 @@ export function compareMessagesByCreatedAt(
     const leftTime = new Date(messageById[leftId]?.created_at ?? 0).getTime();
     const rightTime = new Date(messageById[rightId]?.created_at ?? 0).getTime();
 
-    return leftTime - rightTime;
+    if (leftTime !== rightTime) {
+        return leftTime - rightTime;
+    }
+
+    return leftId - rightId;
 }
 
 export function sortMessageIds(

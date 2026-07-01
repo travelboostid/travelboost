@@ -9,4 +9,5 @@ return [
     'backend_callback_url' => env('PRISMALINK_BACKEND_CALLBACK_URL'),
     'frontend_callback_url' => env('PRISMALINK_FRONTEND_CALLBACK_URL'),
     'default_validity_hours' => env('PRISMALINK_DEFAULT_VALIDITY_HOURS', 24),
+    'default_validity_minutes' => env('PRISMALINK_DEFAULT_VALIDITY_MINUTES'),
 ];

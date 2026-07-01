@@ -34,15 +34,39 @@ class ViteAssetUrl
         $hotFile = $vite->hotFile();
 
         if (! is_file($hotFile)) {
-            return asset($path, $secure);
+            return self::assetUrlFromConfig($path, $secure);
         }
 
         $hotUrl = file_get_contents($hotFile);
 
         if ($hotUrl === false || trim($hotUrl) === '') {
-            return asset($path, $secure);
+            return self::assetUrlFromConfig($path, $secure);
         }
 
         return rtrim(trim($hotUrl), '/').'/'.ltrim($path, '/');
+    }
+
+    private static function assetUrlFromConfig(string $path, ?bool $secure = null): string
+    {
+        $root = rtrim((string) config('app.url'), '/');
+
+        if ($root === '') {
+            return '/'.ltrim($path, '/');
+        }
+
+        if ($secure !== null) {
+            $host = parse_url($root, PHP_URL_HOST);
+            $port = parse_url($root, PHP_URL_PORT);
+
+            if (is_string($host) && $host !== '') {
+                $root = ($secure ? 'https' : 'http').'://'.$host;
+
+                if ($port !== null) {
+                    $root .= ':'.$port;
+                }
+            }
+        }
+
+        return $root.'/'.ltrim($path, '/');
     }
 }

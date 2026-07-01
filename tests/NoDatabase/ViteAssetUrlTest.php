@@ -4,17 +4,25 @@ use App\Support\ViteAssetUrl;
 use Illuminate\Foundation\Vite;
 
 beforeEach(function () {
-    $this->hotFile = public_path('hot');
-    $this->hadHot = is_file($this->hotFile);
-    if ($this->hadHot) {
-        $this->originalHot = file_get_contents($this->hotFile);
-        @unlink($this->hotFile);
+    $hotFile = public_path('hot');
+    $this->hotFileBackup = [
+        'path' => $hotFile,
+        'existed' => is_file($hotFile),
+        'contents' => is_file($hotFile) ? file_get_contents($hotFile) : null,
+    ];
+
+    if ($this->hotFileBackup['existed']) {
+        @unlink($hotFile);
     }
 });
 
 afterEach(function () {
-    if ($this->hadHot) {
-        file_put_contents($this->hotFile, $this->originalHot);
+    $hotFile = $this->hotFileBackup['path'];
+
+    if ($this->hotFileBackup['existed']) {
+        file_put_contents($hotFile, $this->hotFileBackup['contents']);
+    } elseif (is_file($hotFile)) {
+        @unlink($hotFile);
     }
 });
 
