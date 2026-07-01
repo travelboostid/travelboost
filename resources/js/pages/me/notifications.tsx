@@ -107,33 +107,44 @@ export default function CustomerNotifications({
                                                         .message ?? ''}
                                                 </p>
                                             </div>
-                                            <div className="flex shrink-0 items-center gap-1">
-                                                {unread && (
+                                            <div className="flex shrink-0 flex-col items-end gap-1">
+                                                <span className="text-[11px] text-muted-foreground/80 font-medium">
+                                                    {new Intl.DateTimeFormat('id-ID', {
+                                                        day: 'numeric',
+                                                        month: 'long',
+                                                        year: 'numeric',
+                                                        hour: '2-digit',
+                                                        minute: '2-digit',
+                                                    }).format(new Date(notification.created_at))}
+                                                </span>
+                                                <div className="flex items-center gap-1">
+                                                    {unread && (
+                                                        <Button
+                                                            type="button"
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            onClick={() =>
+                                                                markAsRead(
+                                                                    notification.id,
+                                                                )
+                                                            }
+                                                        >
+                                                            <CheckIcon className="size-4" />
+                                                        </Button>
+                                                    )}
                                                     <Button
                                                         type="button"
                                                         variant="ghost"
                                                         size="icon"
                                                         onClick={() =>
-                                                            markAsRead(
+                                                            deleteNotification(
                                                                 notification.id,
                                                             )
                                                         }
                                                     >
-                                                        <CheckIcon className="size-4" />
+                                                        <Trash2Icon className="size-4" />
                                                     </Button>
-                                                )}
-                                                <Button
-                                                    type="button"
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    onClick={() =>
-                                                        deleteNotification(
-                                                            notification.id,
-                                                        )
-                                                    }
-                                                >
-                                                    <Trash2Icon className="size-4" />
-                                                </Button>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
