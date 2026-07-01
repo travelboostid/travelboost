@@ -11,6 +11,7 @@ use App\Actions\Booking\ReconcileBookingPaymentAfterRepriceAction;
 use App\Actions\Booking\SyncAvailabilityAction;
 use App\Enums\BookingAvailabilityContext;
 use App\Enums\BookingStatus;
+use App\Enums\CompanyType;
 use App\Enums\PaymentMethodStatus;
 use App\Enums\PaymentMethodUsageScope;
 use App\Enums\PaymentStatus;
@@ -32,6 +33,7 @@ use App\Models\TourSchedule;
 use App\Models\User;
 use App\Models\VendorAgentPartner;
 use App\Services\AgentCommissionResolver;
+use App\Services\AgentPackageAccessService;
 use App\Services\BookingAddOnOptionsService;
 use App\Services\BookingContactPaymentEmailService;
 use App\Services\BookingDownPaymentRuleService;
@@ -73,6 +75,7 @@ class DashboardBookingController extends Controller
 
     public function __construct(
         private readonly MidtransService $midtransService,
+        private readonly AgentPackageAccessService $agentPackageAccessService,
     ) {}
 
     /**
@@ -83,6 +86,7 @@ class DashboardBookingController extends Controller
     public function create(Company $company, Tour $tour): Response
     {
         $this->assertCompanyCanBookTour($company, $tour);
+        $this->assertAgentCompanyCanBookVendorTour($company, $tour);
 
         $tour->load('company.companySetting', 'schedules.availability', 'visaCategory.items');
         $settings = $tour->company?->companySetting;
@@ -244,6 +248,7 @@ class DashboardBookingController extends Controller
     public function reserve(Company $company, Tour $tour, Request $request, BookingNumberService $bookingNumberService): RedirectResponse
     {
         $this->assertCompanyCanBookTour($company, $tour);
+        $this->assertAgentCompanyCanBookVendorTour($company, $tour);
 
         $data = $request->validate([
             'tour_id' => ['required', 'exists:tours,id'],
@@ -414,6 +419,7 @@ class DashboardBookingController extends Controller
     public function store(Company $company, Tour $tour, StoreBookingRequest $request, BookingService $bookingService, BookingNumberService $bookingNumberService): RedirectResponse
     {
         $this->assertCompanyCanBookTour($company, $tour);
+        $this->assertAgentCompanyCanBookVendorTour($company, $tour);
 
         $validated = $request->validated();
         $agent = $this->resolveDashboardBookingAgent($company, $tour, data_get($validated, 'agent_id'));
@@ -1205,6 +1211,28 @@ class DashboardBookingController extends Controller
                 : null;
     }
 
+    private function assertAgentCompanyCanBookVendorTour(Company $company, Tour $tour): void
+    {
+        if (($company->type->value ?? $company->type) !== CompanyType::AGENT->value) {
+            return;
+        }
+
+        $vendor = $tour->relationLoaded('company')
+            ? $tour->company
+            : $tour->company()->first();
+
+        if (! $vendor instanceof Company) {
+            return;
+        }
+
+        if (
+            $this->agentPackageAccessService->isActivePackageOneAgent($company)
+            && ! $vendor->allow_package_one_agents
+        ) {
+            abort(403, 'This vendor requires an active subscription before you can book tours.');
+        }
+    }
+
     private function resolveDashboardBookingAgent(Company $company, Tour $tour, mixed $agentId): ?Company
     {
         $companyType = $company->type->value ?? $company->type;
@@ -1230,7 +1258,10 @@ class DashboardBookingController extends Controller
             ->where('vendor_id', $company->id)
             ->where('agent_id', $normalizedAgentId)
             ->where('status', VendorAgentPartnerStatus::ACTIVE->value)
-            ->whereHas('agent.agentSubscription', fn (Builder $query): Builder => $this->eligibleAgentSubscriptionConstraint($query))
+            ->whereHas(
+                'agent.agentSubscription',
+                fn (Builder $query): Builder => $this->eligibleAgentSubscriptionConstraint($query, $company),
+            )
             ->first();
 
         if (! $partnership?->agent) {
@@ -1418,7 +1449,10 @@ class DashboardBookingController extends Controller
 
         return $company->agentPartners()
             ->where('status', VendorAgentPartnerStatus::ACTIVE->value)
-            ->whereHas('agent.agentSubscription', fn (Builder $query): Builder => $this->eligibleAgentSubscriptionConstraint($query))
+            ->whereHas(
+                'agent.agentSubscription',
+                fn (Builder $query): Builder => $this->eligibleAgentSubscriptionConstraint($query, $company),
+            )
             ->pluck('agent_id');
     }
 
@@ -1512,7 +1546,10 @@ class DashboardBookingController extends Controller
             ->with('agent:id,name,username,email')
             ->where('status', VendorAgentPartnerStatus::ACTIVE->value)
             ->whereIn('agent_id', $catalogedAgentIds)
-            ->whereHas('agent.agentSubscription', fn (Builder $query): Builder => $this->eligibleAgentSubscriptionConstraint($query))
+            ->whereHas(
+                'agent.agentSubscription',
+                fn (Builder $query): Builder => $this->eligibleAgentSubscriptionConstraint($query, $company),
+            )
             ->get()
             ->map(fn (VendorAgentPartner $partner): ?array => $partner->agent ? [
                 'id' => $partner->agent->id,
@@ -1524,9 +1561,9 @@ class DashboardBookingController extends Controller
             ->values();
     }
 
-    private function eligibleAgentSubscriptionConstraint(Builder $query): Builder
+    private function eligibleAgentSubscriptionConstraint(Builder $query, Company $vendor): Builder
     {
-        return $query->whereNotNull('package_id');
+        return $this->agentPackageAccessService->eligibleSubscriptionConstraint($query, $vendor);
     }
 
     private function transferDashboardPlaceholderOwnership(string $bookingNumber, ?User $dashboardUser, User $owner): void

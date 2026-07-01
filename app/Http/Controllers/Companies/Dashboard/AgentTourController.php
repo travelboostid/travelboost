@@ -6,15 +6,21 @@ use App\Http\Controllers\Controller;
 use App\Models\AgentTour;
 use App\Models\Company;
 use App\Models\VendorAgentPartner;
+use App\Services\AgentPackageAccessService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
 class AgentTourController extends Controller
 {
+    public function __construct(
+        private readonly AgentPackageAccessService $agentPackageAccessService,
+    ) {}
+
     public function index(Company $company, Request $request)
     {
         $status = $request->input('status', 'all');
+        $isPackageOneAgentBlockedByDefault = $this->agentPackageAccessService->isActivePackageOneAgent($company);
 
         $tours = $company->agentTours()
             ->with([
@@ -51,7 +57,7 @@ class AgentTourController extends Controller
             ->get();
 
         $tours = $tours
-            ->each(function (AgentTour $agentTour) use ($partnershipPermissions): void {
+            ->each(function (AgentTour $agentTour) use ($partnershipPermissions, $isPackageOneAgentBlockedByDefault): void {
                 $bookingDeadlineDays = (int) ($agentTour->tour?->company?->companySetting?->booking_deadline ?? 0);
                 $agentTour->tour?->schedules?->each(function ($schedule) use ($bookingDeadlineDays): void {
                     $schedule->setAttribute('price', $this->lowestDiscountedSchedulePrice($schedule->prices));
@@ -77,6 +83,11 @@ class AgentTourController extends Controller
                 $agentTour->setAttribute(
                     'itinerary_document_source',
                     $isUploadEnabled && $agentDocumentUrl ? 'agent' : ($vendorDocumentUrl ? 'vendor' : null),
+                );
+                $agentTour->setAttribute(
+                    'booking_blocked_by_subscription',
+                    $isPackageOneAgentBlockedByDefault
+                    && ! (bool) ($agentTour->tour?->company?->allow_package_one_agents ?? false),
                 );
             });
 

@@ -2,13 +2,16 @@ import { DataTable } from '@/components/data-table/data-table';
 import { DataTableColumnHeader } from '@/components/data-table/data-table-column-header';
 import { DataTableToolbar } from '@/components/data-table/data-table-toolbar';
 import AdminDashboardLayout from '@/components/layouts/admin-dashboard';
+import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Switch } from '@/components/ui/switch';
 import { useDataTable } from '@/hooks/use-data-table';
-import { edit } from '@/routes/admin/database/vendors';
+import { edit, update } from '@/routes/admin/database/vendors';
+import { router } from '@inertiajs/react';
 import type { ColumnDef } from '@tanstack/react-table';
 import dayjs from 'dayjs';
 import { CalendarIcon, Text } from 'lucide-react';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { CompaniesTableActionBar } from '../shared/companies-table-action-bar';
 import { CompanyRowActions } from '../shared/company-row-actions';
 import type {
@@ -16,6 +19,55 @@ import type {
     PaginatedCompanies,
 } from '../shared/company-types';
 import { EmptyVendors } from './components/empty-vendors';
+
+function PackageOneAccessCell({ company }: { company: AdminCompanyRow }) {
+    const [checked, setChecked] = useState(
+        Boolean(company.allow_package_one_agents),
+    );
+    const [pending, setPending] = useState(false);
+
+    return (
+        <div className="flex min-w-[180px] items-center gap-3">
+            <Switch
+                checked={checked}
+                disabled={pending}
+                onCheckedChange={(nextChecked) => {
+                    if (pending) {
+                        return;
+                    }
+
+                    const previousChecked = checked;
+                    setPending(true);
+                    setChecked(nextChecked);
+
+                    router.put(
+                        update({ vendor: company.id }).url,
+                        {
+                            allow_package_one_agents: nextChecked,
+                        },
+                        {
+                            preserveScroll: true,
+                            preserveState: true,
+                            onError: () => setChecked(previousChecked),
+                            onFinish: () => setPending(false),
+                        },
+                    );
+                }}
+                aria-label={`Toggle package one access for ${company.name}`}
+            />
+            <Badge
+                variant="secondary"
+                className={
+                    checked
+                        ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
+                        : 'border-slate-300/70 bg-slate-100 text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300'
+                }
+            >
+                {checked ? 'Allowed' : 'Blocked'}
+            </Badge>
+        </div>
+    );
+}
 
 export default function VendorsPage({ data }: { data: PaginatedCompanies }) {
     const columns = useMemo<ColumnDef<AdminCompanyRow>[]>(
@@ -150,6 +202,19 @@ export default function VendorsPage({ data }: { data: PaginatedCompanies }) {
                     icon: Text,
                 },
                 enableColumnFilter: true,
+            },
+            {
+                id: 'allow_package_one_agents',
+                accessorKey: 'allow_package_one_agents',
+                header: ({ column }) => (
+                    <DataTableColumnHeader
+                        column={column}
+                        label="Pkg 1 Agents"
+                    />
+                ),
+                cell: ({ row }) => (
+                    <PackageOneAccessCell company={row.original} />
+                ),
             },
             {
                 id: 'created_at',

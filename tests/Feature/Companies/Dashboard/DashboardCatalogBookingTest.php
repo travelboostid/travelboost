@@ -250,6 +250,68 @@ test('agent my catalog exposes schedule prices from vendor tour prices', functio
         ->where('data.0.tour.schedules.0.price', 4_500_000));
 });
 
+test('agent package one cannot open booking flow from my catalog when vendor blocks package one agents', function () {
+    ['vendor' => $vendor, 'tour' => $tour, 'schedule' => $schedule] = createPricedDashboardTour();
+    $agent = Company::factory()->create(['type' => 'agent']);
+    $user = User::factory()->create();
+    attachDashboardUserToCompany($user, $agent);
+
+    $agent->agentSubscription()->create([
+        'package_id' => 1,
+        'started_at' => now()->subDay(),
+        'ended_at' => now()->addMonth(),
+    ]);
+
+    VendorAgentPartner::create([
+        'vendor_id' => $vendor->id,
+        'agent_id' => $agent->id,
+        'status' => VendorAgentPartnerStatus::ACTIVE,
+        'accepted_at' => now(),
+    ]);
+
+    AgentTour::create([
+        'company_id' => $agent->id,
+        'tour_id' => $tour->id,
+        'status' => 'active',
+    ]);
+
+    $this->actingAs($user)
+        ->get("/companies/{$agent->username}/dashboard/bookings/create/{$tour->id}?date={$schedule->departure_date}")
+        ->assertForbidden();
+});
+
+test('agent package one can open booking flow from my catalog when vendor allows package one agents', function () {
+    ['vendor' => $vendor, 'tour' => $tour, 'schedule' => $schedule] = createPricedDashboardTour();
+    $vendor->update(['allow_package_one_agents' => true]);
+
+    $agent = Company::factory()->create(['type' => 'agent']);
+    $user = User::factory()->create();
+    attachDashboardUserToCompany($user, $agent);
+
+    $agent->agentSubscription()->create([
+        'package_id' => 1,
+        'started_at' => now()->subDay(),
+        'ended_at' => now()->addMonth(),
+    ]);
+
+    VendorAgentPartner::create([
+        'vendor_id' => $vendor->id,
+        'agent_id' => $agent->id,
+        'status' => VendorAgentPartnerStatus::ACTIVE,
+        'accepted_at' => now(),
+    ]);
+
+    AgentTour::create([
+        'company_id' => $agent->id,
+        'tour_id' => $tour->id,
+        'status' => 'active',
+    ]);
+
+    $this->actingAs($user)
+        ->get("/companies/{$agent->username}/dashboard/bookings/create/{$tour->id}?date={$schedule->departure_date}")
+        ->assertOk();
+});
+
 test('vendor catalog exposes schedule prices from minimum vendor tour price category', function () {
     ['vendor' => $vendor] = createPricedDashboardTour();
     $user = User::factory()->create();
@@ -530,7 +592,7 @@ test('dashboard booking create resume exposes stored input by audit payload', fu
         ->where('inputBy.created_at', $booking->fresh()->created_at->toJSON()));
 });
 
-test('vendor dashboard booking create exposes customers from all subscribed agent partners', function () {
+test('vendor dashboard booking create excludes customers from blocked free trial agent partners', function () {
     ['vendor' => $vendor, 'tour' => $tour, 'schedule' => $schedule] = createPricedDashboardTour();
     $user = User::factory()->create();
     attachDashboardUserToCompany($user, $vendor);
@@ -558,14 +620,11 @@ test('vendor dashboard booking create exposes customers from all subscribed agen
     $response->assertOk();
     $response->assertInertia(fn ($page) => $page
         ->component('tours/bookings/create')
-        ->has('customerOptions', 2)
-        ->where('customerOptions', fn ($customers) => collect($customers)->pluck('id')->sort()->values()->all() === collect([
-            $freeTrialCustomer->id,
-            $paidAgentCustomer->id,
-        ])->sort()->values()->all()));
+        ->has('customerOptions', 1)
+        ->where('customerOptions.0.id', $paidAgentCustomer->id));
 });
 
-test('dashboard booking create exposes saved passengers scoped to eligible agent customers', function () {
+test('dashboard booking create excludes saved passengers from blocked free trial agent customers', function () {
     ['vendor' => $vendor, 'tour' => $tour, 'schedule' => $schedule] = createPricedDashboardTour();
     $user = User::factory()->create();
     attachDashboardUserToCompany($user, $vendor);
@@ -615,16 +674,36 @@ test('dashboard booking create exposes saved passengers scoped to eligible agent
     $response->assertOk();
     $response->assertInertia(fn ($page) => $page
         ->component('tours/bookings/create')
-        ->has('savedPassengers', 3)
+        ->has('savedPassengers', 2)
         ->where('savedPassengers', fn ($passengers) => collect($passengers)->pluck('passportNumber')->sort()->values()->all() === [
             'OTHER-PASSPORT',
             'PAID-PASSPORT',
-            'TRIAL-PASSPORT',
         ]));
 });
 
-test('vendor dashboard booking create exposes active partners including free trial package', function () {
+test('vendor dashboard booking create excludes free trial agents when vendor blocks package one agents', function () {
     ['vendor' => $vendor, 'tour' => $tour, 'schedule' => $schedule] = createPricedDashboardTour();
+    $user = User::factory()->create();
+    attachDashboardUserToCompany($user, $vendor);
+    $freeTrialAgent = createActiveDashboardAgentPartner($vendor, 1, ['name' => 'Free Trial Agent'], $tour);
+    $paidAgent = createActiveDashboardAgentPartner($vendor, 2, ['name' => 'Paid Agent'], $tour);
+
+    $response = $this->actingAs($user)
+        ->get("/companies/{$vendor->username}/dashboard/bookings/create/{$tour->id}?date={$schedule->departure_date}");
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->component('tours/bookings/create')
+        ->where('requiresAgentSelection', true)
+        ->has('agentOptions', 1)
+        ->where('agentOptions.0.id', $paidAgent->id)
+        ->where('agentOptions.0.name', 'Paid Agent'));
+});
+
+test('vendor dashboard booking create can expose free trial agents when vendor allows package one agents', function () {
+    ['vendor' => $vendor, 'tour' => $tour, 'schedule' => $schedule] = createPricedDashboardTour();
+    $vendor->update(['allow_package_one_agents' => true]);
+
     $user = User::factory()->create();
     attachDashboardUserToCompany($user, $vendor);
     $freeTrialAgent = createActiveDashboardAgentPartner($vendor, 1, ['name' => 'Free Trial Agent'], $tour);
@@ -683,6 +762,21 @@ test('vendor dashboard booking reserve rejects active partners without catalog a
     attachDashboardUserToCompany($dashboardUser, $vendor);
     $agent = createActiveDashboardAgentPartner($vendor, 2, ['name' => 'Partner Without Catalog']);
     $payload = dashboardBookingPayload($tour, $schedule, $vendor, $agent, 'guest-without-account@example.test');
+
+    $this->actingAs($dashboardUser)
+        ->from("/companies/{$vendor->username}/dashboard/bookings/create/{$tour->id}?date={$schedule->departure_date}")
+        ->post("/companies/{$vendor->username}/dashboard/bookings/create/{$tour->id}/reserve", $payload)
+        ->assertSessionHasErrors('agent_id');
+
+    expect(Booking::query()->count())->toBe(0);
+});
+
+test('vendor dashboard booking reserve rejects free trial agents when vendor blocks package one agents', function () {
+    ['vendor' => $vendor, 'tour' => $tour, 'schedule' => $schedule] = createPricedDashboardTour();
+    $dashboardUser = User::factory()->create();
+    attachDashboardUserToCompany($dashboardUser, $vendor);
+    $agent = createActiveDashboardAgentPartner($vendor, 1, ['name' => 'Blocked Free Trial Agent'], $tour);
+    $payload = dashboardBookingPayload($tour, $schedule, $vendor, $agent, 'blocked-free-trial@example.test');
 
     $this->actingAs($dashboardUser)
         ->from("/companies/{$vendor->username}/dashboard/bookings/create/{$tour->id}?date={$schedule->departure_date}")
@@ -1019,8 +1113,9 @@ test('vendor dashboard booking reserve requires an active agent partner', functi
     expect(Booking::query()->count())->toBe(0);
 });
 
-test('vendor dashboard booking reserve accepts active partners on the free trial package', function () {
+test('vendor dashboard booking reserve accepts free trial partners when vendor allows package one agents', function () {
     ['vendor' => $vendor, 'tour' => $tour, 'schedule' => $schedule] = createPricedDashboardTour();
+    $vendor->update(['allow_package_one_agents' => true]);
     $dashboardUser = User::factory()->create();
     attachDashboardUserToCompany($dashboardUser, $vendor);
     $agent = createActiveDashboardAgentPartner($vendor, 1, ['name' => 'Free Trial Agent'], $tour);
@@ -1140,8 +1235,9 @@ test('vendor dashboard booking store requires an active agent partner', function
     expect(Booking::query()->count())->toBe(0);
 });
 
-test('vendor dashboard booking store accepts active partners on the free trial package', function () {
+test('vendor dashboard booking store accepts free trial partners when vendor allows package one agents', function () {
     ['vendor' => $vendor, 'tour' => $tour, 'schedule' => $schedule] = createPricedDashboardTour();
+    $vendor->update(['allow_package_one_agents' => true]);
     $dashboardUser = User::factory()->create();
     attachDashboardUserToCompany($dashboardUser, $vendor);
     $agent = createActiveDashboardAgentPartner($vendor, 1, ['name' => 'Free Trial Agent'], $tour);

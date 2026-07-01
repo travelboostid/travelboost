@@ -1,3 +1,4 @@
+import type { MediaResource } from '@/api/model';
 import GeoCitySelector from '@/components/geo-city-selector';
 import GeoDistrictSelector from '@/components/geo-district-selector';
 import GeoProvinceSelector from '@/components/geo-province-selector';
@@ -123,6 +124,9 @@ export default function Profile({ profile, account_status }: ProfilePageProps) {
     ).toLowerCase();
     const profileEntity = profileType === 'vendor' ? 'Vendor' : 'Agent';
     const isStatusActive = account_status === 'active';
+    const isPackageOneSubdomainBlocked =
+        profileType === 'agent' &&
+        profile.package_one_subdomain_access_allowed === false;
 
     const form = useForm({
         name: profile.name || '',
@@ -237,6 +241,21 @@ export default function Profile({ profile, account_status }: ProfilePageProps) {
                         </Badge>
                     </div>
                 </Card>
+
+                {isPackageOneSubdomainBlocked ? (
+                    <Card className="border-amber-500/30 bg-amber-50/70 py-0 shadow-sm dark:border-amber-500/20 dark:bg-amber-950/20">
+                        <CardContent className="px-6 py-4">
+                            <div className="space-y-1">
+                                <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">
+                                    <FormattedMessage defaultMessage="Subdomain publishing is locked for your current package." />
+                                </p>
+                                <p className="text-sm text-amber-800/90 dark:text-amber-100/80">
+                                    <FormattedMessage defaultMessage="This vendor network requires an active paid subscription before your public subdomain can stay online." />
+                                </p>
+                            </div>
+                        </CardContent>
+                    </Card>
+                ) : null}
 
                 <form onSubmit={handleSubmit} className="space-y-6">
                     <Card
@@ -393,7 +412,7 @@ export default function Profile({ profile, account_status }: ProfilePageProps) {
                                         <div className="flex items-center justify-between rounded-lg border p-4">
                                             <div className="space-y-0.5 pr-4">
                                                 <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                                                    <Label>
+                                                    <Label htmlFor="domain_enabled">
                                                         <FormattedMessage defaultMessage="Custom domain" />
                                                     </Label>
                                                     <CustomDomainDnsGuideDialog
@@ -410,6 +429,7 @@ export default function Profile({ profile, account_status }: ProfilePageProps) {
                                                 </FieldDescription>
                                             </div>
                                             <Switch
+                                                id="domain_enabled"
                                                 checked={
                                                     form.data.domain_enabled
                                                 }
@@ -650,11 +670,13 @@ export default function Profile({ profile, account_status }: ProfilePageProps) {
                                         id: profile.id,
                                     }}
                                     onChange={(
-                                        media: { id?: number } | null,
+                                        media?: MediaResource | string | null,
                                     ) => {
                                         form.setData(
                                             'identity_card_id',
-                                            media?.id,
+                                            typeof media === 'string'
+                                                ? undefined
+                                                : media?.id,
                                         );
                                     }}
                                     defaultValue={profile.identity_card}
