@@ -5,7 +5,7 @@ import { DataTableToolbar } from '@/components/data-table/data-table-toolbar';
 import AdminDashboardLayout from '@/components/layouts/admin-dashboard';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useDataTable } from '@/hooks/use-data-table';
-import { formatIDR } from '@/lib/utils';
+import { formatIDRFull } from '@/lib/utils';
 import type { ColumnDef } from '@tanstack/react-table';
 import dayjs from 'dayjs';
 import { CalendarIcon, CircleDashedIcon } from 'lucide-react';
@@ -151,7 +151,7 @@ export default function WithdrawalsPage({ data }: WithdrawalsPageProps) {
                 ),
                 cell: ({ cell }) => {
                     const amount = cell.getValue<any>();
-                    return <div>{formatIDR(amount)}</div>;
+                    return <div>{formatIDRFull(amount)}</div>;
                 },
             },
             {

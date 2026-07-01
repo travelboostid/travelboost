@@ -10,7 +10,7 @@ import {
     CardTitle,
 } from '@/components/ui/card';
 import usePageProps from '@/hooks/use-page-props';
-import { formatIDR } from '@/lib/utils';
+import { formatIDRFull } from '@/lib/utils';
 import {
     IconPercentage0,
     IconTrendingDown,
@@ -32,7 +32,7 @@ export default function WalletSummary() {
                         Total Balance
                     </CardDescription>
                     <CardTitle className="text-3xl font-semibold tabular-nums mt-1">
-                        {formatIDR(balance)}
+                        {formatIDRFull(balance)}
                     </CardTitle>
                     <CardAction>
                         <Badge variant="outline" className="bg-white">
@@ -68,7 +68,7 @@ export default function WalletSummary() {
                         Income This Month
                     </p>
                     <p className="text-2xl font-bold text-emerald-600">
-                        +{formatIDR(income.this_month)}
+                        +{formatIDRFull(income.this_month)}
                     </p>
                 </CardContent>
             </Card>
@@ -79,7 +79,7 @@ export default function WalletSummary() {
                         Expenses This Month
                     </p>
                     <p className="text-2xl font-bold text-rose-600">
-                        -{formatIDR(expenses.this_month)}
+                        -{formatIDRFull(expenses.this_month)}
                     </p>
                 </CardContent>
             </Card>

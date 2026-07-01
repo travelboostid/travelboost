@@ -73,7 +73,9 @@ class AppServiceProvider extends ServiceProvider
             } elseif ($domain->owner instanceof Company) {
                 $redirectPath = route('customers.login.show');
             } elseif ($domain->owner instanceof AffiliateProfile) {
-                $redirectPath = '/affiliate/login';
+                $redirectPath = $request->routeIs('companies.*')
+                    ? route('companies.login.show', absolute: false)
+                    : '/affiliate/login';
             } else {
                 $redirectPath = '/'; // Fallback to general login if domain owner type is unrecognized
             }
@@ -107,13 +109,7 @@ class AppServiceProvider extends ServiceProvider
                 return true;
             }
 
-            return $domain->owner instanceof AffiliateProfile
-                && request()->routeIs(
-                    'companies.login.show',
-                    'companies.login.store',
-                    'companies.register.show',
-                    'companies.register.store',
-                );
+            return $domain->owner instanceof AffiliateProfile;
         });
 
         $this->configureDefaults();

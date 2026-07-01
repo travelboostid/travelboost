@@ -98,3 +98,16 @@ export const formatIDR = (
         maximumFractionDigits: 0,
     }).format(value);
 };
+
+export const formatIDRFull = (
+    value: number,
+    options?: {
+        locale?: string;
+    },
+) => {
+    return formatIDR(value, {
+        ...options,
+        compactThreshold: Number.POSITIVE_INFINITY,
+    });
+};
+

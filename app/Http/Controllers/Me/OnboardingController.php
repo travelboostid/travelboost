@@ -199,13 +199,11 @@ class OnboardingController extends Controller
 
     private function companyDashboardUrl(Request $request, Company $company): string
     {
-        $port = $request->getPort();
-        $portSuffix = in_array($port, [80, 443], true) ? '' : ':'.$port;
         $path = route('companies.dashboard.index', [
             'company' => $company->username,
         ], false);
 
-        return $request->getScheme().'://'.env('APP_HOST', 'localhost').$portSuffix.$path;
+        return $request->getSchemeAndHttpHost().$path;
     }
 
     private function notifySafely(object $notifiable, Notification $notification, string $message, array $context = []): void

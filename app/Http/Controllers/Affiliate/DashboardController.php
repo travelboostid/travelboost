@@ -68,12 +68,14 @@ class DashboardController extends Controller
                 'total_agent_pending' => Company::where('type', 'agent')
                     ->where('referred_by', $user->id)
                     ->whereDoesntHave('agentSubscription', function ($q) {
-                        $q->where('ended_at', '>', now());
+                        $q->where('ended_at', '>', now())
+                            ->where('package_id', '!=', 1);
                     })->count(),
                 'total_agent_subscribed' => Company::where('type', 'agent')
                     ->where('referred_by', $user->id)
                     ->whereHas('agentSubscription', function ($q) {
-                        $q->where('ended_at', '>', now());
+                        $q->where('ended_at', '>', now())
+                            ->where('package_id', '!=', 1);
                     })->count(),
                 'total_commission' => $totalCommission,
             ];

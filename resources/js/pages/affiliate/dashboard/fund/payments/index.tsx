@@ -9,7 +9,7 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
-import { formatIDR } from '@/lib/utils';
+import { formatIDRFull } from '@/lib/utils';
 import { Head } from '@inertiajs/react';
 import dayjs from 'dayjs';
 import { BadgePercent, HandCoins, Receipt, Wallet } from 'lucide-react';
@@ -35,7 +35,7 @@ export default function AffiliatePaymentHistory({
         },
         {
             title: 'Total Commission',
-            value: formatIDR(summary.total_amount || 0),
+            value: formatIDRFull(summary.total_amount || 0),
             description: 'Commission received in this period.',
             icon: Wallet,
         },
@@ -164,7 +164,7 @@ export default function AffiliatePaymentHistory({
                                                 </Badge>
                                             </TableCell>
                                             {/* <TableCell className="text-right font-medium text-slate-700 dark:text-slate-300">
-                        {formatIDR(Number(commission.base_amount || 0))}
+                        {formatIDRFull(Number(commission.base_amount || 0))}
                       </TableCell> */}
                                             <TableCell className="text-right">
                                                 <div className="inline-flex items-center gap-1 text-slate-700 dark:text-slate-300">
@@ -177,7 +177,7 @@ export default function AffiliatePaymentHistory({
                                             </TableCell>
                                             <TableCell className="text-right font-bold text-emerald-600 dark:text-emerald-300">
                                                 +
-                                                {formatIDR(
+                                                {formatIDRFull(
                                                     Number(
                                                         commission.commission_amount ||
                                                             0,

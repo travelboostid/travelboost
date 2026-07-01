@@ -5,7 +5,7 @@ import { DataTableToolbar } from '@/components/data-table/data-table-toolbar';
 import AdminDashboardLayout from '@/components/layouts/admin-dashboard';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useDataTable } from '@/hooks/use-data-table';
-import { formatIDR } from '@/lib/utils';
+import { formatIDRFull } from '@/lib/utils';
 import EmptyWalletTransactions from '@/pages/companies/dashboard/wallet-transactions/empty-wallet-transactions';
 import { router } from '@inertiajs/react';
 import type { ColumnDef } from '@tanstack/react-table';
@@ -116,7 +116,7 @@ export default function WalletTransactionsPage({
                     return (
                         <div>
                             {row.original.type === 'debit' ? '-' : '+'}
-                            {formatIDR(amount)}
+                            {formatIDRFull(amount)}
                         </div>
                     );
                 },

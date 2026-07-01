@@ -36,8 +36,15 @@ class DomainResolver
             return $next($request);
         }
 
+        $domainObject = null;
+
+        if (! $this->isMainHost && ! $this->isInternalSubdomain()) {
+            $domainObject = $this->resolveDomain();
+        }
+
         // Redirect to main domain if accessing company dashboard or other non-guest routes on a subdomain
         if (! $this->isMainHost && ! $this->isInternalSubdomain() && $request->is('companies*')) {
+            $isAffiliateDomain = $domainObject?->owner instanceof AffiliateProfile;
             $allowedPatterns = [
                 'companies/login*',
                 'companies/register*',
@@ -52,7 +59,7 @@ class DomainResolver
                 }
             }
 
-            if (! $isAllowed) {
+            if (! $isAffiliateDomain && ! $isAllowed) {
                 $port = $request->getPort();
                 $portSuffix = in_array($port, [80, 443], true) ? '' : ':'.$port;
 
@@ -71,8 +78,6 @@ class DomainResolver
         }
 
         // Resolve tenant from subdomain or custom domain
-        $domainObject = $this->resolveDomain();
-
         if ($domainObject === null) {
             if ($this->shouldAllowDomainlessOnboarding($request)) {
                 return $this->continueOnboardingWithoutTenant($request, $next);

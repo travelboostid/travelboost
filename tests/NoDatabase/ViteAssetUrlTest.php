@@ -43,6 +43,7 @@ test('vite asset urls preserve absolute urls', function () {
 
 test('vite asset urls fall back to asset helper when hot file is empty', function () {
     config(['app.url' => 'https://dev.travelboost.co.id']);
+    config(['app.asset_url' => 'https://dev.travelboost.co.id']);
 
     $hotFile = public_path('hot');
     $hadHot = is_file($hotFile);

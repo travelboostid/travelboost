@@ -7,7 +7,7 @@ import {
     EmptyTitle,
 } from '@/components/ui/empty';
 import usePageProps from '@/hooks/use-page-props';
-import { formatIDR } from '@/lib/utils';
+import { formatIDRFull } from '@/lib/utils';
 import { IconFolderCode } from '@tabler/icons-react';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
@@ -52,7 +52,7 @@ function CommissionItem({ commission }: any) {
             </div>
             <div className="text-right">
                 <p className="font-semibold text-sm text-indigo-600">
-                    +{formatIDR(Number(commission.commission_amount))}
+                    +{formatIDRFull(Number(commission.commission_amount))}
                 </p>
                 <p className="text-xs text-muted-foreground">
                     {Number(commission.commission_rate)}% Rate

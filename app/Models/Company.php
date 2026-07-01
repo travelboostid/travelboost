@@ -183,7 +183,7 @@ class Company extends Model implements Customer, Wallet
                 $files = collect($this->photo?->data['files'] ?? []);
                 $file = $files->firstWhere('code', 'small');
 
-                return data_get($file, 'url');
+                return Media::normalizePublicUrl(data_get($file, 'url'));
             }
         );
     }

@@ -7,6 +7,7 @@ use App\Events\MediaCreated;
 use App\Events\MediaDeleting;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Storage;
 
 class Media extends Model
 {
@@ -86,6 +87,71 @@ class Media extends Model
     public static function publicPath(string $storageKey): string
     {
         return '/'.ltrim($storageKey, '/');
+    }
+
+    public static function publicUrl(string $storageKey): string
+    {
+        $url = Storage::disk('public')->url($storageKey);
+
+        return self::normalizePublicUrl($url);
+    }
+
+    public static function normalizePublicUrl(?string $url): ?string
+    {
+        if ($url === null || $url === '') {
+            return $url;
+        }
+
+        $path = parse_url($url, PHP_URL_PATH);
+        if (! is_string($path) || $path === '') {
+            return $url;
+        }
+
+        $urlHost = parse_url($url, PHP_URL_HOST);
+        if (! is_string($urlHost) || $urlHost === '') {
+            return $url;
+        }
+
+        $appUrlHost = parse_url((string) config('app.url'), PHP_URL_HOST);
+        $appHost = (string) config('app.host', 'localhost');
+        $allowedHosts = array_filter([$appUrlHost, $appHost]);
+
+        if (in_array($urlHost, $allowedHosts, true) && str_starts_with($path, '/storage/')) {
+            return $path;
+        }
+
+        return $url;
+    }
+
+    /**
+     * @param  array<string, mixed>|null  $data
+     * @return array<string, mixed>|null
+     */
+    public static function normalizePublicUrlsInData(?array $data): ?array
+    {
+        if ($data === null) {
+            return null;
+        }
+
+        if (isset($data['url']) && is_string($data['url'])) {
+            $data['url'] = self::normalizePublicUrl($data['url']);
+        }
+
+        if (isset($data['files']) && is_array($data['files'])) {
+            $data['files'] = array_map(function (mixed $file): mixed {
+                if (! is_array($file)) {
+                    return $file;
+                }
+
+                if (isset($file['url']) && is_string($file['url'])) {
+                    $file['url'] = self::normalizePublicUrl($file['url']);
+                }
+
+                return $file;
+            }, $data['files']);
+        }
+
+        return $data;
     }
 
     public static function storagePathFromUrl(?string $url): ?string

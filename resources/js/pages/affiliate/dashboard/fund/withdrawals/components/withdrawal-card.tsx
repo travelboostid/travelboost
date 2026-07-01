@@ -6,7 +6,7 @@ import {
     ItemDescription,
     ItemTitle,
 } from '@/components/ui/item';
-import { formatIDR } from '@/lib/utils';
+import { formatIDRFull } from '@/lib/utils';
 import dayjs from 'dayjs';
 import { Landmark } from 'lucide-react';
 
@@ -30,7 +30,7 @@ export default function WithdrawalCard({ withdrawal }: { withdrawal: any }) {
                 <ItemContent>
                     <div className="flex flex-wrap items-center gap-3">
                         <ItemTitle className="text-base font-bold text-slate-900 dark:text-slate-100">
-                            {formatIDR(withdrawal.amount)}
+                            {formatIDRFull(withdrawal.amount)}
                         </ItemTitle>
                         <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-500 dark:bg-slate-800 dark:text-slate-400">
                             {dayjs(withdrawal.created_at).format('DD MMM YYYY')}

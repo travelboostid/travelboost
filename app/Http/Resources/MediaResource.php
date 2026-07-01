@@ -27,7 +27,7 @@ class MediaResource extends JsonResource
              *
              * @var array<string, mixed>|null
              */
-            'data' => $this->data,
+            'data' => Media::normalizePublicUrlsInData($this->data),
             'created_at' => $this->created_at?->toISOString(),
             'updated_at' => $this->updated_at?->toISOString(),
             'owner' => $this->whenLoaded('owner', fn () => [

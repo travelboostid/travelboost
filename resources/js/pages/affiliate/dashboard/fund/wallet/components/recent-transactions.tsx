@@ -8,7 +8,7 @@ import {
     EmptyTitle,
 } from '@/components/ui/empty';
 import usePageProps from '@/hooks/use-page-props';
-import { formatIDR } from '@/lib/utils';
+import { formatIDRFull } from '@/lib/utils';
 import { Link } from '@inertiajs/react';
 import { IconFolderCode } from '@tabler/icons-react';
 import dayjs from 'dayjs';
@@ -63,7 +63,7 @@ function TransactionItem({ transaction }: any) {
                 className={`font-semibold text-sm ${isIncome ? 'text-emerald-600' : 'text-rose-600'}`}
             >
                 {isIncome ? '+' : '-'}
-                {formatIDR(Math.abs(transaction.amount))}
+                {formatIDRFull(Math.abs(transaction.amount))}
             </p>
         </div>
     );
