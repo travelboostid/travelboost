@@ -154,7 +154,7 @@ Principles we aim for — and common traps to avoid — with links for deeper re
 - **Match existing patterns** — read sibling files before adding new code
 - **DRY** — extract repeated logic; do not copy-paste (but do not abstract too early — see [YAGNI](https://martinfowler.com/bliki/Yagni.html))
 - **KISS** — prefer the simplest solution that meets the requirement
-- **Guard clauses** — validate preconditions and exit early; keep the happy path flat (see [guard clauses](#principles-to-follow))
+- **Guard clauses** — validate preconditions and exit early; keep the happy path flat — see [Guard clauses in the principles table](#engineering-principles-recommended-reading)
 - **Refactor continuously** — small tidy steps with tests green; don't defer all cleanup to a mythical refactor week
 - **Minimal comments** — code should be clear; comment only non-obvious business rules
 - **Remove dead code** — no commented-out blocks left behind
@@ -228,93 +228,12 @@ These are **guidelines**, not laws. Apply judgment in context — Travelboost co
 | **Abstraction addiction**             | Wrapping one implementation behind three interfaces “for testing” when a simple function would do.                                                           | [A Philosophy of Software Design — John Ousterhout](https://web.stanford.edu/~ouster/cgi-bin/book.php) (book; deep vs shallow modules)                                                              |
 | **Refactor later** (deferred cleanup) | “We'll clean it up in v2” without a PR or ticket — code rots, velocity drops, and the cleanup never ships.                                                   | [Opportunistic Refactoring — Martin Fowler](https://martinfowler.com/bliki/OpportunisticRefactoring.html); [Technical Debt — Martin Fowler](https://martinfowler.com/bliki/TechnicalDebt.html)      |
 
-### Why continuous refactoring is a good thing
-
-Refactoring is not a reward for finishing features — it **is** how you keep shipping features fast. Martin Fowler argues that teams should treat it as **opportunistic**: whenever you touch unclear or duplicated code, improve it in small, test-backed steps instead of scheduling a separate “refactor sprint.”
-
-> “From the beginning I've always seen refactoring as something you do continuously, as regular and indivisible a part of programming as typing if statements.”  
-> — [Opportunistic Refactoring — Martin Fowler](https://martinfowler.com/bliki/OpportunisticRefactoring.html)
-
-The payoff: code stays on the “good design” curve of the [Design Stamina Hypothesis](https://martinfowler.com/bliki/DesignStaminaHypothesis.html) — short-term speed without design decays into slower delivery later. Continuous integration and tests (our CI on every PR) make these small changes safe.
-
-**Read next:** [Opportunistic Refactoring](https://martinfowler.com/bliki/OpportunisticRefactoring.html) · [Continuous Integration — refactoring section](https://martinfowler.com/articles/continuousIntegration.html) · [Tidy First? — Kent Beck](https://www.kentbeck.com/TidyFirst)
-
-### Guard clauses: before, after, and gotchas
-
-#### Without guard clauses (nested “arrow of doom”)
-
-Each new edge case adds another indentation level. The happy path ends up buried on the right:
-
-```php
-public function release(Request $request, Booking $booking): RedirectResponse
-{
-    $user = $request->user();
-
-    if ($user !== null) {
-        if ($booking->user_id === $user->id) {
-            if ($booking->agent_id === tenant()->id) {
-                if ($booking->canBeReleased()) {
-                    app(ReleaseCustomerBookingHoldAction::class)->execute($booking);
-
-                    return back()->with('status', 'Hold released.');
-                } else {
-                    return back()->withErrors(['booking' => 'Cannot release this hold.']);
-                }
-            } else {
-                abort(403);
-            }
-        } else {
-            abort(403);
-        }
-    } else {
-        abort(403);
-    }
-}
-```
-
-#### With guard clauses (flat happy path)
-
-Preconditions are checked up front; the main logic reads top-to-bottom:
-
-```php
-public function release(Request $request, Booking $booking): RedirectResponse
-{
-    $user = $request->user();
-
-    if ($user === null) {
-        abort(403);
-    }
-
-    if ($booking->user_id !== $user->id || $booking->agent_id !== tenant()->id) {
-        abort(403);
-    }
-
-    if (! $booking->canBeReleased()) {
-        return back()->withErrors(['booking' => 'Cannot release this hold.']);
-    }
-
-    app(ReleaseCustomerBookingHoldAction::class)->execute($booking);
-
-    return back()->with('status', 'Hold released.');
-}
-```
-
-#### Gotchas if you skip guard clauses
-
-| Problem                                    | What happens                                                                                                            |
-| ------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------- |
-| **Happy path is hard to find**             | Reviewers and future-you must scan right through nested blocks to see what actually runs on success.                    |
-| **Easy to break when adding a case**       | A new `if` often goes in the wrong branch; you fix one path and miss another.                                           |
-| **Duplicate or divergent error handling**  | Three `abort(403)` copies in nested `else` branches drift apart (one returns JSON, one redirects, one forgets logging). |
-| **Harder to test**                         | Tests need to navigate the same nesting; missing one branch gives false confidence.                                     |
-| **“Temporary” `else` blocks grow forever** | Each bug fix adds `else if` instead of an early return — the method becomes a liability nobody wants to touch.          |
-
-Use guard clauses when one path is **normal** and the others are **exceptions**. Do not add eight guards in a row — extract a method or policy check if preconditions pile up ([Kent Beck — don't overdo guard clauses](https://www.oreilly.com/library/view/tidy-first/9781098151232/ch01.html)).
+Guard clauses: check preconditions at the top and `return` early so the happy path stays flat. Examples and refactoring patterns: [Replace Nested Conditional with Guard Clauses — Refactoring.Guru](https://refactoring.guru/replace-nested-conditional-with-guard-clauses).
 
 ### How this applies here
 
 - **New feature:** match existing Laravel + Inertia patterns in the same directory before inventing a framework.
-- **Guard clauses:** prefer the flat style above in controllers, actions, and agent context methods — see [before/after example](#guard-clauses-before-after-and-gotchas).
+- **Guard clauses:** prefer early returns in controllers, actions, and services — see [Refactoring.Guru](https://refactoring.guru/replace-nested-conditional-with-guard-clauses).
 
 - **Continuous refactor:** when you understand the code while implementing a fix, tidy locally (rename, extract method, guard clause) in the **same PR** if tests cover it; otherwise a small follow-up PR — never “I'll clean it up later” without a ticket or PR.
 - **Two hats:** separate **behavior changes** (feature/fix) from **structure-only** tidies when possible so reviewers can follow the diff; both are encouraged, just not hidden inside each other without mention.
@@ -327,6 +246,7 @@ Use guard clauses when one path is **normal** and the others are **exceptions**.
 ## Environment & config
 
 - Local setup: `pnpm dev:init` then `pnpm dev:full` — see [Local Development](./local-development.md)
+- Env presets and variable reference: [Configuration](./configuration.md)
 - Switch presets with `pnpm dev:setenv`; do not hand-edit env files without knowing the preset
 - New env vars need `.env.example` updates and deploy notes in the PR
 
@@ -334,19 +254,9 @@ Use guard clauses when one path is **normal** and the others are **exceptions**.
 
 ## Deploy awareness
 
-Changes that affect production need callouts in the PR:
+Changes that affect production need callouts in the PR — especially new env vars, migrations, frontend builds, and Supervisor restarts.
 
-- New or changed `.env` variables (update matching `.env.preset.*` and `.env.example`)
-- Migrations (`php artisan migrate --force` on server)
-- Frontend build upload (`pnpm build` → `public/build/` on VPS)
-- Supervisor restart (`sudo supervisorctl restart all`)
-
-Release from a clean tree on the correct branch:
-
-```bash
-git push origin dev    # or main
-pnpm dev:deploy -- -e dev    # or -e main for production
-```
+Pre-deploy checklist and deploy commands: [Deployment — Before you deploy](./deployment.md#before-you-deploy).
 
 See [Deployment](./deployment.md) for manual steps, skip flags, and server mapping.
 
@@ -354,12 +264,14 @@ See [Deployment](./deployment.md) for manual steps, skip flags, and server mappi
 
 ## Related docs
 
-| Topic           | Doc                                                       |
-| --------------- | --------------------------------------------------------- |
-| Flow charts     | [Development Flow](./development-flow.md)                 |
-| Merge conflicts | [Merging Branch Conflicts](./merging-branch-conflicts.md) |
-| Local setup     | [Local Development](./local-development.md)               |
-| Architecture    | [Architecture](./architecture.md)                         |
-| Web API types   | [Web API & Orval](./webapi-orval.md)                      |
-| Translations    | [Translations (i18n)](./i18n.md)                          |
-| Deploy          | [Deployment](./deployment.md)                             |
+| Topic               | Doc                                                       |
+| ------------------- | --------------------------------------------------------- |
+| Flow charts         | [Development Flow](./development-flow.md)                 |
+| Merge conflicts     | [Merging Branch Conflicts](./merging-branch-conflicts.md) |
+| Local setup         | [Local Development](./local-development.md)               |
+| Configuration & env | [Configuration](./configuration.md)                       |
+| Integrations        | [Integrations](./integrations.md)                         |
+| Architecture        | [Architecture](./architecture.md)                         |
+| Web API types       | [Web API & Orval](./webapi-orval.md)                      |
+| Translations        | [Translations (i18n)](./i18n.md)                          |
+| Deploy              | [Deployment](./deployment.md)                             |

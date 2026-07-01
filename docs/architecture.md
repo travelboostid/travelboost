@@ -306,17 +306,7 @@ Scoped props are injected by dedicated middleware rather than loading everything
 
 ### JSON API client (Orval)
 
-Interactive UI features that need JSON outside Inertia (payments, geo lookups, etc.) call `/webapi`:
-
-1. **Scramble** generates OpenAPI spec from webapi controllers → `/docs/api.json`
-2. **Orval** (`orval.config.js`) generates React Query hooks into `resources/js/api/`
-3. **`api-instance.ts`** configures Axios with `baseURL: '/webapi'` and session credentials
-
-Regenerate after API changes (with the dev server running):
-
-```bash
-npx orval
-```
+Interactive UI features that need JSON outside Inertia (payments, geo lookups, etc.) call `/webapi`. Types and React Query hooks are generated via Scramble + Orval — see [Web API & Orval](./webapi-orval.md).
 
 ### Wayfinder (Inertia navigation)
 
@@ -452,21 +442,7 @@ Changes to `chatbot` invalidate the config cache used by AI agents.
 
 ## Development vs Production
 
-### Local development
-
-```bash
-pnpm dev:full   # Reverb + queue + Vite + artisan serve (with bcmath)
-```
-
-Individual processes: `dev:serve`, `dev:reverb`, `dev:queue`, `dev:vite`.
-
-See [Local Development](./local-development.md).
-
-### Production
-
-- **Caddy** serves PHP via FastCGI — see [Production App Server](./production-app-server.md)
-- **Supervisor** manages queue workers, scheduler, and Reverb
-- Deploy workflow: [Deployment](./deployment.md) (`pnpm dev:deploy`)
+Local stack: [Local Development](./local-development.md) (`pnpm dev:full`). Production servers, Caddy, and Supervisor: [Production App Server](./production-app-server.md). Release workflow: [Deployment](./deployment.md).
 
 ---
 
@@ -474,15 +450,23 @@ See [Local Development](./local-development.md).
 
 Full index: [README](../README.md)
 
-| Topic                | Document                                                                                                                 |
-| -------------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| Web API & Orval      | [webapi-orval.md](./webapi-orval.md)                                                                                     |
-| Routing              | [routing.md](./routing.md)                                                                                               |
-| Product requirements | [requirements.md](./requirements.md)                                                                                     |
-| Local development    | [local-development.md](./local-development.md)                                                                           |
-| Production servers   | [production-app-server.md](./production-app-server.md), [production-database-server.md](./production-database-server.md) |
-| Database backups     | [database-backups.md](./database-backups.md)                                                                             |
-| Object storage       | [object-storage.md](./object-storage.md)                                                                                 |
-| Debugging            | [debugging.md](./debugging.md)                                                                                           |
-| Deployment           | [deployment.md](./deployment.md)                                                                                         |
-| Translations         | [i18n.md](./i18n.md)                                                                                                     |
+| Topic                       | Document                                                                                                                 |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| Configuration & env presets | [configuration.md](./configuration.md)                                                                                   |
+| External integrations       | [integrations.md](./integrations.md)                                                                                     |
+| Web API & Orval             | [webapi-orval.md](./webapi-orval.md)                                                                                     |
+| Routing                     | [routing.md](./routing.md)                                                                                               |
+| Product requirements        | [requirements.md](./requirements.md)                                                                                     |
+| Development flow            | [development-flow.md](./development-flow.md)                                                                             |
+| Team SOP                    | [team-sop.md](./team-sop.md)                                                                                             |
+| Merge conflicts             | [merging-branch-conflicts.md](./merging-branch-conflicts.md)                                                             |
+| Local development           | [local-development.md](./local-development.md)                                                                           |
+| Cloudflare tunnel           | [cloudflare-tunnel.md](./cloudflare-tunnel.md)                                                                           |
+| Testing email accounts      | [testing-email-accounts.md](./testing-email-accounts.md)                                                                 |
+| Server inventory            | [server-inventory.md](./server-inventory.md)                                                                             |
+| Production servers          | [production-app-server.md](./production-app-server.md), [production-database-server.md](./production-database-server.md) |
+| Database backups            | [database-backups.md](./database-backups.md)                                                                             |
+| Object storage              | [object-storage.md](./object-storage.md)                                                                                 |
+| Debugging                   | [debugging.md](./debugging.md)                                                                                           |
+| Deployment                  | [deployment.md](./deployment.md)                                                                                         |
+| Translations                | [i18n.md](./i18n.md)                                                                                                     |

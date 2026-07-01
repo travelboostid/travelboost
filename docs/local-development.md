@@ -4,6 +4,8 @@ Set up PHP, PostgreSQL, Node, and the dev stack on your machine.
 
 Doc index: [README](../README.md)
 
+See also: [Configuration](./configuration.md) · [Integrations](./integrations.md) · [Debugging](./debugging.md) · [Cloudflare Tunnel](./cloudflare-tunnel.md) · [Web API & Orval](./webapi-orval.md)
+
 ## Prerequisites
 
 - **OS**: Windows, macOS, or Linux
@@ -38,41 +40,15 @@ https://github.com/andreiramani/pgvector_pgsql_windows/releases
 
 ---
 
-## Required tools
-
 ## VS Code
 
 VS Code based editor is mandatory for this project. You can also use Cursor if you want.
 
-Download:
+Download: [code.visualstudio.com](https://code.visualstudio.com/)
 
-```text
-https://code.visualstudio.com/
-```
+Install recommended extensions from [`.vscode/extensions.json`](../.vscode/extensions.json) — VS Code/Cursor will prompt on first open, or run **Extensions: Show Recommended Extensions**.
 
----
-
-## Essential Extensions
-
-- [ESLint](https://marketplace.visualstudio.com/items?itemName=dbaeumer.vscode-eslint) — JavaScript and TypeScript linting
-
-- [Prettier](https://marketplace.visualstudio.com/items?itemName=esbenp.prettier-vscode) — Main formatter for frontend files
-
-- [Tailwind CSS IntelliSense](https://marketplace.visualstudio.com/items?itemName=bradlc.vscode-tailwindcss) — Tailwind autocomplete and validation
-
-- [Intelephense](https://marketplace.visualstudio.com/items?itemName=bmewburn.vscode-intelephense-client) — Main PHP language server
-
-- [Laravel Extension Pack](https://marketplace.visualstudio.com/items?itemName=laravel.vscode-laravel) — Laravel tooling and Blade integration
-
-- [PHP Tools](https://marketplace.visualstudio.com/items?itemName=DEVSENSE.phptools-vscode) — Advanced PHP tooling and debugging
-
-- [Composer PHP Extension](https://marketplace.visualstudio.com/items?itemName=DEVSENSE.composer-php-vscode) — Composer integration inside VS Code
-
-- [Continue](https://marketplace.visualstudio.com/items?itemName=Continue.continue) — AI coding assistant integration
-
-- [Intelli PHP](https://marketplace.visualstudio.com/items?itemName=DEVSENSE.intelli-php-vscode) — Additional PHP IntelliSense support
-
-- [PHP Debug](https://marketplace.visualstudio.com/items?itemName=xdebug.php-debug) — Xdebug breakpoint debugging support
+Key extensions: ESLint, Prettier, Tailwind CSS IntelliSense, Intelephense, Laravel Extension Pack, PHP Debug (Xdebug).
 
 ---
 
@@ -191,6 +167,8 @@ This copies the selected file to `.env` for local work. Deploy uses presets dire
 | `.env.preset.dev`    | Dev server deploy target (`pnpm dev:deploy -- -e dev`)                |
 | `.env.preset.main`   | Production deploy target (`pnpm dev:deploy -- -e main`)               |
 
+Full preset map, core variables, and env maintenance checklist: [Configuration](./configuration.md).
+
 For many unique signup emails on dev/staging (verification links in a real inbox), see [Testing Email Accounts](./testing-email-accounts.md).
 
 First-time setup runs `pnpm dev:setenv` as part of `pnpm dev:init`. Ask a teammate for preset files if they are not in your clone.
@@ -232,4 +210,4 @@ Requires the Laravel server to be running (`pnpm dev:serve` or `pnpm dev:full`) 
 
 Full conventions: [Web API & Orval](./webapi-orval.md).
 
-For payment gateway webhooks (Midtrans, PrismaLink), see [Cloudflare Tunnel](./cloudflare-tunnel.md).
+Payment gateway webhooks: [Integrations](./integrations.md) · [Cloudflare Tunnel](./cloudflare-tunnel.md).

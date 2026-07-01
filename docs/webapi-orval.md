@@ -153,3 +153,16 @@ Use these to verify new endpoints before running Orval.
 | Wrong TypeScript shape     | Add/adjust Form Request or API Resource; re-run `pnpm orval`     |
 | 401 in Try It              | Scramble uses session cookies — log in on the same host first    |
 | Generated path 404         | Client uses `/webapi` base URL; route must exist in `webapi.php` |
+
+---
+
+## Related docs
+
+| Topic                   | Doc                                                         |
+| ----------------------- | ----------------------------------------------------------- |
+| Architecture API layer  | [Architecture](./architecture.md)                           |
+| External integrations   | [Integrations](./integrations.md)                           |
+| Pre-push (`pnpm orval`) | [Team SOP — Before you push](./team-sop.md#before-you-push) |
+| Local dev server        | [Local Development](./local-development.md)                 |
+
+Wayfinder generates type-safe Inertia route helpers in `@/actions/` and `@/routes/` — see [Architecture](./architecture.md).

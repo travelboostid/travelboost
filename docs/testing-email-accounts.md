@@ -2,7 +2,7 @@
 
 How to create many unique test accounts that can receive real emails (verification links, password resets, booking notifications) without maintaining dozens of inboxes.
 
-Doc index: [README](../README.md) · Related: [Local Development](./local-development.md) · [Team SOP](./team-sop.md)
+Doc index: [README](../README.md) · Related: [Local Development](./local-development.md) · [Configuration](./configuration.md) (mail driver per preset) · [Team SOP](./team-sop.md)
 
 ---
 

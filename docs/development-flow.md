@@ -13,11 +13,7 @@ Doc index: [README](../README.md) · Details: [Team SOP](./team-sop.md) · Deplo
 | `dev`  | Staging     | dev.travelboost.co.id | `-e dev`      |
 | `main` | Production  | travelboost.co.id     | `-e main`     |
 
-**Rules**
-
-- Never commit or push directly to `dev` or `main`.
-- All work happens on short-lived branches (`feat/`, `fix/`, `docs/`, `hotfix/`, etc.).
-- Merge into `dev` first for normal work; promote `dev` → `main` when staging is verified.
+**Rules:** Never commit or push directly to `dev` or `main`. All work on short-lived branches (`feat/`, `fix/`, etc.); merge into `dev` first, then promote `dev` → `main`. Details: [Team SOP — Branches](./team-sop.md#branches).
 
 ---
 
@@ -92,7 +88,7 @@ flowchart TD
 | 5. Deploy          | `git checkout main && git pull origin main` then `pnpm dev:deploy -- -e main`                    |
 | 6. Verify          | Smoke-test critical paths on production; watch [Debugging](./debugging.md) logs if issues appear |
 
-**Server:** `tb-app-main` (103.93.163.174) — [Server Inventory](./server-inventory.md).
+**Server:** [Server Inventory](./server-inventory.md) (`tb-app-main`).
 
 Never run `migrate:fresh` on production. Migrations run automatically during deploy (`php artisan migrate --force`).
 
@@ -178,10 +174,7 @@ flowchart LR
 
 ### Pre-deploy checklist
 
-1. Changes **pushed** to `origin` on the branch you deploy (`dev` or `main`)
-2. **Clean** working tree (`git status`)
-3. Local branch matches `DEPLOY_BRANCH` in the preset
-4. PR notes mention new env vars, migrations, or manual steps
+See [Deployment — Before you deploy](./deployment.md#before-you-deploy).
 
 ---
 

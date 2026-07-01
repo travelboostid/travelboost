@@ -12,10 +12,12 @@ App path on servers: `~/travelboost` (see `DEPLOY_TARGET_PATH` in `.env.preset.*
 
 Deploy reads `.env.preset.<name>` directly — you do **not** need `pnpm dev:setenv` first. The script loads the full preset into the process environment so `pnpm build` uses the correct `VITE_*` and app URLs.
 
-| Preset (`-e`)   | Server      | IP             | Branch | Site                  |
-| --------------- | ----------- | -------------- | ------ | --------------------- |
-| `dev` (default) | tb-app-dev  | 103.127.138.76 | `dev`  | dev.travelboost.co.id |
-| `main`          | tb-app-main | 103.93.163.174 | `main` | travelboost.co.id     |
+| Preset (`-e`)   | Server      | Site                  |
+| --------------- | ----------- | --------------------- |
+| `dev` (default) | tb-app-dev  | dev.travelboost.co.id |
+| `main`          | tb-app-main | travelboost.co.id     |
+
+Host names, IPs, app↔DB pairing, and SSH user: [Server Inventory](./server-inventory.md). Env variable reference: [Configuration](./configuration.md).
 
 Local-only presets (`local`, `tunnel`) are for development — see [Local Development](./local-development.md).
 
@@ -35,39 +37,11 @@ SSH key auth is required — ask a teammate to register your key if needed.
 
 ## Prerequisites (dev machine)
 
-| Tool           | Purpose                                                                         |
-| -------------- | ------------------------------------------------------------------------------- |
-| **SSH**        | Remote git pull, `.env` upload, supervisor restart                              |
-| **rsync**      | Upload `public/build/` to VPS (`scp` fallback if rsync is missing)              |
-| **AWS CLI v2** | Inspect and manage S3 media buckets — see [Object Storage](./object-storage.md) |
-
-Install AWS CLI v2:
-
-```text
-https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html
-```
-
-Verify:
-
-```bash
-aws --version
-```
-
-Configure credentials for Neo object storage (Biznet GIO access key with **Implicit access** to the buckets you need — see [Object Storage](./object-storage.md)):
-
-```bash
-aws configure --profile travelboost-s3
-# AWS Access Key ID: ...
-# AWS Secret Access Key: ...
-# Default region: us-east-1
-# Default output format: json
-```
-
-Example — list media bucket:
-
-```bash
-aws s3 ls s3://tb-media-dev --endpoint-url https://nos.wjv-1.neo.id --profile travelboost-s3
-```
+| Tool           | Purpose                                                                                                    |
+| -------------- | ---------------------------------------------------------------------------------------------------------- |
+| **SSH**        | Remote git pull, `.env` upload, supervisor restart                                                         |
+| **rsync**      | Upload `public/build/` to VPS (`scp` fallback if rsync is missing)                                         |
+| **AWS CLI v2** | Inspect and manage S3 media buckets — install and configure per [Object Storage (S3)](./object-storage.md) |
 
 AWS CLI is **not** required for deploy itself — only for S3 media debugging and bucket management.
 
