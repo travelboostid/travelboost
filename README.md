@@ -32,11 +32,13 @@ Other dev commands: `pnpm dev:min` (server + Vite only), `pnpm dev` (interactive
 
 ### Getting started
 
-| Doc                                              | When to read                                                 |
-| ------------------------------------------------ | ------------------------------------------------------------ |
-| [Local Development](./docs/local-development.md) | First-time setup, PHP extensions, `pnpm dev:full`            |
-| [Cloudflare Tunnel](./docs/cloudflare-tunnel.md) | Payment webhooks & OAuth via `tunnel-8000.travelboost.co.id` |
-| [Team SOP](./docs/team-sop.md)                   | Git workflow, PRs, coding standards                          |
+| Doc                                                        | When to read                                                 |
+| ---------------------------------------------------------- | ------------------------------------------------------------ |
+| [Local Development](./docs/local-development.md)           | First-time setup, PHP extensions, `pnpm dev:full`            |
+| [Testing Email Accounts](./docs/testing-email-accounts.md) | Bulk unique test users with 33mail forwarding                |
+| [Cloudflare Tunnel](./docs/cloudflare-tunnel.md)           | Payment webhooks & OAuth via `tunnel-8000.travelboost.co.id` |
+| [Development Flow](./docs/development-flow.md)             | Clone → branch → PR → merge → deploy (charts)                |
+| [Team SOP](./docs/team-sop.md)                             | Git workflow, PRs, coding standards                          |
 
 ### Architecture & product
 
@@ -89,4 +91,4 @@ pnpm dev:deploy              # dev server (default preset)
 pnpm dev:deploy -- -e main     # production
 ```
 
-Full workflow, skip flags, and manual steps: [Deployment](./docs/deployment.md).
+Workflow charts: [Development Flow](./docs/development-flow.md). Deploy commands and flags: [Deployment](./docs/deployment.md).

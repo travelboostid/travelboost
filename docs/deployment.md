@@ -2,7 +2,7 @@
 
 Release workflow for `tb-app-dev` and `tb-app-main`. Server names and IPs: [Server Inventory](./server-inventory.md). First-time server setup: [Production App Server](./production-app-server.md).
 
-Doc index: [README](../README.md)
+Doc index: [README](../README.md) · When to deploy: [Development Flow](./development-flow.md)
 
 App path on servers: `~/travelboost` (see `DEPLOY_TARGET_PATH` in `.env.preset.*`). Deploys track the branch set in `DEPLOY_BRANCH` (`dev` or `main`).
 

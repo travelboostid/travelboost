@@ -191,6 +191,8 @@ This copies the selected file to `.env` for local work. Deploy uses presets dire
 | `.env.preset.dev`    | Dev server deploy target (`pnpm dev:deploy -- -e dev`)                |
 | `.env.preset.main`   | Production deploy target (`pnpm dev:deploy -- -e main`)               |
 
+For many unique signup emails on dev/staging (verification links in a real inbox), see [Testing Email Accounts](./testing-email-accounts.md).
+
 First-time setup runs `pnpm dev:setenv` as part of `pnpm dev:init`. Ask a teammate for preset files if they are not in your clone.
 
 ---
