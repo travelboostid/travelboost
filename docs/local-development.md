@@ -169,6 +169,25 @@ This copies the selected file to `.env` for local work. Deploy uses presets dire
 
 Full preset map, core variables, and env maintenance checklist: [Configuration](./configuration.md).
 
+### Why `lvh.me` for local dev?
+
+The `local` preset sets `APP_HOST=lvh.me`. That is intentional — **not** a typo for `localhost`.
+
+Travelboost routes tenants by **subdomain**: on production, agent storefronts live at `{username}.travelboost.co.id`. Locally, the same pattern is `{username}.lvh.me`.
+
+`lvh.me` is a domain where **every** subdomain resolves to `127.0.0.1`:
+
+| URL                            | Resolves to  | Use for                         |
+| ------------------------------ | ------------ | ------------------------------- |
+| `http://lvh.me:8000`           | Your machine | Main marketing site (no tenant) |
+| `http://agentname.lvh.me:8000` | Your machine | That agent's tenant storefront  |
+
+`localhost` does not give reliable subdomains (`agent.localhost` is inconsistent across browsers). You would also need a new `/etc/hosts` entry for every agent username you test. With `lvh.me`, any `{username}.lvh.me` works automatically.
+
+Laravel matches the hostname via `DomainResolver` and `routes/customers.php` — same idea as production, different `APP_HOST`. See [Routing](./routing.md).
+
+For payment webhooks or OAuth that need a **public** HTTPS URL, switch to the `tunnel` preset instead — [Cloudflare Tunnel](./cloudflare-tunnel.md).
+
 For many unique signup emails on dev/staging (verification links in a real inbox), see [Testing Email Accounts](./testing-email-accounts.md).
 
 First-time setup runs `pnpm dev:setenv` as part of `pnpm dev:init`. Ask a teammate for preset files if they are not in your clone.
