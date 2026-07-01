@@ -17,6 +17,7 @@ export type AdminCompanyRow = {
     customer_service_phone?: string | null;
     address?: string | null;
     note?: string | null;
+    allow_package_one_agents?: boolean;
     photo_id?: number | null;
     photo_url?: string | null;
     created_at?: string | null;

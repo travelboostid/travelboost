@@ -8,8 +8,14 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
-import { Field, FieldError, FieldLabel } from '@/components/ui/field';
+import {
+    Field,
+    FieldDescription,
+    FieldError,
+    FieldLabel,
+} from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
+import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { useForm } from '@inertiajs/react';
 import { toast } from 'sonner';
@@ -35,6 +41,7 @@ export function CompanyEditForm({
         address: company.address ?? '',
         note: company.note ?? '',
         photo_id: company.photo_id,
+        allow_package_one_agents: company.allow_package_one_agents ?? false,
     });
 
     const handleSubmit = () => {
@@ -165,6 +172,36 @@ export function CompanyEditForm({
                         />
                         <FieldError>{form.errors.note}</FieldError>
                     </Field>
+                    {entityLabel === 'Vendor' ? (
+                        <Field className="sm:col-span-2">
+                            <div className="flex items-start justify-between gap-4 rounded-xl border border-border/70 p-4">
+                                <div className="space-y-1">
+                                    <FieldLabel htmlFor="allow_package_one_agents">
+                                        Allow package `1` agents
+                                    </FieldLabel>
+                                    <FieldDescription>
+                                        Free-trial agents can book this vendor,
+                                        appear in booking step 1, and keep
+                                        subdomain access only when this is
+                                        enabled.
+                                    </FieldDescription>
+                                </div>
+                                <Switch
+                                    id="allow_package_one_agents"
+                                    checked={form.data.allow_package_one_agents}
+                                    onCheckedChange={(checked) =>
+                                        form.setData(
+                                            'allow_package_one_agents',
+                                            checked,
+                                        )
+                                    }
+                                />
+                            </div>
+                            <FieldError>
+                                {form.errors.allow_package_one_agents}
+                            </FieldError>
+                        </Field>
+                    ) : null}
                 </div>
 
                 <Button

@@ -31,6 +31,7 @@ class Company extends Model implements Customer, Wallet
         'photo_id',
         'meta',
         'note',
+        'allow_package_one_agents',
         'province_id',
         'city_id',
         'district_id',
@@ -48,6 +49,7 @@ class Company extends Model implements Customer, Wallet
     protected $casts = [
         'meta' => 'array',
         'type' => CompanyType::class,
+        'allow_package_one_agents' => 'boolean',
     ];
 
     protected $appends = ['photo_url'];

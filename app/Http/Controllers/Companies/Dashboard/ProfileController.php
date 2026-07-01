@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Companies\UpdateProfileRequest;
 use App\Models\Company;
 use App\Models\User;
+use App\Services\AgentPackageAccessService;
 use App\Support\AffiliateReferralContext;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -14,6 +15,10 @@ use Inertia\Inertia;
 
 class ProfileController extends Controller
 {
+    public function __construct(
+        private readonly AgentPackageAccessService $agentPackageAccessService,
+    ) {}
+
     public function show(Request $request, Company $company, AffiliateReferralContext $affiliateReferralContext)
     {
         $company->load(['domain', 'photo', 'identityCard', 'referrer.affiliateProfile']);
@@ -30,6 +35,10 @@ class ProfileController extends Controller
             'name' => $referrer->name,
             'referral_code' => $referrerProfile?->referral_code,
         ] : null);
+        $company->setAttribute(
+            'package_one_subdomain_access_allowed',
+            $this->agentPackageAccessService->agentHasVendorAllowingPackageOneAccess($company),
+        );
 
         return Inertia::render('companies/dashboard/profile/index', [
             'profile' => $company,
@@ -49,6 +58,7 @@ class ProfileController extends Controller
 
         $company->forceFill($companyDto)->save();
         $company->domain()->updateOrCreate([], $updateDomainDto);
+        $this->agentPackageAccessService->syncAgentSubdomainAccess($company->fresh());
 
         if ($company->username !== $previousUsername) {
             return redirect()

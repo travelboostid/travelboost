@@ -105,6 +105,7 @@ trait QueriesAdminCompanies
             'photo_id' => $company->photo_id,
             'photo_url' => $company->photo_url,
             'created_at' => $company->created_at,
+            'allow_package_one_agents' => (bool) $company->allow_package_one_agents,
             'subscription_status' => $subscription?->status?->value,
             'subscription_ends_at' => $subscription?->ended_at,
             'subscription_package' => $subscription?->package?->name,

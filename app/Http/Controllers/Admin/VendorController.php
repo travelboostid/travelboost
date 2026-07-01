@@ -9,6 +9,7 @@ use App\Http\Requests\Admin\BulkUpdateCompanyRequest;
 use App\Http\Requests\Admin\IndexVendorRequest;
 use App\Http\Requests\Admin\UpdateCompanyRequest;
 use App\Models\Company;
+use App\Services\AgentPackageAccessService;
 use DB;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -17,6 +18,10 @@ use Inertia\Response;
 class VendorController extends Controller
 {
     use QueriesAdminCompanies;
+
+    public function __construct(
+        private readonly AgentPackageAccessService $agentPackageAccessService,
+    ) {}
 
     public function index(IndexVendorRequest $request): Response
     {
@@ -53,6 +58,7 @@ class VendorController extends Controller
         abort_unless($vendor->type === CompanyType::VENDOR, 404);
 
         $vendor->update($request->validated());
+        $this->agentPackageAccessService->syncPackageOneAgentSubdomainAccessForVendor($vendor->fresh());
 
         return back()->with('success', 'Vendor updated successfully.');
     }

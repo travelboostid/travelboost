@@ -46,6 +46,7 @@ class UpdateCompanyRequest extends FormRequest
             'address' => ['sometimes', 'nullable', 'string', 'max:255'],
             'note' => ['sometimes', 'nullable', 'string', 'max:1000'],
             'photo_id' => ['sometimes', 'nullable', 'integer', 'exists:medias,id'],
+            'allow_package_one_agents' => ['sometimes', 'boolean'],
         ];
     }
 }

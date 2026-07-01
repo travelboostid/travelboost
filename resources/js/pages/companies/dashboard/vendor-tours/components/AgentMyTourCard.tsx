@@ -31,7 +31,16 @@ export default function AgentMyTourCard({
     startingChat,
 }: any) {
     const { company } = usePageSharedDataProps();
+    const isBookingBlockedBySubscription = Boolean(
+        tour.booking_blocked_by_subscription,
+    );
+
     const handleBookClick = () => {
+        if (isBookingBlockedBySubscription) {
+            toast.error('Upgrade subscription to book this vendor tour.');
+            return;
+        }
+
         const normalizedTour = Array.isArray(tour?.schedules)
             ? {
                   ...tour,
@@ -186,19 +195,40 @@ export default function AgentMyTourCard({
                     <div className="flex w-full flex-wrap gap-2">
                         <Tooltip delayDuration={200}>
                             <TooltipTrigger asChild>
-                                <Button
-                                    variant="default"
-                                    size="sm"
-                                    type="button"
-                                    className="h-9 flex-1 rounded-xl bg-primary text-primary-foreground shadow-sm hover:scale-105 active:scale-95"
-                                    onClick={handleBookClick}
+                                <span
+                                    className="flex-1"
+                                    tabIndex={
+                                        isBookingBlockedBySubscription
+                                            ? 0
+                                            : undefined
+                                    }
                                 >
-                                    <IconCalendarEvent size={18} />
-                                </Button>
+                                    <Button
+                                        variant="default"
+                                        size="sm"
+                                        type="button"
+                                        className="h-9 w-full rounded-xl bg-primary text-primary-foreground shadow-sm hover:scale-105 active:scale-95 disabled:hover:scale-100 disabled:opacity-60"
+                                        onClick={handleBookClick}
+                                        disabled={
+                                            isBookingBlockedBySubscription
+                                        }
+                                        aria-describedby={
+                                            isBookingBlockedBySubscription
+                                                ? 'booking-subscription-lock'
+                                                : undefined
+                                        }
+                                    >
+                                        <IconCalendarEvent size={18} />
+                                    </Button>
+                                </span>
                             </TooltipTrigger>
                             <TooltipContent>
                                 <p>
-                                    <FormattedMessage defaultMessage="Book Tour" />
+                                    {isBookingBlockedBySubscription ? (
+                                        <FormattedMessage defaultMessage="Subscribe to unlock booking" />
+                                    ) : (
+                                        <FormattedMessage defaultMessage="Book Tour" />
+                                    )}
                                 </p>
                             </TooltipContent>
                         </Tooltip>
@@ -261,6 +291,14 @@ export default function AgentMyTourCard({
                             </TooltipContent>
                         </Tooltip>
                     </div>
+                    {isBookingBlockedBySubscription ? (
+                        <div
+                            id="booking-subscription-lock"
+                            className="w-full rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] font-medium text-amber-700 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-200"
+                        >
+                            <FormattedMessage defaultMessage="Booking locked for this vendor. Please subscribe to a paid package first." />
+                        </div>
+                    ) : null}
                     {agentDocument ? (
                         <div className="flex w-full items-center gap-2">
                             {canReplaceAgentDocument ? (
