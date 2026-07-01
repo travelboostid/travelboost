@@ -3,6 +3,21 @@
 use App\Support\ViteAssetUrl;
 use Illuminate\Foundation\Vite;
 
+beforeEach(function () {
+    $this->hotFile = public_path('hot');
+    $this->hadHot = is_file($this->hotFile);
+    if ($this->hadHot) {
+        $this->originalHot = file_get_contents($this->hotFile);
+        @unlink($this->hotFile);
+    }
+});
+
+afterEach(function () {
+    if ($this->hadHot) {
+        file_put_contents($this->hotFile, $this->originalHot);
+    }
+});
+
 test('vite asset urls resolve as same origin relative paths', function () {
     expect(ViteAssetUrl::resolve('build/assets/app.js'))
         ->toBe('/build/assets/app.js');
@@ -20,6 +35,7 @@ test('vite asset urls preserve absolute urls', function () {
 
 test('vite asset urls fall back to asset helper when hot file is empty', function () {
     config(['app.url' => 'https://dev.travelboost.co.id']);
+    config(['app.asset_url' => 'https://dev.travelboost.co.id']);
 
     $hotFile = public_path('hot');
     $hadHot = is_file($hotFile);

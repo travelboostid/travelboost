@@ -12,6 +12,7 @@ use Database\Seeders\Common\RolePermissionSeeder;
 use Inertia\Testing\AssertableInertia as Assert;
 
 beforeEach(function () {
+    $this->travelTo(now()->startOfMonth()->addDays(15));
     $this->withoutVite();
     $this->seed(RolePermissionSeeder::class);
 
