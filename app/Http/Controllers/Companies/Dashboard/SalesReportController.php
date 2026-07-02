@@ -384,8 +384,8 @@ class SalesReportController extends Controller
     private function filters(Request $request): array
     {
         return [
-            'period_from' => $request->input('period_from') ?: null,
-            'period_to' => $request->input('period_to') ?: null,
+            'period_from' => $request->input('period_from') ?: now()->startOfMonth()->toDateString(),
+            'period_to' => $request->input('period_to') ?: now()->toDateString(),
             'agent_id' => $request->input('agent_id') ?: null,
             'tour_code' => $request->input('tour_code') ?: null,
             'departure_date' => $request->input('departure_date') ?: null,

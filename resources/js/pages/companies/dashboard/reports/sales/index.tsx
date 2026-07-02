@@ -96,6 +96,9 @@ type SalesReportProps = {
 const dateLabel = (date?: string | null) =>
     date ? dayjs(date).format('DD MMM YYYY') : '-';
 
+const timeLabel = (date?: string | null) =>
+    date ? dayjs(date).format('HH:mm') : '-';
+
 const dateTimeLabel = (date?: string | null) =>
     date ? dayjs(date).format('DD MMM YYYY HH:mm') : '-';
 
@@ -443,34 +446,21 @@ export default function SalesReportPage({
                                     <TableHead className="min-w-36">
                                         <FormattedMessage defaultMessage="Payment Date" />
                                     </TableHead>
-                                    <TableHead className="min-w-32">
+                                    <TableHead className="min-w-64">
                                         {isVendor ? (
-                                            <FormattedMessage defaultMessage="Agent Code" />
+                                            <FormattedMessage defaultMessage="Agent" />
                                         ) : (
                                             <FormattedMessage defaultMessage="Vendor" />
                                         )}
                                     </TableHead>
-                                    <TableHead className="min-w-48">
-                                        {isVendor ? (
-                                            <FormattedMessage defaultMessage="Agent Name" />
-                                        ) : (
-                                            <FormattedMessage defaultMessage="Vendor Name" />
-                                        )}
-                                    </TableHead>
-                                    <TableHead className="min-w-28">
-                                        <FormattedMessage defaultMessage="Tour Code" />
-                                    </TableHead>
                                     <TableHead className="min-w-64">
-                                        <FormattedMessage defaultMessage="Tour Name" />
+                                        <FormattedMessage defaultMessage="Tour" />
                                     </TableHead>
                                     <TableHead className="min-w-44">
                                         <FormattedMessage defaultMessage="Departure" />
                                     </TableHead>
-                                    <TableHead className="min-w-36">
-                                        <FormattedMessage defaultMessage="Booking Number" />
-                                    </TableHead>
-                                    <TableHead className="min-w-44">
-                                        <FormattedMessage defaultMessage="Customer" />
+                                    <TableHead className="min-w-56">
+                                        <FormattedMessage defaultMessage="Booking" />
                                     </TableHead>
                                     <TableHead className="min-w-20 text-center">
                                         <FormattedMessage defaultMessage="Pax" />
@@ -512,7 +502,7 @@ export default function SalesReportPage({
                                 {rows.length === 0 ? (
                                     <TableRow>
                                         <TableCell
-                                            colSpan={19}
+                                            colSpan={16}
                                             className="h-40 text-center text-slate-500"
                                         >
                                             <FormattedMessage defaultMessage="No full payment sales found." />
@@ -533,26 +523,28 @@ export default function SalesReportPage({
                                                         {dateLabel(row.paid_at)}
                                                     </div>
                                                     <div className="mt-1 text-xs text-slate-500">
-                                                        {dateTimeLabel(
-                                                            row.paid_at,
-                                                        )}
+                                                        {timeLabel(row.paid_at)}
                                                     </div>
                                                 </TableCell>
-                                                <TableCell className="whitespace-nowrap font-mono text-xs text-slate-600 dark:text-slate-300">
-                                                    {isVendor
-                                                        ? row.agent_code
-                                                        : row.vendor_name}
+                                                <TableCell className="min-w-0">
+                                                    <div className="font-medium text-slate-950 dark:text-slate-100">
+                                                        {isVendor
+                                                            ? row.agent_name
+                                                            : row.vendor_name}
+                                                    </div>
+                                                    <div className="mt-1 font-mono text-xs text-slate-500">
+                                                        {isVendor
+                                                            ? row.agent_code
+                                                            : row.vendor_name}
+                                                    </div>
                                                 </TableCell>
-                                                <TableCell className="font-medium text-slate-950 dark:text-slate-100">
-                                                    {isVendor
-                                                        ? row.agent_name
-                                                        : row.vendor_name}
-                                                </TableCell>
-                                                <TableCell className="whitespace-nowrap font-mono text-xs">
-                                                    {row.tour_code}
-                                                </TableCell>
-                                                <TableCell className="font-medium text-slate-950 dark:text-slate-100">
-                                                    {row.tour_name}
+                                                <TableCell className="min-w-0">
+                                                    <div className="font-medium text-slate-950 dark:text-slate-100">
+                                                        {row.tour_name}
+                                                    </div>
+                                                    <div className="mt-1 font-mono text-xs text-slate-500">
+                                                        {row.tour_code}
+                                                    </div>
                                                 </TableCell>
                                                 <TableCell className="whitespace-nowrap text-slate-600 dark:text-slate-300">
                                                     {dateLabel(
@@ -561,17 +553,12 @@ export default function SalesReportPage({
                                                     -{' '}
                                                     {dateLabel(row.return_date)}
                                                 </TableCell>
-                                                <TableCell className="whitespace-nowrap font-mono text-xs">
-                                                    {row.booking_code}
-                                                </TableCell>
                                                 <TableCell>
-                                                    <div className="font-medium text-slate-950 dark:text-slate-100">
-                                                        {row.booking_contact}
+                                                    <div className="whitespace-nowrap font-mono text-xs text-slate-950 dark:text-slate-100">
+                                                        {row.booking_code}
                                                     </div>
-                                                    <div className="mt-1 whitespace-nowrap text-xs text-slate-500">
-                                                        {dateTimeLabel(
-                                                            row.booking_date,
-                                                        )}
+                                                    <div className="mt-1 font-medium text-slate-500">
+                                                        {row.booking_contact}
                                                     </div>
                                                 </TableCell>
                                                 <TableCell className="text-center font-medium text-slate-950 dark:text-slate-100">

@@ -75,9 +75,7 @@ export function SectionCards({ stats, company }: any) {
             ? Number(stats.sales?.yearly?.pax || 0)
             : Number(stats.sales?.monthly?.pax || 0);
     }, [revenuePeriod, stats.sales]);
-    const salesPerPaxNote = (
-        <FormattedMessage defaultMessage="Sales per pax only. Excludes add-ons, tax, and visa." />
-    );
+    const salesPerPaxNote = null;
     const salesPaxOnlyValue = (
         <FormattedMessage
             defaultMessage="{count} pax"
@@ -122,7 +120,7 @@ export function SectionCards({ stats, company }: any) {
         ? [
               {
                   key: 'revenue',
-                  label: <FormattedMessage defaultMessage="Revenue" />,
+                  label: <FormattedMessage defaultMessage="Total Sales" />,
                   value: revenueValue,
                   isCurrency: true,
                   inlineValueSuffix: (
@@ -131,7 +129,6 @@ export function SectionCards({ stats, company }: any) {
                       </span>
                   ),
                   sub: revenueSubLabel,
-                  note: salesPerPaxNote,
                   icon: <Wallet className="text-primary" size={16} />,
                   color: 'bg-primary/10 dark:bg-primary/20',
                   className: 'md:col-span-2',

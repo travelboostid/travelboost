@@ -41,7 +41,7 @@ function walletTransactionsHref(companyUsername: string, walletSlug: string) {
 function TransactionItem({ transaction }: { transaction: Transaction }) {
     const { company } = usePageSharedDataProps();
     const { wallet } = usePageProps<WalletPageProps>();
-    const isIncome = transaction.amount > 0;
+    const isIncome = transaction.type === 'income';
     const Icon = isIncome ? ArrowUpRight : ArrowDownLeft;
     const description = transaction.meta?.description || 'Wallet transaction';
 
@@ -81,7 +81,7 @@ function TransactionItem({ transaction }: { transaction: Transaction }) {
                     className={cn(
                         'flex size-10 shrink-0 items-center justify-center rounded-full transition-colors',
                         isIncome
-                            ? 'bg-primary/10 text-primary group-hover:bg-primary/15'
+                            ? 'bg-green-100 text-green-600 group-hover:bg-green-200'
                             : 'bg-destructive/10 text-destructive group-hover:bg-destructive/15',
                     )}
                 >
@@ -121,7 +121,7 @@ function TransactionItem({ transaction }: { transaction: Transaction }) {
                 <p
                     className={cn(
                         'text-right text-sm font-semibold tabular-nums sm:text-base',
-                        isIncome ? 'text-primary' : 'text-destructive',
+                        isIncome ? 'text-green-600' : 'text-destructive',
                     )}
                 >
                     {isIncome ? '+' : '-'}

@@ -65,7 +65,7 @@ function TransactionItem({ transaction }: { transaction: WalletTransaction }) {
                     className={cn(
                         'flex size-10 shrink-0 items-center justify-center rounded-full',
                         isIncome
-                            ? 'bg-primary/10 text-primary'
+                            ? 'bg-green-100 text-green-600'
                             : 'bg-destructive/10 text-destructive',
                     )}
                 >
@@ -115,7 +115,7 @@ function TransactionItem({ transaction }: { transaction: WalletTransaction }) {
                 <p
                     className={cn(
                         'shrink-0 text-right text-sm font-semibold tabular-nums sm:text-base',
-                        isIncome ? 'text-primary' : 'text-destructive',
+                        isIncome ? 'text-green-600' : 'text-destructive',
                     )}
                 >
                     {isIncome ? '+' : '-'}
