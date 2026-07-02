@@ -346,6 +346,10 @@ const terms: Record<'affiliate' | 'agent', Record<TermsLanguage, TermsCopy>> = {
                             text: 'The amount of commission or profit sharing will be determined based on the applicable policy from the Vendor providing the Tour Package.',
                         },
                         {
+                            label: 'Platform Fee',
+                            text: 'TravelBoost charges a platform fee of Rp 25,000 per pax for every successful booking transaction.',
+                        },
+                        {
                             label: 'Withdrawal',
                             text: 'Balance or commission withdrawals are carried out according to the schedule and minimum limits set in the system.',
                         },
@@ -451,6 +455,10 @@ const terms: Record<'affiliate' | 'agent', Record<TermsLanguage, TermsCopy>> = {
                         {
                             label: 'Skema Komisi',
                             text: 'Besaran komisi atau bagi hasil akan ditentukan berdasarkan kebijakan yang berlaku dari Vendor penyedia Paket Wisata.',
+                        },
+                        {
+                            label: 'Biaya Platform',
+                            text: 'TravelBoost mengenakan biaya platform (platform fee) sebesar Rp 25.000 per pax untuk setiap transaksi pemesanan yang berhasil.',
                         },
                         {
                             label: 'Pencairan Dana',
