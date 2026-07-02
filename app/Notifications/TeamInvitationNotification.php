@@ -39,11 +39,21 @@ class TeamInvitationNotification extends Notification implements ShouldQueue
     {
         return (new MailMessage)
             ->subject('You are invited to join a team on TravelBoost')
-            ->greeting('Hello!')
-            ->line('You are invited to join the team "'.$this->team->company->name.'" on TravelBoost.')
-            ->line('Please click the button below to register your account and join the team.')
-            ->action('Join Team', route('companies.accept-team-invitation.show', ['token' => $this->team->invite_token]))
-            ->line('If you did not expect this invitation, you can ignore this email.');
+            ->view('emails.travelboost-message', [
+                'title' => 'You are invited to join a team on TravelBoost',
+                'preheader' => 'Join the '.$this->team->company->name.' team on TravelBoost.',
+                'eyebrow' => 'Team Invitation',
+                'headline' => 'You are invited to join a team',
+                'intro' => 'You are invited to join the team "'.$this->team->company->name.'" on TravelBoost. Please click the button below to register your account and join the team.',
+                'detailsTitle' => 'Invitation Details',
+                'details' => [
+                    ['label' => 'Company', 'value' => $this->team->company->name],
+                    ['label' => 'Invited Email', 'value' => $this->team->invite_email],
+                ],
+                'actionLabel' => 'Join Team',
+                'actionUrl' => route('companies.accept-team-invitation.show', ['token' => $this->team->invite_token]),
+                'closing' => 'If you did not expect this invitation, you can ignore this email.',
+            ]);
     }
 
     /**

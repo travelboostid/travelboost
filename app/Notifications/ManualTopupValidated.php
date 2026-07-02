@@ -26,16 +26,28 @@ class ManualTopupValidated extends Notification implements ShouldQueue
         $status = $this->statusLabel();
         $amount = 'Rp '.number_format($this->payment->amount, 0, ',', '.');
         [$subject, $message, $failureMessage] = $this->content();
+        $resolvedSubject = str_replace(':status', $status, $subject);
+        $resolvedMessage = str_replace([':status', ':amount'], [$status, $amount], $message);
+        $closing = $this->payment->status->value === 'failed'
+            ? $failureMessage.' Thank you for using TravelBoost.'
+            : 'Thank you for using TravelBoost.';
 
-        $message = (new MailMessage)
-            ->subject(str_replace(':status', $status, $subject))
-            ->line(str_replace([':status', ':amount'], [$status, $amount], $message));
-
-        if ($this->payment->status->value === 'failed') {
-            $message->line($failureMessage);
-        }
-
-        return $message->line('Thank you for using Travelboost!');
+        return (new MailMessage)
+            ->subject($resolvedSubject)
+            ->view('emails.travelboost-message', [
+                'title' => $resolvedSubject,
+                'preheader' => $resolvedMessage,
+                'eyebrow' => 'Payment Update',
+                'headline' => $resolvedSubject,
+                'intro' => $resolvedMessage,
+                'detailsTitle' => 'Payment Details',
+                'details' => [
+                    ['label' => 'Amount', 'value' => $amount],
+                    ['label' => 'Status', 'value' => $status],
+                    ['label' => 'Reference', 'value' => (string) $this->payment->reference],
+                ],
+                'closing' => $closing,
+            ]);
     }
 
     public function toArray(object $notifiable): array

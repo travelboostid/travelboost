@@ -1,6 +1,6 @@
 import { OptimizedImage } from '@/components/optimized-image';
 import { Link } from '@inertiajs/react';
-import { Building2, Mail, MapPin, Phone } from 'lucide-react';
+import { Building2, Mail, Phone } from 'lucide-react';
 
 export function Footer() {
     return (
@@ -23,19 +23,6 @@ export function Footer() {
                             momentum promosi, dan komunikasi bisnis dengan lebih
                             rapi.
                         </p>
-                        <div className="mt-6 flex items-start gap-3 text-sm text-background/70">
-                            <Building2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-                            <div>
-                                <p className="font-medium text-background">
-                                    PT Erasoft Teknologi Indonessia
-                                </p>
-                                <p className="mt-1 leading-relaxed">
-                                    Jl. Alaydrus No.37, RT.8/RW.2, Petojo Utara,
-                                    Kecamatan Gambir, Kota Jakarta Pusat, Daerah
-                                    Khusus Ibukota Jakarta 10130
-                                </p>
-                            </div>
-                        </div>
                     </div>
 
                     <div>
@@ -110,39 +97,17 @@ export function Footer() {
                                 <span>0216349318</span>
                             </a>
                             <div className="flex items-start gap-3 text-sm text-background/70">
-                                <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-                                <p>
-                                    Dukungan untuk diskusi produk, onboarding,
-                                    dan partnership tersedia melalui email dan
-                                    telepon pada jam kerja.
-                                </p>
-                            </div>
-                            <div className="rounded-2xl border border-background/15 bg-background/[0.04] p-4">
-                                <p className="text-xs uppercase tracking-[0.22em] text-background/50">
-                                    Supported by
-                                </p>
-                                <div className="mt-4 flex flex-wrap items-center gap-x-6 gap-y-4">
-                                    <OptimizedImage
-                                        src="/images/logo/partner/astindo.png"
-                                        alt="ASTINDO"
-                                        width={140}
-                                        height={42}
-                                        className="h-8 w-auto max-w-[140px] object-contain sm:h-9"
-                                    />
-                                    <OptimizedImage
-                                        src="/images/logo/partner/prismalink.png"
-                                        alt="Prismalink"
-                                        width={148}
-                                        height={40}
-                                        className="h-7 w-auto max-w-[148px] object-contain sm:h-8"
-                                    />
-                                    <OptimizedImage
-                                        src="/images/logo/partner/gct.webp"
-                                        alt="GCT"
-                                        width={150}
-                                        height={46}
-                                        className="h-9 w-auto max-w-[150px] object-contain sm:h-10"
-                                    />
+                                <Building2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                                <div>
+                                    <p className="font-medium text-background">
+                                        PT Erasoft Teknologi Indonessia
+                                    </p>
+                                    <p className="mt-1 leading-relaxed">
+                                        Jl. Alaydrus No.37, RT.8/RW.2, Petojo
+                                        Utara, Kecamatan Gambir, Kota Jakarta
+                                        Pusat, Daerah Khusus Ibukota Jakarta
+                                        10130
+                                    </p>
                                 </div>
                             </div>
                         </div>

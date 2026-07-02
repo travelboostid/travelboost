@@ -35,9 +35,21 @@ class UserCreatedNotification extends Notification implements ShouldQueue
     public function toMail(object $notifiable): MailMessage
     {
         return (new MailMessage)
-            ->line('Welcome to our application! Your account has been successfully created.')
-            ->action('Notification Action', url('/'))
-            ->line('Thank you for using our application!');
+            ->subject('Welcome to TravelBoost')
+            ->view('emails.travelboost-message', [
+                'title' => 'Welcome to TravelBoost',
+                'preheader' => 'Your account has been created successfully.',
+                'eyebrow' => 'Account Created',
+                'headline' => 'Welcome to TravelBoost',
+                'intro' => 'Your account has been created successfully and is ready to use.',
+                'detailsTitle' => 'Account Details',
+                'details' => [
+                    ['label' => 'Status', 'value' => 'Active'],
+                ],
+                'actionLabel' => 'Open TravelBoost',
+                'actionUrl' => url('/'),
+                'closing' => 'Thank you for using TravelBoost.',
+            ]);
     }
 
     /**

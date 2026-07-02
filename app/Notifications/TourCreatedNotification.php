@@ -37,9 +37,22 @@ class TourCreatedNotification extends Notification implements ShouldQueue
     public function toMail(object $notifiable): MailMessage
     {
         return (new MailMessage)
-            ->line('The introduction to the notification.')
-            ->action('Notification Action', url('/'))
-            ->line('Thank you for using our application!');
+            ->subject('A new tour has been created')
+            ->view('emails.travelboost-message', [
+                'title' => 'A new tour has been created',
+                'preheader' => 'Your tour has been created successfully.',
+                'eyebrow' => 'Tour Update',
+                'headline' => 'A new tour has been created',
+                'intro' => 'Your tour has been created successfully in TravelBoost.',
+                'detailsTitle' => 'Tour Details',
+                'details' => [
+                    ['label' => 'Tour', 'value' => (string) data_get($this->tour, 'name', 'New Tour')],
+                    ['label' => 'Code', 'value' => (string) data_get($this->tour, 'code', '-')],
+                ],
+                'actionLabel' => 'Open TravelBoost',
+                'actionUrl' => url('/'),
+                'closing' => 'Thank you for using TravelBoost.',
+            ]);
     }
 
     /**

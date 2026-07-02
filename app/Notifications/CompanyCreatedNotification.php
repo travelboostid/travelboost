@@ -35,9 +35,21 @@ class CompanyCreatedNotification extends Notification implements ShouldQueue
     public function toMail(object $notifiable): MailMessage
     {
         return (new MailMessage)
-            ->line('The introduction to the notification.')
-            ->action('Notification Action', url('/'))
-            ->line('Thank you for using our application!');
+            ->subject('Your TravelBoost company is ready')
+            ->view('emails.travelboost-message', [
+                'title' => 'Your TravelBoost company is ready',
+                'preheader' => 'Your company has been created successfully.',
+                'eyebrow' => 'Company Setup',
+                'headline' => 'Your company is ready',
+                'intro' => 'Your TravelBoost company has been created successfully.',
+                'detailsTitle' => 'Company Details',
+                'details' => [
+                    ['label' => 'Status', 'value' => 'Created'],
+                ],
+                'actionLabel' => 'Open TravelBoost',
+                'actionUrl' => url('/'),
+                'closing' => 'Thank you for using TravelBoost.',
+            ]);
     }
 
     /**
