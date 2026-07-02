@@ -26,6 +26,7 @@ class ProductionSeeder extends Seeder
             RolePermissionSeeder::class,
             ProductionUserSeeder::class,
             ProductionCompanySeeder::class,
+            ProductionVendorSettingsSeeder::class,
             ProductionAgentSubscriptionSeeder::class,
             ProductionAffiliateSeeder::class,
             ContinentSeeder::class,

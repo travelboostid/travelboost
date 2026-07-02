@@ -201,6 +201,6 @@ class HomeController extends Controller
 
     private function salesAmountSql(): string
     {
-        return 'COALESCE((SELECT SUM(booking_passengers.price_amount) FROM booking_passengers WHERE booking_passengers.booking_id = bookings.id), bookings.total_price)';
+        return 'bookings.grand_total';
     }
 }

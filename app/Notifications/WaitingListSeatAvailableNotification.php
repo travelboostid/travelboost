@@ -36,10 +36,21 @@ class WaitingListSeatAvailableNotification extends Notification
 
         return (new MailMessage)
             ->subject((string) $data['title'])
-            ->greeting('Hello,')
-            ->line((string) $data['message'])
-            ->action('Complete Booking', (string) $data['action_url'])
-            ->line('This seat offer expires on '.$this->offerExpiresAt->timezone(config('app.timezone'))->format('d M Y H:i').'.');
+            ->view('emails.travelboost-message', [
+                'title' => (string) $data['title'],
+                'preheader' => (string) $data['message'],
+                'eyebrow' => 'Waiting List Update',
+                'headline' => (string) $data['title'],
+                'intro' => (string) $data['message'],
+                'detailsTitle' => 'Offer Details',
+                'details' => [
+                    ['label' => 'Booking Number', 'value' => (string) $data['booking_number']],
+                    ['label' => 'Offer Expires At', 'value' => $this->offerExpiresAt->timezone(config('app.timezone'))->format('d M Y H:i')],
+                ],
+                'actionLabel' => 'Complete Booking',
+                'actionUrl' => (string) $data['action_url'],
+                'closing' => 'Please complete the booking before this offer expires.',
+            ]);
     }
 
     /**

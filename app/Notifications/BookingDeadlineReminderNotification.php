@@ -37,10 +37,22 @@ class BookingDeadlineReminderNotification extends Notification implements Should
 
         return (new MailMessage)
             ->subject((string) $data['title'])
-            ->greeting('Hello,')
-            ->line((string) $data['message'])
-            ->action('View Booking', url((string) $data['action_url']))
-            ->line('Please contact customer support if you need help with this booking.');
+            ->view('emails.travelboost-message', [
+                'title' => (string) $data['title'],
+                'preheader' => (string) $data['message'],
+                'eyebrow' => 'Booking Reminder',
+                'headline' => (string) $data['title'],
+                'intro' => (string) $data['message'],
+                'detailsTitle' => 'Booking Details',
+                'details' => [
+                    ['label' => 'Booking Number', 'value' => (string) $data['booking_number']],
+                    ['label' => 'Deadline Type', 'value' => ucfirst((string) $data['deadline_type'])],
+                    ['label' => 'Deadline Date', 'value' => (string) $data['deadline_date']],
+                ],
+                'actionLabel' => 'View Booking',
+                'actionUrl' => url((string) $data['action_url']),
+                'closing' => 'Please contact customer support if you need help with this booking.',
+            ]);
     }
 
     /**

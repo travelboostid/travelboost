@@ -35,10 +35,20 @@ class CustomerCustomNotification extends Notification implements ShouldQueue
     {
         return (new MailMessage)
             ->subject($this->title)
-            ->greeting('Hello,')
-            ->line($this->message)
-            ->action('View My Bookings', url('/mybookings'))
-            ->line("Sent by {$this->senderCompany->name}.");
+            ->view('emails.travelboost-message', [
+                'title' => $this->title,
+                'preheader' => $this->message,
+                'eyebrow' => 'Customer Update',
+                'headline' => $this->title,
+                'intro' => $this->message,
+                'detailsTitle' => 'Sender Details',
+                'details' => [
+                    ['label' => 'Sent By', 'value' => $this->senderCompany->name],
+                ],
+                'actionLabel' => 'View My Bookings',
+                'actionUrl' => url('/mybookings'),
+                'closing' => "Sent by {$this->senderCompany->name}.",
+            ]);
     }
 
     /**

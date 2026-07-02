@@ -16,6 +16,7 @@ use Database\Seeders\Production\ProductionAffiliateSeeder;
 use Database\Seeders\Production\ProductionAgentSubscriptionSeeder;
 use Database\Seeders\Production\ProductionCompanySeeder;
 use Database\Seeders\Production\ProductionUserSeeder;
+use Database\Seeders\Production\ProductionVendorSettingsSeeder;
 use Illuminate\Database\Seeder;
 
 class LocalSeeder extends Seeder
@@ -31,6 +32,7 @@ class LocalSeeder extends Seeder
             RolePermissionSeeder::class,
             ProductionUserSeeder::class,
             ProductionCompanySeeder::class,
+            ProductionVendorSettingsSeeder::class,
             ProductionAgentSubscriptionSeeder::class,
             ProductionAffiliateSeeder::class,
             ContinentSeeder::class,

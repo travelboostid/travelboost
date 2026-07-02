@@ -1,5 +1,4 @@
 import CompanyDashboardLayout from '@/components/layouts/company-dashboard';
-import { MediaPicker } from '@/components/media-picker';
 import { TourMediaImage } from '@/components/tours/tour-media-image';
 import {
     AlertDialog,
@@ -13,7 +12,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 import {
     DropdownMenu,
     DropdownMenuCheckboxItem,
@@ -47,8 +46,7 @@ import {
     TooltipTrigger,
 } from '@/components/ui/tooltip';
 import usePageSharedDataProps from '@/hooks/use-page-shared-data-props';
-import { extractDocumentUrl } from '@/lib/utils';
-import { router, usePage } from '@inertiajs/react';
+import { router } from '@inertiajs/react';
 import {
     flexRender,
     getCoreRowModel,
@@ -87,119 +85,51 @@ import type { AgentTour } from './type';
 
 dayjs.extend(relativeTime);
 
-const addDays = (date: Date, days: number) => {
-    const result = new Date(date);
-    result.setDate(result.getDate() + days);
+const MediaPicker = React.lazy(() =>
+    import('@/components/media-picker').then((module) => ({
+        default: module.MediaPicker,
+    })),
+);
 
-    return result;
-};
+const getDocumentName = (
+    documentName: string | null | undefined,
+    intl: IntlShape,
+): string =>
+    documentName || intl.formatMessage({ defaultMessage: 'Itinerary PDF' });
 
-const toDateString = (date: Date) => {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-
-    return `${year}-${month}-${day}`;
-};
-
-const getBookingDeadlineDays = (tour: any): number =>
-    Number(
-        tour?.company?.company_setting?.booking_deadline ??
-            tour?.company?.companySetting?.booking_deadline ??
-            0,
-    );
-
-const getDocumentName = (media: any, intl: IntlShape): string =>
-    media?.name ||
-    media?.file_name ||
-    media?.data?.name ||
-    media?.data?.file_name ||
-    media?.data?.filename ||
-    intl.formatMessage({ defaultMessage: 'Itinerary PDF' });
-
-const isActiveAvailability = (
-    availability: any,
-    bookingDeadlineDays = 0,
-): boolean => {
-    const departureDate = availability?.schedule?.departure_date;
-    if (!departureDate) return false;
-
-    const cutoffDate = toDateString(addDays(new Date(), bookingDeadlineDays));
-
-    return departureDate >= cutoffDate;
-};
-
-function RowActions({ row }: { row: any }) {
+function TourDetailsDialog({
+    agentTour,
+    open,
+    onOpenChange,
+}: {
+    agentTour: AgentTour | null;
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+}) {
     const intl = useIntl();
-    const agentTour = row.original;
-    const tour = agentTour.tour;
+    const tour = agentTour?.tour;
     const { company } = usePageSharedDataProps();
-    const { errors } = usePage().props;
-    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
-
-    const handleDelete = () => {
-        router.delete(
-            `/companies/${company.username}/dashboard/agent-tours/${agentTour.id}`,
-            {
-                preserveScroll: true,
-                onSuccess: () => {
-                    if (!(errors as any).delete_error) {
-                        toast.success(
-                            intl.formatMessage({
-                                defaultMessage:
-                                    'Tour removed from catalog successfully',
-                            }),
-                        );
-                        setIsDeleteDialogOpen(false);
-                    }
-                },
-                onError: (err: any) => {
-                    if (err.delete_error) {
-                        toast.error(err.delete_error);
-                    }
-                },
-            },
-        );
-    };
 
     return (
-        <div className="flex items-center justify-end">
-            <Dialog>
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <MoreVertical className="h-4 w-4" />
-                        </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent
-                        align="end"
-                        className="w-48 shadow-lg rounded-xl"
-                    >
-                        <DialogTrigger asChild>
-                            <DropdownMenuItem className="cursor-pointer">
-                                <EyeIcon className="mr-2 h-4 w-4" />
-                                <FormattedMessage defaultMessage="View Details" />
-                            </DropdownMenuItem>
-                        </DialogTrigger>
-                        <DropdownMenuItem className="cursor-pointer">
-                            <HistoryIcon className="mr-2 h-4 w-4" />
-                            <FormattedMessage defaultMessage="Booking History" />
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                            className="cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50"
-                            onClick={() => setIsDeleteDialogOpen(true)}
-                        >
-                            <TrashIcon className="mr-2 h-4 w-4" />
-                            <FormattedMessage defaultMessage="Remove Tour" />
-                        </DropdownMenuItem>
-                    </DropdownMenuContent>
-                </DropdownMenu>
-
+        <Dialog open={open} onOpenChange={onOpenChange}>
+            {agentTour ? (
                 <DialogContent className="max-w-3xl p-0 overflow-hidden border-none shadow-2xl bg-slate-50 rounded-2xl">
                     <div className="relative h-64 w-full">
                         <TourMediaImage
-                            media={tour?.image as any}
+                            media={
+                                tour?.cover_image_url
+                                    ? ({
+                                          data: {
+                                              files: [
+                                                  {
+                                                      code: 'medium',
+                                                      url: tour.cover_image_url,
+                                                  },
+                                              ],
+                                          },
+                                      } as any)
+                                    : undefined
+                            }
                             fallbackSrc="https://placehold.co/800x400/e2e8f0/94a3b8?text=No+Image"
                             alt={
                                 tour?.name ||
@@ -289,42 +219,110 @@ function RowActions({ row }: { row: any }) {
                         </div>
                     </div>
                 </DialogContent>
-            </Dialog>
+            ) : null}
+        </Dialog>
+    );
+}
 
-            <AlertDialog
-                open={isDeleteDialogOpen}
-                onOpenChange={setIsDeleteDialogOpen}
-            >
-                <AlertDialogContent className="rounded-2xl">
-                    <AlertDialogHeader>
-                        <AlertDialogTitle>
-                            <FormattedMessage defaultMessage="Are you absolutely sure?" />
-                        </AlertDialogTitle>
-                        <AlertDialogDescription>
-                            <FormattedMessage defaultMessage="This action will remove the tour from your catalog. It cannot be undone." />
-                            {(errors as any).delete_error && (
-                                <div className="mt-4 p-3 bg-red-50 text-red-600 rounded-lg text-sm font-medium border border-red-100">
-                                    {(errors as any).delete_error}
-                                </div>
-                            )}
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <AlertDialogCancel>
-                            <FormattedMessage defaultMessage="Cancel" />
-                        </AlertDialogCancel>
-                        <AlertDialogAction
-                            onClick={handleDelete}
-                            className="bg-red-600 hover:bg-red-700 focus:ring-red-600"
-                        >
-                            <FormattedMessage defaultMessage="Remove" />
-                        </AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
+const MemoTourDetailsDialog = React.memo(TourDetailsDialog);
+
+function RemoveAgentTourDialog({
+    agentTour,
+    open,
+    onOpenChange,
+    onConfirm,
+    isDeleting,
+}: {
+    agentTour: AgentTour | null;
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+    onConfirm: () => void;
+    isDeleting: boolean;
+}) {
+    return (
+        <AlertDialog open={open} onOpenChange={onOpenChange}>
+            <AlertDialogContent className="rounded-2xl">
+                <AlertDialogHeader>
+                    <AlertDialogTitle>
+                        <FormattedMessage defaultMessage="Are you absolutely sure?" />
+                    </AlertDialogTitle>
+                    <AlertDialogDescription>
+                        <FormattedMessage defaultMessage="This action will remove the tour from your catalog. It cannot be undone." />
+                        {agentTour?.tour?.name ? (
+                            <span className="mt-2 block font-medium text-slate-700 dark:text-slate-200">
+                                {agentTour.tour.name}
+                            </span>
+                        ) : null}
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel disabled={isDeleting}>
+                        <FormattedMessage defaultMessage="Cancel" />
+                    </AlertDialogCancel>
+                    <AlertDialogAction
+                        onClick={onConfirm}
+                        disabled={isDeleting}
+                        className="bg-red-600 hover:bg-red-700 focus:ring-red-600"
+                    >
+                        <FormattedMessage defaultMessage="Remove" />
+                    </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
+    );
+}
+
+const MemoRemoveAgentTourDialog = React.memo(RemoveAgentTourDialog);
+
+function RowActions({
+    row,
+    onViewDetails,
+    onDelete,
+}: {
+    row: any;
+    onViewDetails: (agentTour: AgentTour) => void;
+    onDelete: (agentTour: AgentTour) => void;
+}) {
+    const agentTour = row.original;
+
+    return (
+        <div className="flex items-center justify-end">
+            <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                        <MoreVertical className="h-4 w-4" />
+                    </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                    align="end"
+                    className="w-48 shadow-lg rounded-xl"
+                >
+                    <DropdownMenuItem
+                        className="cursor-pointer"
+                        onClick={() => onViewDetails(agentTour)}
+                    >
+                        <EyeIcon className="mr-2 h-4 w-4" />
+                        <FormattedMessage defaultMessage="View Details" />
+                    </DropdownMenuItem>
+                    <DropdownMenuItem className="cursor-pointer">
+                        <HistoryIcon className="mr-2 h-4 w-4" />
+                        <FormattedMessage defaultMessage="Booking History" />
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                        className="cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50"
+                        onClick={() => onDelete(agentTour)}
+                    >
+                        <TrashIcon className="mr-2 h-4 w-4" />
+                        <FormattedMessage defaultMessage="Remove Tour" />
+                    </DropdownMenuItem>
+                </DropdownMenuContent>
+            </DropdownMenu>
         </div>
     );
 }
+
+const MemoRowActions = React.memo(RowActions);
 
 function CategoryCell({
     row,
@@ -381,6 +379,8 @@ function CategoryCell({
         </div>
     );
 }
+
+const MemoCategoryCell = React.memo(CategoryCell);
 
 function StatusCell({
     row,
@@ -452,11 +452,13 @@ function StatusCell({
     );
 }
 
+const MemoStatusCell = React.memo(StatusCell);
+
 function VendorDocumentCell({ row }: { row: any }) {
     const intl = useIntl();
     const tour = row.original.tour;
-    const hasDocument = Boolean(tour?.document);
-    const documentUrl = hasDocument ? extractDocumentUrl(tour.document) : '';
+    const documentUrl = row.original.vendor_document_url || '';
+    const documentName = tour?.vendor_document_name || null;
 
     return (
         <Button
@@ -469,8 +471,8 @@ function VendorDocumentCell({ row }: { row: any }) {
             {documentUrl ? (
                 <a
                     href={documentUrl}
-                    download={getDocumentName(tour.document, intl)}
-                    title={getDocumentName(tour.document, intl)}
+                    download={getDocumentName(documentName, intl)}
+                    title={getDocumentName(documentName, intl)}
                 >
                     <DownloadIcon className="mr-1.5 h-3.5 w-3.5" />
                     <FormattedMessage defaultMessage="Vendor PDF" />
@@ -484,16 +486,14 @@ function VendorDocumentCell({ row }: { row: any }) {
     );
 }
 
+const MemoVendorDocumentCell = React.memo(VendorDocumentCell);
+
 function AgentDocumentCell({ row }: { row: any }) {
     const intl = useIntl();
-    const { company } = usePageSharedDataProps();
     const agentTour = row.original;
-    const vendorDocument = agentTour.tour?.document;
-    const agentDocument = agentTour.agent_document;
-    const documentUrl = agentDocument ? extractDocumentUrl(agentDocument) : '';
-    const hasVendorDocument = Boolean(
-        vendorDocument && extractDocumentUrl(vendorDocument),
-    );
+    const documentUrl = agentTour.agent_document_url || '';
+    const hasVendorDocument = Boolean(agentTour.vendor_document_url);
+    const agentDocumentName = agentTour.agent_document_name || null;
     const isAgentUploadEnabled =
         agentTour.agent_itinerary_upload_enabled ?? false;
     const uploadBlockedReason = !hasVendorDocument
@@ -509,32 +509,9 @@ function AgentDocumentCell({ row }: { row: any }) {
           : null;
     const isUploadDisabled = uploadBlockedReason !== null;
 
-    const updateDocument = (media: any) => {
-        router.put(
-            `/companies/${company.username}/dashboard/agent-tours/${agentTour.id}`,
-            { agent_document_id: media?.id ?? null },
-            {
-                preserveScroll: true,
-                preserveState: true,
-                onSuccess: () =>
-                    toast.success(
-                        media
-                            ? intl.formatMessage({
-                                  defaultMessage:
-                                      'Agent itinerary uploaded successfully',
-                              })
-                            : intl.formatMessage({
-                                  defaultMessage:
-                                      'Agent itinerary removed successfully',
-                              }),
-                    ),
-            },
-        );
-    };
-
     return (
         <div className="flex min-w-[220px] items-center gap-2">
-            {agentDocument ? (
+            {documentUrl ? (
                 <>
                     <Button
                         asChild={Boolean(documentUrl)}
@@ -547,7 +524,7 @@ function AgentDocumentCell({ row }: { row: any }) {
                                 href={documentUrl}
                                 target="_blank"
                                 rel="noreferrer"
-                                title={getDocumentName(agentDocument, intl)}
+                                title={getDocumentName(agentDocumentName, intl)}
                             >
                                 <FileTextIcon className="mr-1.5 h-3.5 w-3.5 shrink-0" />
                                 <span className="truncate">
@@ -565,63 +542,56 @@ function AgentDocumentCell({ row }: { row: any }) {
                         variant="ghost"
                         size="icon"
                         className="h-9 w-9 shrink-0 rounded-xl text-red-500 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/30"
-                        onClick={() => updateDocument(null)}
+                        onClick={() =>
+                            row.table.options.meta?.onRemoveAgentDocument?.(
+                                agentTour,
+                            )
+                        }
                     >
                         <XIcon className="h-4 w-4" />
                     </Button>
                 </>
             ) : (
-                <MediaPicker
-                    type="document"
-                    defaultValue={agentDocument}
-                    onChange={updateDocument}
-                    params={{
-                        owner_type: 'company',
-                        owner_id: company.id,
-                    }}
-                    uploadParams={{
-                        owner_type: 'company',
-                        owner_id: company.id,
-                        subtype: 'agent-itinerary',
-                    }}
-                >
-                    {(_, change) => (
-                        <TooltipProvider>
-                            <Tooltip>
-                                <TooltipTrigger asChild>
-                                    <span className="inline-flex">
-                                        <Button
-                                            type="button"
-                                            variant="outline"
-                                            size="sm"
-                                            className="h-9 rounded-xl border-slate-200 bg-white text-xs font-semibold shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
-                                            onClick={change}
-                                            disabled={isUploadDisabled}
-                                        >
-                                            <UploadCloudIcon className="mr-1.5 h-3.5 w-3.5" />
-                                            {!hasVendorDocument ? (
-                                                <FormattedMessage defaultMessage="Vendor PDF Required" />
-                                            ) : isAgentUploadEnabled ? (
-                                                <FormattedMessage defaultMessage="Upload Agent PDF" />
-                                            ) : (
-                                                <FormattedMessage defaultMessage="Upload Locked" />
-                                            )}
-                                        </Button>
-                                    </span>
-                                </TooltipTrigger>
-                                {uploadBlockedReason ? (
-                                    <TooltipContent side="top">
-                                        {uploadBlockedReason}
-                                    </TooltipContent>
-                                ) : null}
-                            </Tooltip>
-                        </TooltipProvider>
-                    )}
-                </MediaPicker>
+                <TooltipProvider>
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <span className="inline-flex">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-9 rounded-xl border-slate-200 bg-white text-xs font-semibold shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                                    onClick={() =>
+                                        row.table.options.meta?.onUploadAgentDocument?.(
+                                            agentTour,
+                                        )
+                                    }
+                                    disabled={isUploadDisabled}
+                                >
+                                    <UploadCloudIcon className="mr-1.5 h-3.5 w-3.5" />
+                                    {!hasVendorDocument ? (
+                                        <FormattedMessage defaultMessage="Vendor PDF Required" />
+                                    ) : isAgentUploadEnabled ? (
+                                        <FormattedMessage defaultMessage="Upload Agent PDF" />
+                                    ) : (
+                                        <FormattedMessage defaultMessage="Upload Locked" />
+                                    )}
+                                </Button>
+                            </span>
+                        </TooltipTrigger>
+                        {uploadBlockedReason ? (
+                            <TooltipContent side="top">
+                                {uploadBlockedReason}
+                            </TooltipContent>
+                        ) : null}
+                    </Tooltip>
+                </TooltipProvider>
             )}
         </div>
     );
 }
+
+const MemoAgentDocumentCell = React.memo(AgentDocumentCell);
 
 function SortableHeader({
     column,
@@ -673,6 +643,11 @@ type AgentTourUpdateResponse = {
 
 type SavingState = Record<number, boolean>;
 
+type AgentToursTableMeta = {
+    onUploadAgentDocument: (agentTour: AgentTour) => void;
+    onRemoveAgentDocument: (agentTour: AgentTour) => void;
+};
+
 async function updateAgentTour(
     companyUsername: string,
     agentTourId: number,
@@ -702,12 +677,16 @@ function getColumns({
     savingState,
     onCategoryChange,
     onStatusChange,
+    onViewDetails,
+    onDelete,
 }: {
     intl: IntlShape;
     categories: AgentTourCategoryOption[];
     savingState: SavingState;
     onCategoryChange: (agentTour: AgentTour, value: string) => void;
     onStatusChange: (agentTour: AgentTour, value: string) => void;
+    onViewDetails: (agentTour: AgentTour) => void;
+    onDelete: (agentTour: AgentTour) => void;
 }): ColumnDef<any>[] {
     return [
         // {
@@ -803,7 +782,21 @@ function getColumns({
             cell: ({ row }) => (
                 <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm w-20 h-12 flex items-center justify-center shrink-0">
                     <TourMediaImage
-                        media={row.original.tour?.image as any}
+                        media={
+                            row.original.tour?.cover_image_url
+                                ? ({
+                                      data: {
+                                          files: [
+                                              {
+                                                  code: 'small',
+                                                  url: row.original.tour
+                                                      ?.cover_image_url,
+                                              },
+                                          ],
+                                      },
+                                  } as any)
+                                : undefined
+                        }
                         fallbackSrc="https://placehold.co/400x300/f8fafc/94a3b8?text=No+Image"
                         alt={intl.formatMessage({ defaultMessage: 'Tour' })}
                         className="w-full h-full object-cover"
@@ -817,12 +810,12 @@ function getColumns({
             header: () => (
                 <FormattedMessage defaultMessage="Vendor Itinerary" />
             ),
-            cell: ({ row }) => <VendorDocumentCell row={row} />,
+            cell: ({ row }) => <MemoVendorDocumentCell row={row} />,
             enableSorting: false,
         },
         {
             id: 'agent_document',
-            accessorFn: (row) => row.agent_document?.name,
+            accessorFn: (row) => row.agent_document_name,
             header: ({ column }) => (
                 <SortableHeader
                     column={column}
@@ -831,7 +824,7 @@ function getColumns({
                     }
                 />
             ),
-            cell: ({ row }) => <AgentDocumentCell row={row} />,
+            cell: ({ row }) => <MemoAgentDocumentCell row={row} />,
         },
         {
             id: 'category',
@@ -843,7 +836,7 @@ function getColumns({
                 />
             ),
             cell: ({ row }) => (
-                <CategoryCell
+                <MemoCategoryCell
                     row={row}
                     categories={categories}
                     isSaving={Boolean(savingState[row.original.id])}
@@ -853,19 +846,7 @@ function getColumns({
         },
         {
             id: 'seats',
-            accessorFn: (row: any) =>
-                row.tour?.availabilities
-                    ?.filter((item: any) =>
-                        isActiveAvailability(
-                            item,
-                            getBookingDeadlineDays(row.tour),
-                        ),
-                    )
-                    .reduce(
-                        (sum: number, item: any) =>
-                            sum + (Number(item.available) || 0),
-                        0,
-                    ) || 0,
+            accessorFn: (row: any) => Number(row.total_active_seats || 0),
             header: ({ column }) => (
                 <SortableHeader
                     column={column}
@@ -904,7 +885,7 @@ function getColumns({
                 />
             ),
             cell: ({ row }) => (
-                <StatusCell
+                <MemoStatusCell
                     row={row}
                     isSaving={Boolean(savingState[row.original.id])}
                     onChange={onStatusChange}
@@ -929,7 +910,13 @@ function getColumns({
         {
             id: 'actions',
             header: '',
-            cell: ({ row }) => <RowActions row={row} />,
+            cell: ({ row }) => (
+                <MemoRowActions
+                    row={row}
+                    onViewDetails={onViewDetails}
+                    onDelete={onDelete}
+                />
+            ),
             enableHiding: false,
             enableSorting: false,
         },
@@ -953,8 +940,16 @@ export default function Page({ data, categories }: PageProps) {
         React.useState<VisibilityState>({ image: false });
     const [activeTab, setActiveTab] = React.useState('active');
     const [globalFilter, setGlobalFilter] = React.useState('');
+    const deferredGlobalFilter = React.useDeferredValue(globalFilter);
     const [tableData, setTableData] = React.useState<AgentTour[]>(data);
     const [savingState, setSavingState] = React.useState<SavingState>({});
+    const [detailAgentTour, setDetailAgentTour] =
+        React.useState<AgentTour | null>(null);
+    const [deleteAgentTour, setDeleteAgentTour] =
+        React.useState<AgentTour | null>(null);
+    const [uploadAgentTour, setUploadAgentTour] =
+        React.useState<AgentTour | null>(null);
+    const [isDeleting, setIsDeleting] = React.useState(false);
 
     React.useEffect(() => {
         setTableData(data);
@@ -1122,6 +1117,99 @@ export default function Page({ data, categories }: PageProps) {
         [company.username, intl, setRowSaving],
     );
 
+    const handleViewDetails = React.useCallback((agentTour: AgentTour) => {
+        setDetailAgentTour(agentTour);
+    }, []);
+
+    const handleDeleteRequest = React.useCallback((agentTour: AgentTour) => {
+        setDeleteAgentTour(agentTour);
+    }, []);
+
+    const handleDeleteConfirm = React.useCallback(() => {
+        if (!deleteAgentTour) {
+            return;
+        }
+
+        setIsDeleting(true);
+
+        router.delete(
+            `/companies/${company.username}/dashboard/agent-tours/${deleteAgentTour.id}`,
+            {
+                preserveScroll: true,
+                onSuccess: () => {
+                    toast.success(
+                        intl.formatMessage({
+                            defaultMessage:
+                                'Tour removed from catalog successfully',
+                        }),
+                    );
+                    setDeleteAgentTour(null);
+                },
+                onError: (err: any) => {
+                    toast.error(
+                        err.delete_error ||
+                            intl.formatMessage({
+                                defaultMessage: 'Failed to remove tour',
+                            }),
+                    );
+                },
+                onFinish: () => {
+                    setIsDeleting(false);
+                },
+            },
+        );
+    }, [company.username, deleteAgentTour, intl]);
+
+    const syncAgentDocument = React.useCallback(
+        (agentTour: AgentTour, media?: any | null) => {
+            router.put(
+                `/companies/${company.username}/dashboard/agent-tours/${agentTour.id}`,
+                { agent_document_id: media?.id ?? null },
+                {
+                    preserveScroll: true,
+                    preserveState: true,
+                    onSuccess: () => {
+                        toast.success(
+                            media
+                                ? intl.formatMessage({
+                                      defaultMessage:
+                                          'Agent itinerary uploaded successfully',
+                                  })
+                                : intl.formatMessage({
+                                      defaultMessage:
+                                          'Agent itinerary removed successfully',
+                                  }),
+                        );
+                        setUploadAgentTour(null);
+                    },
+                    onError: () => {
+                        toast.error(
+                            intl.formatMessage({
+                                defaultMessage:
+                                    'Failed to update agent itinerary',
+                            }),
+                        );
+                    },
+                },
+            );
+        },
+        [company.username, intl],
+    );
+
+    const handleUploadAgentDocument = React.useCallback(
+        (agentTour: AgentTour) => {
+            setUploadAgentTour(agentTour);
+        },
+        [],
+    );
+
+    const handleRemoveAgentDocument = React.useCallback(
+        (agentTour: AgentTour) => {
+            syncAgentDocument(agentTour, null);
+        },
+        [syncAgentDocument],
+    );
+
     const globalFilterFn = (
         row: any,
         columnId: string,
@@ -1153,11 +1241,15 @@ export default function Page({ data, categories }: PageProps) {
                 savingState,
                 onCategoryChange: handleCategoryChange,
                 onStatusChange: handleStatusChange,
+                onViewDetails: handleViewDetails,
+                onDelete: handleDeleteRequest,
             }),
         [
             categories,
             handleCategoryChange,
+            handleDeleteRequest,
             handleStatusChange,
+            handleViewDetails,
             intl,
             savingState,
         ],
@@ -1180,8 +1272,12 @@ export default function Page({ data, categories }: PageProps) {
             sorting,
             columnFilters,
             columnVisibility,
-            globalFilter,
+            globalFilter: deferredGlobalFilter,
         },
+        meta: {
+            onUploadAgentDocument: handleUploadAgentDocument,
+            onRemoveAgentDocument: handleRemoveAgentDocument,
+        } satisfies AgentToursTableMeta,
     });
 
     return (
@@ -1375,6 +1471,59 @@ export default function Page({ data, categories }: PageProps) {
                     </div>
                 </div>
             </div>
+            <MemoTourDetailsDialog
+                agentTour={detailAgentTour}
+                open={detailAgentTour !== null}
+                onOpenChange={(open) => {
+                    if (!open) {
+                        setDetailAgentTour(null);
+                    }
+                }}
+            />
+            <MemoRemoveAgentTourDialog
+                agentTour={deleteAgentTour}
+                open={deleteAgentTour !== null}
+                onOpenChange={(open) => {
+                    if (!open && !isDeleting) {
+                        setDeleteAgentTour(null);
+                    }
+                }}
+                onConfirm={handleDeleteConfirm}
+                isDeleting={isDeleting}
+            />
+            {uploadAgentTour ? (
+                <React.Suspense fallback={null}>
+                    <MediaPicker
+                        type="document"
+                        value={null}
+                        open
+                        onOpenChange={(open) => {
+                            if (!open) {
+                                setUploadAgentTour(null);
+                            }
+                        }}
+                        onChange={(media) => {
+                            if (uploadAgentTour) {
+                                syncAgentDocument(
+                                    uploadAgentTour,
+                                    media ?? null,
+                                );
+                            }
+                        }}
+                        params={{
+                            owner_type: 'company',
+                            owner_id: company.id,
+                        }}
+                        uploadParams={{
+                            owner_type: 'company',
+                            owner_id: company.id,
+                            subtype: 'agent-itinerary',
+                        }}
+                    >
+                        {() => null}
+                    </MediaPicker>
+                </React.Suspense>
+            ) : null}
         </CompanyDashboardLayout>
     );
 }

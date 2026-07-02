@@ -27,6 +27,8 @@ type MediaPickerProps = {
     type: 'image' | 'photo' | 'document';
     params?: GetMediasParams;
     uploadParams?: Partial<CreateMediaMutationBody>;
+    open?: boolean;
+    onOpenChange?: (open: boolean) => void;
 };
 
 export function MediaPicker({
@@ -37,12 +39,14 @@ export function MediaPicker({
     type = 'photo',
     params,
     uploadParams,
+    open,
+    onOpenChange,
 }: MediaPickerProps) {
     const [internalValue, setInternalValue] = useState<
         MediaResource | Media | string | null | undefined
     >(value || defaultValue);
     const fileInputRef = useRef<HTMLInputElement | null>(null);
-    const [open, setOpen] = useState(false);
+    const [internalOpen, setInternalOpen] = useState(false);
     const [selectedImage, setSelectedImage] = useState('');
     const [crop, setCrop] = useState({ x: 0, y: 0 });
     const [rotation, setRotation] = useState(0);
@@ -50,6 +54,7 @@ export function MediaPicker({
     const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(
         null,
     );
+    const isOpen = open ?? internalOpen;
 
     const uploader = useCreateMedia({
         mutation: {
@@ -65,6 +70,14 @@ export function MediaPicker({
     const handleChange = (value?: MediaResource | string) => {
         setInternalValue(value);
         onChange?.(value);
+    };
+
+    const setOpen = (nextOpen: boolean) => {
+        if (open === undefined) {
+            setInternalOpen(nextOpen);
+        }
+
+        onOpenChange?.(nextOpen);
     };
 
     const handleFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
@@ -157,7 +170,7 @@ export function MediaPicker({
                     setSelectedImage('');
                 }
             }}
-            open={open}
+            open={isOpen}
         >
             {children(internalValue, handleOpen)}
             <DialogContent className="w-full max-w-200">
